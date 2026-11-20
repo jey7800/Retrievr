@@ -1,0 +1,62 @@
+# Hand-written recipe: financial results in the server-rendered document database.
+# Verified against the snapshots in tests/fixtures/societegenerale/ (2026-11-20).
+schema_version: 1
+recipe: societegenerale-ir
+version: 1
+issuer: societegenerale
+site: investors.societegenerale.com
+allowed_domains:
+  - investors.societegenerale.com
+  - www.societegenerale.com      # files are served from the corporate domain
+fetch:
+  mode: http
+defaults:
+  language: fr                   # French document database (/fr/)
+sources:
+  - id: resultats-financiers
+    kind: url_template
+    url: "https://investors.societegenerale.com/fr/base-documentaire?theme=finance&category[resultats-financiers]&fiscal[{year}]"
+    params:
+      year: {from: 2019, to: current}
+    pagination:
+      kind: next_link
+      selector: "nav.pager a[rel=next]"
+      max_pages: 10
+    items:
+      # Scope to the search results: the menu banner and the footer repeat
+      # unrelated documents (universal registration document, social report).
+      container: "#search-documentation-results-wrapper"
+      item: "li.wrapper-doc"
+      link: "a[href]"
+      title: "h3"
+      date: {regex: 'Publi\S* le (\d{2}\.\d{2}\.\d{4})', format: '%d.%m.%Y'}
+      extensions: [pdf, xlsx]
+classify:
+  type:
+    # Order matters: the first matching rule wins.
+    - {pattern: 'series[-_]trimestrielles[-_]retraitees', type: quarterly_series_restated}
+    - {pattern: 'series[-_]trimestrielles|quarterly[-_]series', type: quarterly_series}
+    - {pattern: 'communique[-_]presse|press[-_]release', type: press_release}
+    - {pattern: 'resultats[-_]financiers[-_]presentation|results[-_]presentation', type: results_presentation}
+    - {pattern: 'etats[-_]financiers|financial[-_]statements', type: financial_statements}
+    - {pattern: 'document[-_]enregistrement[-_]universel|universal[-_]registration', type: urd}
+    - {pattern: 'pilier[-_]3|pillar[-_]3', type: pillar3}
+  period:
+    - {pattern: '(?<![a-z0-9])(?P<q>[tq][1-4])[-_](?P<year>20\d{2})(?![0-9])'}
+  language:
+    - {pattern: '[-_](?P<lang>fr|en)\.[a-z0-9]+$'}
+    - {pattern: 'version fran\S+aise', target: text, language: fr}
+    - {pattern: 'english version', target: text, language: en}
+health:
+  anchors:
+    - https://www.societegenerale.com/sites/default/files/resultats-publication/fr/2026-02/t4-2025-communique-presse-fr.pdf
+    - https://www.societegenerale.com/sites/default/files/resultats-publication/fr/2025-10/t3-2025-resultats-financiers-presentation.pdf
+  items_per_year: [8, 40]
+  cadence: {every: quarter, max_gap_days: 110}
+provenance:
+  method: hand_written
+  created_at: 2026-11-20
+  notes: >-
+    Two listing pages per fiscal year (10 cards per page). Requesting a page
+    beyond the last one returns unrelated results, so pagination follows
+    rel=next only and never guesses page numbers.

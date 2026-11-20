@@ -1,0 +1,42 @@
+pages:
+- url: https://investors.societegenerale.com/fr/base-documentaire?theme=finance&category%5Bresultats-financiers%5D=&fiscal%5B2024%5D=&page=1
+  normalized_url: https://investors.societegenerale.com/fr/base-documentaire?category%5Bresultats-financiers%5D=&fiscal%5B2024%5D=&page=1&theme=finance
+  file: pages/fr-base-documentaire-category-resultats-financiers--fiscal-2024--page-1-theme-finance.html
+  status: 200
+  content_type: text/html; charset=utf-8
+  etag: '"1795167960-gzip"'
+  last_modified: Fri, 20 Nov 2026 09:46:00 GMT
+  sha256: 8c422a71c30f898ec064b8b1b8103c73c16c880dc9904dde9172136563c782bd
+  captured_at: '2026-11-20T09:46:01+00:00'
+- url: https://investors.societegenerale.com/fr/base-documentaire?theme=finance&category[resultats-financiers]&fiscal[2024]
+  normalized_url: https://investors.societegenerale.com/fr/base-documentaire?category%5Bresultats-financiers%5D=&fiscal%5B2024%5D=&theme=finance
+  file: pages/fr-base-documentaire-category-resultats-financiers--fiscal-2024--theme-finance.html
+  status: 200
+  content_type: text/html; charset=utf-8
+  etag: '"1795167958-gzip"'
+  last_modified: Fri, 20 Nov 2026 09:45:58 GMT
+  sha256: d69501d2efcde99715ed2860f1f332e501769b63b7c17d4ce1daf2536f0dc803
+  captured_at: '2026-11-20T09:45:59+00:00'
+- url: https://investors.societegenerale.com/fr/base-documentaire?category%5Bresultats-financiers%5D=&fiscal%5B2025%5D=&theme=finance&page=1
+  normalized_url: https://investors.societegenerale.com/fr/base-documentaire?category%5Bresultats-financiers%5D=&fiscal%5B2025%5D=&page=1&theme=finance
+  file: pages/fr-base-documentaire-category-resultats-financiers--fiscal-2025--page-1-theme-finance.html
+  status: 200
+  content_type: text/html; charset=utf-8
+  etag: '"1795167962-gzip"'
+  last_modified: Fri, 20 Nov 2026 09:46:02 GMT
+  sha256: bb686da69cc16681c91dc923db67b22456d310519e291657aa164e2e7c10cc40
+  captured_at: '2026-11-20T09:46:03+00:00'
+- url: https://investors.societegenerale.com/fr/base-documentaire?theme=finance&category[resultats-financiers]&fiscal[2025]
+  normalized_url: https://investors.societegenerale.com/fr/base-documentaire?category%5Bresultats-financiers%5D=&fiscal%5B2025%5D=&theme=finance
+  file: pages/fr-base-documentaire-category-resultats-financiers--fiscal-2025--theme-finance.html
+  status: 200
+  content_type: text/html; charset=utf-8
+  etag: '"1795167961-gzip"'
+  last_modified: Fri, 20 Nov 2026 09:46:01 GMT
+  sha256: e52aad6bc462b4375b11b61b1c07d5bc5ede46ad7ec2fdfdb16edf094d8d68aa
+  captured_at: '2026-11-20T09:46:02+00:00'
+robots:
+  https://investors.societegenerale.com:
+    status: 200
+    final_url: https://www.societegenerale.com/robots.txt
+    file: robots-investors.societegenerale.com.txt

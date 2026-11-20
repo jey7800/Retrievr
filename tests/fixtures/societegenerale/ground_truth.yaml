@@ -1,0 +1,232 @@
+# Hand-written ground truth for the "resultats-financiers" document database,
+# fiscal years 2024 and 2025, as shown on the snapshots captured 2026-11-20.
+#
+# Scope: only the documents listed in the search results
+# (#search-documentation-results-wrapper). The universal registration document
+# and the social report that appear in the menu banner and the footer of every
+# page are NOT part of this category and must not be returned.
+#
+# Each entry was checked against the card shown on the page (title, publication
+# date, "Version française"). Types use the library's taxonomy ids.
+site: investors.societegenerale.com
+source: resultats-financiers
+captured_at: 2026-11-20
+fiscal_years: [2024, 2025]
+pages:
+  2024: 2   # 10 + 6 cards
+  2025: 2   # 10 + 4 cards
+documents:
+  # ---- fiscal 2024, page 1 -------------------------------------------------
+  - url: https://www.societegenerale.com/sites/default/files/documents/2025-04/t4-2024-resultats-financiers-series-trimestrielles-retraitees.xlsx
+    title: T4 2024 Résultats financiers séries trimestrielles retraitées (XLSX)
+    type: quarterly_series_restated
+    period: 2024-Q4
+    fiscal_year: 2024
+    language: fr
+    date: 2025-04-02
+  - url: https://www.societegenerale.com/sites/default/files/documents/2025-04/t4-2024-resultats-financiers-series-trimestrielles-retraitees.pdf
+    title: T4 2024 Résultats financiers séries trimestrielles retraitées
+    type: quarterly_series_restated
+    period: 2024-Q4
+    fiscal_year: 2024
+    language: fr
+    date: 2025-04-02
+  - url: https://www.societegenerale.com/sites/default/files/resultats_publication/fr/2025-02/t4-2024-Etats-financiers_FR.pdf
+    title: T4 2024 Résultats financiers - États Financiers
+    type: financial_statements
+    period: 2024-Q4
+    fiscal_year: 2024
+    language: fr
+    date: 2025-02-06
+  - url: https://www.societegenerale.com/sites/default/files/resultats_publication/fr/2025-02/t4-2024-Resultats-Financiers-Series-trimestrielles.xlsx
+    title: T4 2024 Résultats financiers - Séries trimestrielles
+    type: quarterly_series
+    period: 2024-Q4
+    fiscal_year: 2024
+    language: fr
+    date: 2025-02-06
+  - url: https://www.societegenerale.com/sites/default/files/resultats_publication/fr/2025-02/t4-2024-Communique-presse_FR.pdf
+    title: T4 2024 Résultats financiers - Communiqué de presse
+    type: press_release
+    period: 2024-Q4
+    fiscal_year: 2024
+    language: fr
+    date: 2025-02-06
+  - url: https://www.societegenerale.com/sites/default/files/resultats_publication/fr/2025-02/t4-2024-Resultats-financiers-Presentation.pdf
+    title: T4 2024 Résultats financiers - Présentation
+    type: results_presentation
+    period: 2024-Q4
+    fiscal_year: 2024
+    language: fr
+    date: 2025-02-06
+  - url: https://www.societegenerale.com/sites/default/files/resultats_publication/fr/2024-10/t3-2024-Resultats-financiers-Presentation.pdf
+    title: T3 2024 Résultats financiers - Présentation
+    type: results_presentation
+    period: 2024-Q3
+    fiscal_year: 2024
+    language: fr
+    date: 2024-10-31
+  - url: https://www.societegenerale.com/sites/default/files/resultats_publication/fr/2024-10/t3-2024-Resultats-Financiers-Series-trimestrielles.xlsx
+    title: T3 2024 Résultats financiers - Séries trimestrielles
+    type: quarterly_series
+    period: 2024-Q3
+    fiscal_year: 2024
+    language: fr
+    date: 2024-10-31
+  - url: https://www.societegenerale.com/sites/default/files/resultats_publication/fr/2024-10/t3-2024-Communique-presse_FR.pdf
+    title: T3 2024 Résultats financiers - Communiqué de presse
+    type: press_release
+    period: 2024-Q3
+    fiscal_year: 2024
+    language: fr
+    date: 2024-10-31
+  - url: https://www.societegenerale.com/sites/default/files/resultats_publication/fr/2024-08/t2-2024-Communique-presse_FR.pdf
+    title: T2 2024 Résultats financiers - Communiqué de presse
+    type: press_release
+    period: 2024-Q2
+    fiscal_year: 2024
+    language: fr
+    date: 2024-08-01
+  # ---- fiscal 2024, page 2 -------------------------------------------------
+  - url: https://www.societegenerale.com/sites/default/files/resultats_publication/fr/2024-08/t2-2024-Resultats-financiers-Presentation.pdf
+    title: T2 2024 Résultats financiers - Présentation
+    type: results_presentation
+    period: 2024-Q2
+    fiscal_year: 2024
+    language: fr
+    date: 2024-08-01
+  - url: https://www.societegenerale.com/sites/default/files/resultats_publication/fr/2024-08/t2-2024-Etats-financiers_FR.pdf
+    title: T2 2024 Résultats financiers - États Financiers
+    type: financial_statements
+    period: 2024-Q2
+    fiscal_year: 2024
+    language: fr
+    date: 2024-08-01
+  - url: https://www.societegenerale.com/sites/default/files/resultats_publication/fr/2024-08/t2-2024-Resultats-Financiers-Series-trimestrielles.xlsx
+    title: T2 2024 Résultats financiers - Séries trimestrielles
+    type: quarterly_series
+    period: 2024-Q2
+    fiscal_year: 2024
+    language: fr
+    date: 2024-08-01
+  - url: https://www.societegenerale.com/sites/default/files/resultats_publication/fr/2024-05/t1-2024-Resultats-financiers-Presentation.pdf
+    title: T1 2024 Résultats financiers - Présentation
+    type: results_presentation
+    period: 2024-Q1
+    fiscal_year: 2024
+    language: fr
+    date: 2024-05-03
+  - url: https://www.societegenerale.com/sites/default/files/resultats_publication/fr/2024-05/t1-2024-Resultats-Financiers-Series-trimestrielles.xlsx
+    title: T1 2024 Résultats financiers - Séries trimestrielles
+    type: quarterly_series
+    period: 2024-Q1
+    fiscal_year: 2024
+    language: fr
+    date: 2024-05-03
+  - url: https://www.societegenerale.com/sites/default/files/resultats_publication/fr/2024-05/t1-2024-Communique-presse_FR.pdf
+    title: T1 2024 Résultats financiers - Communiqué de presse
+    type: press_release
+    period: 2024-Q1
+    fiscal_year: 2024
+    language: fr
+    date: 2024-05-03
+  # ---- fiscal 2025, page 1 -------------------------------------------------
+  - url: https://www.societegenerale.com/sites/default/files/resultats-publication/fr/2026-02/t4-2025-communique-presse-fr.pdf
+    title: T4 2025 Résultats financiers - Communiqué de presse
+    type: press_release
+    period: 2025-Q4
+    fiscal_year: 2025
+    language: fr
+    date: 2026-02-06
+  - url: https://www.societegenerale.com/sites/default/files/resultats-publication/fr/2026-02/t4-2025-resultats-financiers-presentation.pdf
+    title: T4 2025 Résultats financiers - Présentation
+    type: results_presentation
+    period: 2025-Q4
+    fiscal_year: 2025
+    language: fr
+    date: 2026-02-06
+  - url: https://www.societegenerale.com/sites/default/files/resultats-publication/fr/2026-02/t4-2025-resultats-financiers-series-trimestrielles.xlsx
+    title: T4 2025 Résultats financiers - Séries trimestrielles
+    type: quarterly_series
+    period: 2025-Q4
+    fiscal_year: 2025
+    language: fr
+    date: 2026-02-06
+  - url: https://www.societegenerale.com/sites/default/files/resultats-publication/fr/2026-02/t4-2025-etats-financiers-fr.pdf
+    title: T4 2025 Résultats financiers - États Financiers
+    type: financial_statements
+    period: 2025-Q4
+    fiscal_year: 2025
+    language: fr
+    date: 2026-02-06
+  - url: https://www.societegenerale.com/sites/default/files/resultats-publication/fr/2025-10/t3-2025-resultats-financiers-series-trimestrielles.xlsx
+    title: T3 2025 Résultats financiers - Séries trimestrielles
+    type: quarterly_series
+    period: 2025-Q3
+    fiscal_year: 2025
+    language: fr
+    date: 2025-10-30
+  - url: https://www.societegenerale.com/sites/default/files/resultats-publication/fr/2025-10/t3-2025-communique-presse-fr.pdf
+    title: T3 2025 Résultats financiers - Communiqué de presse
+    type: press_release
+    period: 2025-Q3
+    fiscal_year: 2025
+    language: fr
+    date: 2025-10-30
+  - url: https://www.societegenerale.com/sites/default/files/resultats-publication/fr/2025-10/t3-2025-resultats-financiers-presentation.pdf
+    title: T3 2025 Résultats financiers - Présentation
+    type: results_presentation
+    period: 2025-Q3
+    fiscal_year: 2025
+    language: fr
+    date: 2025-10-30
+  - url: https://www.societegenerale.com/sites/default/files/resultats-publication/fr/2025-07/t2-2025-resultats-financiers-series-trimestrielles.xlsx
+    title: T2 2025 Résultats financiers - Séries trimestrielles
+    type: quarterly_series
+    period: 2025-Q2
+    fiscal_year: 2025
+    language: fr
+    date: 2025-07-31
+  - url: https://www.societegenerale.com/sites/default/files/resultats-publication/fr/2025-07/t2-2025-communique-presse-fr.pdf
+    title: T2 2025 Résultats financiers - Communiqué de presse
+    type: press_release
+    period: 2025-Q2
+    fiscal_year: 2025
+    language: fr
+    date: 2025-07-31
+  - url: https://www.societegenerale.com/sites/default/files/resultats-publication/fr/2025-07/t2-2025-resultats-financiers-presentation.pdf
+    title: T2 2025 Résultats financiers - Présentation
+    type: results_presentation
+    period: 2025-Q2
+    fiscal_year: 2025
+    language: fr
+    date: 2025-07-31
+  # ---- fiscal 2025, page 2 -------------------------------------------------
+  - url: https://www.societegenerale.com/sites/default/files/resultats-publication/fr/2025-07/t2-2025-etats-financiers-fr.pdf
+    title: T2 2025 Résultats financiers - États Financiers
+    type: financial_statements
+    period: 2025-Q2
+    fiscal_year: 2025
+    language: fr
+    date: 2025-07-31
+  - url: https://www.societegenerale.com/sites/default/files/resultats_publication/fr/2025-04/t1-2025-Resultats-financiers-Presentation.pdf
+    title: T1 2025 Résultats financiers - Présentation
+    type: results_presentation
+    period: 2025-Q1
+    fiscal_year: 2025
+    language: fr
+    date: 2025-04-30
+  - url: https://www.societegenerale.com/sites/default/files/resultats_publication/fr/2025-04/t1-2025-Resultats-Financiers-Series-trimestrielles.xlsx
+    title: T1 2025 Résultats financiers - Séries trimestrielles
+    type: quarterly_series
+    period: 2025-Q1
+    fiscal_year: 2025
+    language: fr
+    date: 2025-04-30
+  - url: https://www.societegenerale.com/sites/default/files/resultats_publication/fr/2025-04/t1-2025-Communique-presse_FR.pdf
+    title: T1 2025 Résultats financiers - Communiqué de presse
+    type: press_release
+    period: 2025-Q1
+    fiscal_year: 2025
+    language: fr
+    date: 2025-04-30

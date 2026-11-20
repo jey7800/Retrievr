@@ -23,8 +23,8 @@ cost of a run must be capped.
 - **Cache and ledger**: validated outputs are cached on disk by SHA-256 of model + JSON
   schema + messages. `cache = "replay"` makes a miss an error (tests). Every call, cached
   or not, is written to the SQLite ledger (`llm_calls`: messages, response, tokens, cost,
-  latency, strategy). Cost comes from the endpoint (`usage.cost`) or a configured price
-  table. `max_cost_per_run_usd` (default 0.10) is checked before every network call.
+  latency, strategy), failed calls included with what they cost. Cost comes from the
+  endpoint (`usage.cost`) or a configured price table. `max_cost_per_run_usd` (default 0.10) is checked before every network call.
 - **Learning** (`retrievr.learn`), three steps, each a JSON object the engine checks:
   1. *Structure*: the LLM sees a page digest (document-link groups by DOM path with
      digits folded, navigation links, pruned HTML) and either asks to open listed links
@@ -33,8 +33,9 @@ cost of a run must be capped.
      builds a recipe, replays it and compares with the groups the LLM selected; missing
      or extra documents go back as a diagnostic (2 repairs at most).
   2. *Rules*: the LLM writes type, period and language rules and labels a sample of
-     documents (at most 150). The engine measures how often the rules reproduce the
-     labels (target 90 %) and asks for one repair otherwise. Labels become stored
+     documents (at most 80, halved once if the reply is truncated). The engine measures
+     how often the rules reproduce the labels (target 90 %) and asks for one repair
+     otherwise; a failed repair keeps the best rules so far. Labels become stored
      decisions for documents the rules leave undecided.
   3. *Request*: the request is compiled once into a `Filter` (types, excluded types,
      fiscal-year range, languages), cached in SQLite by hash of the request and year.

@@ -383,3 +383,35 @@ def test_label_normalization() -> None:
 )
 def test_issuer_from_url(url: str, slug: str) -> None:
     assert issuer_from_url(url) == slug
+
+
+def test_truncated_rules_reply_retries_with_fewer_documents(tmp_path: Path) -> None:
+    from retrievr.learn import Learner
+    from retrievr.llm import StructuredOutputError
+
+    seen: list[int] = []
+
+    def rules(messages: list[Message]) -> RulesReply:
+        seen.append(messages[-1]["content"].count('"id": "D'))
+        if len(seen) == 1:
+            raise StructuredOutputError("empty reply (finish_reason=length)")
+        return rules_answer(messages)
+
+    llm = default_llm(rules=rules)
+    original = Learner.__init__
+
+    def small_sample(self: Learner, *args: Any, **kwargs: Any) -> None:
+        original(self, *args, **kwargs)
+        self.sample_size = 4
+
+    import retrievr.learn as learn_module
+
+    monkey = pytest.MonkeyPatch()
+    monkey.setattr(learn_module, "MIN_RULES_SAMPLE", 2)
+    monkey.setattr(Learner, "__init__", small_sample)
+    try:
+        result = make(tmp_path, llm).learn(f"{SITE}/results?year=2025", years=[2024, 2025])
+    finally:
+        monkey.undo()
+    assert result.status == "learned", result.errors
+    assert seen[:2] == [4, 2]

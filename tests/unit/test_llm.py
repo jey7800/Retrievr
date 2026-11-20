@@ -202,3 +202,16 @@ def test_empty_reply_is_retried_then_reported() -> None:
     llm = _client(Endpoint(httpx.Response(200, json=empty), httpx.Response(200, json=empty)))
     with llm, pytest.raises(StructuredOutputError, match="finish_reason=length"):
         llm.structured(MESSAGES, Answer, step="t")
+
+
+def test_failed_calls_are_logged_and_paid() -> None:
+    empty = {
+        "choices": [{"message": {"content": ""}, "finish_reason": "length"}],
+        "usage": {"prompt_tokens": 10, "completion_tokens": 5, "cost": 0.002},
+    }
+    llm = _client(Endpoint(httpx.Response(200, json=empty), httpx.Response(200, json=empty)))
+    with llm, pytest.raises(StructuredOutputError):
+        llm.structured(MESSAGES, Answer, step="t")
+    (record,) = llm.ledger.calls
+    assert not record.cached and "empty reply" in record.response
+    assert llm.ledger.spent_usd == pytest.approx(0.004)

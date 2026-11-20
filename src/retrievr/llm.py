@@ -90,7 +90,11 @@ class CacheMissError(LLMError):
 
 
 class StructuredOutputError(LLMError):
-    pass
+    """The model never returned valid output. ``usage`` holds what the attempts cost."""
+
+    def __init__(self, message: str, usage: Mapping[str, Any] | None = None) -> None:
+        super().__init__(message)
+        self.usage: dict[str, Any] = dict(usage or {})
 
 
 @dataclass(frozen=True)
@@ -284,7 +288,17 @@ class LLMClient:
             raise CacheMissError(f"{step}: no cached response for key {key} (model {model})")
         self.ledger.check()
         started = self._clock()
-        value, entry = self._call(model, msgs, schema)
+        try:
+            value, entry = self._call(model, msgs, schema)
+        except StructuredOutputError as exc:
+            # Failed calls are paid and logged too (ledger and budget).
+            failed = {
+                "output": {"error": str(exc)},
+                "usage": exc.usage,
+                "latency_s": round(self._clock() - started, 3),
+            }
+            self._record(step, model, key, msgs, failed, cached=False)
+            raise
         entry["latency_s"] = round(self._clock() - started, 3)
         if self.cache is not None:
             self.cache.put(key, {**entry, "model": model, "schema": schema.__name__, "step": step})
@@ -368,7 +382,7 @@ class LLMClient:
             if not text:
                 reason = _finish_reason(data)
                 if attempt == 2:
-                    raise StructuredOutputError(f"empty reply (finish_reason={reason})")
+                    raise StructuredOutputError(f"empty reply (finish_reason={reason})", usage)
                 self.ledger.check()
                 convo = [
                     *convo,
@@ -384,7 +398,7 @@ class LLMClient:
             except (ValueError, ValidationError) as exc:
                 if attempt == 2:
                     raise StructuredOutputError(
-                        f"reply does not match {schema.__name__}: {exc}"
+                        f"reply does not match {schema.__name__}: {exc}", usage
                     ) from exc
                 self.ledger.check()
                 convo = [

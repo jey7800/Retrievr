@@ -58,7 +58,13 @@ from retrievr.classify import (
     needs_decision,
 )
 from retrievr.fetch import BlockedError, Fetcher, FetchError
-from retrievr.llm import UNTRUSTED_NOTICE, Message, StructuredLLM, untrusted
+from retrievr.llm import (
+    UNTRUSTED_NOTICE,
+    Message,
+    StructuredLLM,
+    StructuredOutputError,
+    untrusted,
+)
 from retrievr.recipe import (
     SCHEMA_VERSION,
     Cadence,
@@ -85,6 +91,7 @@ MAX_SNIPPETS_PER_PAGE = 12
 MAX_NAV_PER_PAGE = 60
 MAX_OPEN_PER_ROUND = 5
 RULES_AGREEMENT = 0.9
+MIN_RULES_SAMPLE = 30
 _YEAR_PLACEHOLDER = "{year}"
 
 
@@ -252,7 +259,7 @@ class Learner:
         max_open_rounds: int = 2,
         max_repairs: int = 2,
         max_rule_repairs: int = 1,
-        sample_size: int = 150,
+        sample_size: int = 80,
     ) -> None:
         self.fetcher = fetcher
         self.llm = llm
@@ -520,8 +527,9 @@ class Learner:
 
     # -- rules -------------------------------------------------------------------------
 
-    def sample(self, docs: Sequence[FoundDocument]) -> list[FoundDocument]:
-        if len(docs) <= self.sample_size:
+    def sample(self, docs: Sequence[FoundDocument], size: int | None = None) -> list[FoundDocument]:
+        size = size or self.sample_size
+        if len(docs) <= size:
             return list(docs)
         years = {str(y) for y in self.ctx.years or ()}
 
@@ -529,14 +537,14 @@ class Learner:
             blob = d.url + " " + " ".join(v or "" for v in d.fields.values())
             return any(y in blob for y in years) or d.params.get("year") in (self.ctx.years or ())
 
-        first = [d for d in docs if years and relevant(d)][: self.sample_size]
+        first = [d for d in docs if years and relevant(d)][:size]
         rest = [d for d in docs if d not in first]
-        return first + rest[: self.sample_size - len(first)]
+        return first + rest[: size - len(first)]
 
-    def learn_rules(self, structure: StructureResult) -> RulesResult:
-        docs = self.sample(structure.run.documents)
+    def _rules_prompt(
+        self, structure: StructureResult, docs: Sequence[FoundDocument]
+    ) -> tuple[list[Message], dict[str, FoundDocument]]:
         table, ids = document_table(docs)
-        by_id = dict(zip(ids, docs, strict=True))
         sources = "\n".join(f"- {s.url}" for s in structure.recipe.sources)
         user = (
             f"Issuer: {self.ctx.issuer}\nListing sources:\n{sources}\n"
@@ -548,9 +556,30 @@ class Learner:
             {"role": "system", "content": RULES_SYSTEM + taxonomy_text()},
             {"role": "user", "content": user},
         ]
+        return messages, dict(zip(ids, docs, strict=True))
+
+    def learn_rules(self, structure: StructureResult) -> RulesResult:
+        docs = self.sample(structure.run.documents)
+        messages, by_id = self._rules_prompt(structure, docs)
         best: RulesResult | None = None
-        for attempt in range(1, 2 + self.max_rule_repairs):
-            reply = self.llm.structured(messages, RulesReply, step="rules")
+        attempt = 0
+        shrunk = False
+        while attempt < 1 + self.max_rule_repairs:
+            attempt += 1
+            try:
+                reply = self.llm.structured(messages, RulesReply, step="rules")
+            except StructuredOutputError as exc:
+                if best is not None:
+                    log.info("rules repair failed (%s): keeping the best rules", exc)
+                    break
+                if shrunk or len(docs) <= MIN_RULES_SAMPLE:
+                    raise
+                # Usually a truncated reply: ask again about fewer documents.
+                shrunk = True
+                attempt -= 1
+                docs = self.sample(docs, max(MIN_RULES_SAMPLE, len(docs) // 2))
+                messages, by_id = self._rules_prompt(structure, docs)
+                continue
             rules, errors = rules_from_reply(reply)
             evaluation = evaluate_rules(
                 rules, reply.labels, by_id, structure.recipe.defaults.language

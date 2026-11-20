@@ -17,7 +17,15 @@ uv run python -m bench.capture --site airbus --url "https://www.airbus.com/en/in
 uv run python -m bench.run
 # live run (monthly drift measurement)
 uv run python -m bench.run --mode live
+# cold learning with an LLM (pages from snapshots, LLM over the network, cached)
+uv run --env-file .env python -m bench.run --mode cold --model openai/gpt-6-luna
 ```
+
+In `cold` mode the runner learns each site from scratch (no hand-written recipe), scores
+the learned recipe, and scores the three requests of the ground truth: each is compiled
+into a filter and applied to the ground truth (column *Requests*: share of exact
+matches). LLM responses are cached in `bench/.llm_cache/` (git-ignored), so a second run
+costs nothing.
 
 Metrics, per site:
 

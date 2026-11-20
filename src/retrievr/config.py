@@ -34,11 +34,47 @@ class OutputSettings(_Section):
     output_dir: Path = Path("downloads")
 
 
+StructuredMode = Literal["auto", "json_schema", "tools", "json_object"]
+CacheMode = Literal["use", "replay", "off"]
+
+
+class LLMSettings(_Section):
+    """Any OpenAI-compatible chat completions endpoint (configuration only)."""
+
+    base_url: str = "https://openrouter.ai/api/v1"
+    api_key_env: str = Field(default="RETRIEVR_LLM_API_KEY", min_length=1)
+    """Name of the environment variable holding the key (the key itself is never stored)."""
+    model_small: str = "openai/gpt-6-luna"
+    model_large: str = "openai/gpt-6-sol"
+    structured: StructuredMode = "auto"
+    """``auto``: json_schema, then a forced tool call, then json_object + validation."""
+    extra_body: dict[str, Any] = Field(
+        default_factory=lambda: {"provider": {"require_parameters": True}}
+    )
+    """Merged into every request body (provider routing, reasoning effort...)."""
+    temperature: float | None = None
+    max_output_tokens: int | None = Field(default=16000, gt=0)
+    timeout_s: float = Field(default=180.0, gt=0)
+    max_cost_per_run_usd: float = Field(default=0.10, ge=0)
+    prices: dict[str, tuple[float, float]] = {}
+    """USD per million tokens (input, output), used when the endpoint returns no cost."""
+    cache_dir: Path | None = None
+    """Response cache directory (default: ``<state_dir>/llm_cache``)."""
+    cache: CacheMode = "use"
+    """``use`` reads and writes the response cache, ``replay`` only reads it (a miss is an
+    error, used by tests), ``off`` disables it."""
+
+
+class StateSettings(_Section):
+    state_dir: Path = Path(".retrievr")
+    """Learned recipes, SQLite state (runs, LLM ledger, decisions) and the LLM cache."""
+
+
 class Settings(_Section):
     fetch: FetchSettings = FetchSettings()
     output: OutputSettings = OutputSettings()
-    llm: dict[str, Any] | None = None
-    """Accepted but not interpreted yet (LLM support comes in a later milestone)."""
+    llm: LLMSettings = LLMSettings()
+    state: StateSettings = StateSettings()
 
 
 def load_settings(path: Path | str | None = None) -> Settings:

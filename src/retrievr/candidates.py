@@ -1,12 +1,15 @@
 """Candidate extraction: document links plus their context, from an HTML page.
 
-Deterministic, never calls an LLM. HTML pruning for prompts comes with the LLM milestone.
+Deterministic, never calls an LLM. Also builds the compact page digest (document link
+groups, navigation links, pruned HTML) that the learner shows to the LLM.
 """
 
 from __future__ import annotations
 
+import re
+from collections import Counter
 from collections.abc import Collection
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from functools import lru_cache
 from typing import Any
 
@@ -15,9 +18,14 @@ from lxml import etree
 from lxml import html as lxml_html
 from lxml.cssselect import CSSSelector
 
-from retrievr.urls import normalize_url, path_extension, resolve_url
+from retrievr.urls import host_of, normalize_url, path_extension, resolve_url
 
 HtmlElement = Any  # lxml.html.HtmlElement (lxml ships no type stubs)
+
+DOCUMENT_EXTENSIONS = frozenset(
+    {"pdf", "xlsx", "xls", "xlsb", "xlsm", "csv", "zip", "xbri", "doc", "docx", "ppt", "pptx"}
+)
+"""File extensions treated as documents when a recipe declares none."""
 
 _HEADINGS_XPATH = (
     "preceding::*[self::h1 or self::h2 or self::h3 or self::h4 or self::h5 or self::h6][1]"
@@ -282,3 +290,153 @@ def _table_headers(a: HtmlElement, grids: dict[int, _Grid]) -> tuple[str | None,
 def to_string(el: HtmlElement) -> str:
     """Serialize an element (debug helper)."""
     return str(etree.tostring(el, encoding="unicode", method="html"))
+
+
+# -- page digest for prompts ---------------------------------------------------------
+
+_DIGITS = re.compile(r"\d+")
+_YEAR = re.compile(r"(?<!\d)(19|20)\d{2}(?!\d)")
+_NAV_WORDS = re.compile(
+    r"archive|result|report|financ|publication|document|quarter|annual|interim|investor|"
+    r"rapport|r[ée]sultat|semest|trimest|exercice|year|ann[ée]e|page|next|suivant|more|all|"
+    r"previous|older|take=|view",
+    re.IGNORECASE,
+)
+_PRUNE_TAGS = ("script", "style", "noscript", "svg", "iframe", "template", "link", "meta")
+_KEEP_ATTRS = ("id", "class", "href", "title", "rel", "role", "data-title", "aria-label")
+
+
+@dataclass
+class LinkGroup:
+    """Document links sharing a DOM path (digits folded, so per-year panels merge)."""
+
+    key: str
+    example_path: str
+    candidates: list[Candidate] = field(default_factory=list)
+    elements: list[HtmlElement] = field(default_factory=list)
+
+    @property
+    def extensions(self) -> Counter[str]:
+        return Counter(path_extension(c.url) for c in self.candidates)
+
+    @property
+    def hosts(self) -> set[str]:
+        return {host_of(c.url) for c in self.candidates}
+
+
+@dataclass(frozen=True)
+class NavLink:
+    url: str
+    text: str
+    score: int
+
+
+def group_document_links(
+    root: HtmlElement, base_url: str, extensions: Collection[str] = DOCUMENT_EXTENSIONS
+) -> list[LinkGroup]:
+    """Every document link of the page, grouped by folded DOM path, in page order."""
+    groups: dict[str, LinkGroup] = {}
+    seen: set[str] = set()
+    for a in _links(root, "a[href]", base_url, {e.lower() for e in extensions}):
+        cand = _candidate(
+            a,
+            base_url,
+            text_of(_row_element(a, normalize_url(resolve_url(a.get("href"), base_url)), base_url)),
+            None,
+            None,
+        )
+        if cand.normalized_url in seen:
+            continue
+        seen.add(cand.normalized_url)
+        key = _DIGITS.sub("N", cand.dom_path)
+        group = groups.setdefault(key, LinkGroup(key, cand.dom_path))
+        group.candidates.append(cand)
+        group.elements.append(a)
+    return list(groups.values())
+
+
+def site_domain(host: str) -> str:
+    """Registrable-ish domain used to tell "same site" links: the last two labels."""
+    labels = host.lower().split(".")
+    return ".".join(labels[-2:]) if len(labels) >= 2 else host.lower()
+
+
+def in_site(host: str, domain: str) -> bool:
+    host = host.lower()
+    return host == domain or host.endswith("." + domain)
+
+
+def entry_element(a: HtmlElement, base_url: str) -> HtmlElement:
+    """The "row" of a link: its largest ancestor that links to nothing else."""
+    return _row_element(a, normalize_url(resolve_url(a.get("href"), base_url)), base_url)
+
+
+def page_title(root: HtmlElement) -> str:
+    found = root.xpath("//title")
+    return text_of(found[0])[:150] if found else ""
+
+
+def navigation_links(
+    root: HtmlElement,
+    base_url: str,
+    domain: str,
+    *,
+    limit: int = 80,
+    extensions: Collection[str] = DOCUMENT_EXTENSIONS,
+) -> list[NavLink]:
+    """Links to other pages of the site (hosts under ``domain``), most promising first
+    (years, archives, paging)."""
+    exts = {e.lower() for e in extensions}
+    found: dict[str, NavLink] = {}
+    for order, a in enumerate(select(root, "a[href]")):
+        href = (a.get("href") or "").strip()
+        if not href or href.lower().startswith(("javascript:", "mailto:", "tel:", "#")):
+            continue
+        url = resolve_url(href, base_url)
+        if not in_site(host_of(url), domain) or path_extension(url) in exts:
+            continue
+        key = normalize_url(url)
+        if key == normalize_url(base_url) or key in found:
+            continue
+        text = " ".join((text_of(a) or a.get("title") or a.get("aria-label") or "").split())[:80]
+        blob = f"{text} {url}"
+        score = 2 * bool(_YEAR.search(blob)) + bool(_NAV_WORDS.search(blob))
+        score += 2 * (a.get("rel") == "next")
+        found[key] = NavLink(url, text, score * 10_000 - order)
+    ranked = sorted(found.values(), key=lambda n: -n.score)
+    return ranked[:limit]
+
+
+def pruned_html(el: HtmlElement, max_chars: int = 1200) -> str:
+    """Compact HTML of ``el`` for a prompt: no scripts or styles, few attributes, repeated
+    siblings reduced to two examples plus a count."""
+    clone = lxml_html.fromstring(etree.tostring(el))
+    for bad in clone.xpath("|".join(f".//{t}" for t in _PRUNE_TAGS)):
+        bad.getparent().remove(bad)
+    for node in list(clone.iter()):
+        if not isinstance(node.tag, str):
+            continue
+        for attr in list(node.attrib):
+            if attr not in _KEEP_ATTRS:
+                del node.attrib[attr]
+        if node.get("class"):
+            node.set("class", " ".join(node.get("class").split()[:3]))
+        _fold_siblings(node)
+    text = str(etree.tostring(clone, encoding="unicode", method="html"))
+    text = re.sub(r"\s+", " ", text)
+    return text if len(text) <= max_chars else text[:max_chars] + " ...(truncated)"
+
+
+def _fold_siblings(node: HtmlElement) -> None:
+    children = [c for c in node if isinstance(c.tag, str)]
+    if len(children) <= 3:
+        return
+    signature = Counter((c.tag, c.get("class")) for c in children)
+    for (tag, cls), count in signature.items():
+        if count <= 3:
+            continue
+        same = [c for c in children if (c.tag, c.get("class")) == (tag, cls)]
+        for extra in same[2:]:
+            node.remove(extra)
+        marker = etree.Comment(f" {count - 2} more <{tag}> siblings ")
+        same[1].addnext(marker)

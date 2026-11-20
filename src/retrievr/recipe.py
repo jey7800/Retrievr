@@ -21,7 +21,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator, model_valida
 
 from retrievr.candidates import Candidate, compile_selector, extract_candidates, parse_html, select
 from retrievr.classify import ClassifyRules, classify
-from retrievr.fetch import BlockedError, Fetcher, FetchError
+from retrievr.fetch import BlockedError, Fetcher, FetchError, HTTPStatusError
 from retrievr.urls import is_allowed, normalize_url, path_extension, resolve_url
 
 log = logging.getLogger("retrievr.recipe")
@@ -248,6 +248,8 @@ class FoundDocument:
     language: str | None
     score: float
     justification: str
+    fields: Mapping[str, str | None] = field(default_factory=dict, compare=False)
+    """Texts the classification rules read (link text, heading, table headers...)."""
 
 
 @dataclass(frozen=True)
@@ -296,6 +298,13 @@ def run_recipe(
                 result.status = "blocked"
                 result.errors.append(str(exc))
                 return result
+            except HTTPStatusError as exc:
+                if params and exc.status in (404, 410):
+                    # A year page that does not exist (yet): nothing listed for it.
+                    result.warnings.append(f"{source.id}: no listing for {params} ({exc})")
+                    continue
+                result.status = "error"
+                result.errors.append(f"{source.id}: {exc}")
             except FetchError as exc:
                 result.status = "error"
                 result.errors.append(f"{source.id}: {exc}")
@@ -387,4 +396,5 @@ def _to_document(
         language=cls.language,
         score=cls.score,
         justification="; ".join(cls.justification),
+        fields=cand.fields(),
     )

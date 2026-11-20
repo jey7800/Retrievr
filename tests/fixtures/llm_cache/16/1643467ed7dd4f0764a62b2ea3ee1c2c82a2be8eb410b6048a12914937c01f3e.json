@@ -1,0 +1,24 @@
+{
+ "cache_format": 1,
+ "output": {
+  "reasoning": "The document listing is paginated: the page exposes a “Dernière page” link for the same filtered 2025 results. Inspect that page to determine the complete listing and pagination before defining the recipe.",
+  "action": "open_pages",
+  "open_links": [
+   "P1.N3"
+  ],
+  "document_groups": [],
+  "sources": [],
+  "default_language": null
+ },
+ "usage": {
+  "input_tokens": 4067,
+  "output_tokens": 236,
+  "cost_usd": 0.00015894
+ },
+ "strategy": "json_schema",
+ "attempts": 1,
+ "latency_s": 4.047,
+ "model": "openai/gpt-6-luna",
+ "schema": "StructureReply",
+ "step": "structure"
+}

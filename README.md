@@ -3,7 +3,7 @@
 Find and download documents (PDF, XLSX…) from websites, such as the investor-relations
 pages of listed companies, with an LLM used **only when needed**.
 
-> Status: early development (deterministic core and benchmark). No LLM support yet.
+> Status: early development (deterministic core, benchmark, LLM learning).
 
 ## How it works
 
@@ -12,22 +12,39 @@ listings are, how to paginate and how to type each document. The engine replays 
 plain HTTP requests and rules, then downloads the files with integrity checks and
 deduplication, into a file tree with a `manifest.json`.
 
-```python
-from retrievr.config import load_settings
-from retrievr.download import Downloader
-from retrievr.fetch import Fetcher
-from retrievr.recipe import load_recipe, run_recipe
+On a new site, `learn` asks the LLM to understand the pages once and stores the recipe
+it proposes, after the engine has replayed and validated it. Later runs replay the
+recipe with no LLM call.
 
-settings = load_settings("retrievr.toml")  # or load_settings() for defaults
-recipe = load_recipe("recipes/societegenerale-ir@1.yaml")
-with Fetcher(settings.fetch) as fetcher:
-    result = run_recipe(recipe, fetcher, years=[2024, 2025])
-    outcomes = Downloader(fetcher, settings.output.output_dir).download_all(
-        recipe, result.documents
-    )
+```python
+from retrievr import Retrievr
+
+r = Retrievr("retrievr.toml", on_event=print)  # or Retrievr() for defaults
+result = r.learn("https://example-issuer.com/investors", "annual reports since 2024")
+print(result.status, len(result.documents))
+outcome = r.run("example-issuer")  # replays the active recipe, downloads new files
 ```
 
-These module-level functions are internal for now; the public `Retrievr` API comes later.
+## LLM configuration
+
+Any OpenAI-compatible endpoint, by configuration only. The API key is read from the
+environment variable named by `api_key_env` (put it in a git-ignored `.env` and run with
+`uv run --env-file .env ...`).
+
+```toml
+[llm]
+base_url    = "https://openrouter.ai/api/v1"
+api_key_env = "RETRIEVR_LLM_API_KEY"
+model_small = "openai/gpt-6-luna"
+structured  = "auto"   # json_schema -> forced tool call -> json_object
+max_cost_per_run_usd = 0.10
+
+[state]
+state_dir = ".retrievr"  # learned recipes, SQLite state, LLM response cache
+```
+
+Every LLM call is logged (prompt, response, tokens, cost) in the SQLite state, and
+responses are cached so that tests replay them offline.
 
 Output: `<output_dir>/<issuer>/<year>/<type>_<period>_<lang>.<ext>` plus
 `<output_dir>/manifest.json`.

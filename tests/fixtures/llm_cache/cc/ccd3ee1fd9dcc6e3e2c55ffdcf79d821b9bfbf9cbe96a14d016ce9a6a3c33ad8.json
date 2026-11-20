@@ -1,0 +1,24 @@
+{
+ "cache_format": 1,
+ "output": {
+  "types": [
+   "quarterly_series",
+   "quarterly_series_restated"
+  ],
+  "exclude_types": [],
+  "year_from": 2024,
+  "year_to": 2024,
+  "languages": null
+ },
+ "usage": {
+  "input_tokens": 1139,
+  "output_tokens": 98,
+  "cost_usd": 6.066e-05
+ },
+ "strategy": "json_schema",
+ "attempts": 1,
+ "latency_s": 2.672,
+ "model": "openai/gpt-6-luna",
+ "schema": "Filter",
+ "step": "filter"
+}

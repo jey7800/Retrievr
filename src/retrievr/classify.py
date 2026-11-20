@@ -1,20 +1,30 @@
 """Rule-based classification: document type, period and language.
 
 Rules are data (regular expressions declared in the recipe). The first matching rule
-wins. Candidates that no rule can type are left undecided (``type=None``, score 0);
-an LLM fallback for them comes in a later milestone.
+wins. Candidates that no rule can type are left undecided (``type=None``, score 0).
+
+The LLM fallback (:func:`classify_with_llm`) is a cold path: it only sees documents the
+rules leave undecided, and its decisions are stored so later runs do not ask again.
 """
 
 from __future__ import annotations
 
+import dataclasses
+import json
 import re
-from collections.abc import Mapping
+from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass, field
 from functools import cached_property
-from typing import Literal
+from typing import TYPE_CHECKING, Literal
 from urllib.parse import unquote, urlsplit
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+
+from retrievr.llm import UNTRUSTED_NOTICE, StructuredLLM, untrusted
+from retrievr.taxonomy import DocumentType, canonical_period, taxonomy_text
+
+if TYPE_CHECKING:
+    from retrievr.recipe import FoundDocument
 
 MAX_PATTERN_LENGTH = 500
 _ID = r"^[a-z][a-z0-9_]*$"
@@ -155,14 +165,19 @@ def classify(
     period = period_year = None
     for period_rule in rules.period:
         if m := period_rule.search(values):
-            period, period_year = normalize_period(m)
+            try:
+                period, period_year = normalize_period(m)
+            except (ValueError, IndexError):
+                continue  # e.g. a "q" group without a digit: try the next rule
             notes.append(f"period={period} by {period_rule.describe()}")
             break
 
     language = None
     for lang_rule in rules.language:
         if m := lang_rule.search(values):
-            language = lang_rule.language or m.group("lang").lower()
+            language = lang_rule.language or (m.group("lang") or "").lower() or None
+            if language is None:
+                continue
             notes.append(f"language={language} by {lang_rule.describe()}")
             break
     if language is None and default_language:
@@ -201,3 +216,157 @@ def _digit(value: str) -> str:
     if not digits:
         raise ValueError(f"no digit in period component {value!r}")
     return digits
+
+
+# -- LLM fallback ----------------------------------------------------------------------
+
+FALLBACK_BATCH = 50
+_TEXT_FIELDS = ("link_text", "title", "heading", "row_header", "column_header", "link_title")
+
+
+@dataclass(frozen=True)
+class Decision:
+    """Classification of one document decided outside the recipe rules."""
+
+    type: str | None
+    period: str | None
+    fiscal_year: int | None
+    language: str | None
+    source: str
+    """Who decided, e.g. ``llm:learn`` or ``llm:classify``."""
+
+
+class DocumentLabel(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    id: str
+    type: DocumentType
+    period: str | None
+    """2025-Q3, 2025-H1, 2025-FY or 2025; null when the document gives no period."""
+    language: str | None
+    """ISO 639-1 code of the document, or null."""
+
+    @field_validator("period")
+    @classmethod
+    def _canonical(cls, value: str | None) -> str | None:
+        return canonical_period(value)
+
+    @field_validator("language")
+    @classmethod
+    def _lang(cls, value: str | None) -> str | None:
+        value = (value or "").strip().lower()
+        return value if re.fullmatch(r"[a-z]{2,3}", value) else None
+
+    def decision(self, source: str) -> Decision:
+        year = int(self.period[:4]) if self.period else None
+        return Decision(self.type, self.period, year, self.language, source)
+
+
+class LabelBatch(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    labels: list[DocumentLabel]
+
+
+def describe_document(doc_id: str, doc: FoundDocument) -> dict[str, str]:
+    """Compact, prompt-friendly view of a document (texts that rules can read)."""
+    path = unquote(urlsplit(doc.url).path)
+    out = {"id": doc_id, "file": path.rsplit("/", 1)[-1][:120], "path": path[-160:]}
+    query = urlsplit(doc.url).query
+    if query:
+        out["query"] = unquote(query)[:120]
+    seen = {out["file"]}
+    for name in _TEXT_FIELDS:
+        value = " ".join((doc.fields.get(name) or "").split())[:160]
+        if value and value not in seen:
+            out[name] = value
+            seen.add(value)
+    context = " ".join((doc.fields.get("context") or "").split())
+    if context and context not in seen:
+        out["context"] = context[:200]
+    return out
+
+
+def document_table(docs: Sequence[FoundDocument], prefix: str = "D") -> tuple[str, list[str]]:
+    """JSON lines describing ``docs`` and the ids used for them."""
+    ids = [f"{prefix}{i + 1}" for i in range(len(docs))]
+    lines = [
+        json.dumps(describe_document(i, d), ensure_ascii=False)
+        for i, d in zip(ids, docs, strict=True)
+    ]
+    return "\n".join(lines), ids
+
+
+FALLBACK_SYSTEM = f"""You classify documents listed on investor-relations web pages.
+For each document, give its type, the period it covers and its language, from its file
+name, link text, headings and table headers. Use only the listed type ids.
+{UNTRUSTED_NOTICE}
+
+"""
+
+
+def classify_with_llm(
+    llm: StructuredLLM,
+    docs: Sequence[FoundDocument],
+    *,
+    issuer: str,
+    step: str = "classify",
+    batch_size: int = FALLBACK_BATCH,
+) -> dict[str, Decision]:
+    """Ask the LLM for the documents the rules could not fully classify."""
+    decisions: dict[str, Decision] = {}
+    for start in range(0, len(docs), batch_size):
+        batch = list(docs[start : start + batch_size])
+        table, ids = document_table(batch)
+        messages = [
+            {"role": "system", "content": FALLBACK_SYSTEM + taxonomy_text()},
+            {
+                "role": "user",
+                "content": f"Issuer: {issuer}\nGive one label per document id.\n"
+                + untrusted("documents", table),
+            },
+        ]
+        reply = llm.structured(messages, LabelBatch, step=step)
+        by_id = {label.id: label for label in reply.labels}
+        for doc_id, doc in zip(ids, batch, strict=True):
+            if (label := by_id.get(doc_id)) is not None:
+                decisions[doc.normalized_url] = label.decision(f"llm:{step}")
+    return decisions
+
+
+def needs_decision(doc: FoundDocument) -> bool:
+    return doc.type is None or doc.period is None
+
+
+def apply_decisions(
+    docs: Iterable[FoundDocument], decisions: Mapping[str, Decision]
+) -> list[FoundDocument]:
+    """Fill what the rules left undecided; rules always win where they decided."""
+    out = []
+    for doc in docs:
+        dec = decisions.get(doc.normalized_url)
+        if dec is None or (not needs_decision(doc) and doc.language is not None):
+            out.append(doc)
+            continue
+        changes: dict[str, object] = {}
+        notes = []
+        if doc.type is None and dec.type is not None:
+            changes["type"] = dec.type
+            changes["score"] = 0.8
+            notes.append(f"type={dec.type} by {dec.source}")
+        if doc.period is None and dec.period is not None:
+            changes["period"] = dec.period
+            changes["fiscal_year"] = dec.fiscal_year
+            notes.append(f"period={dec.period} by {dec.source}")
+        if doc.language is None and dec.language is not None:
+            changes["language"] = dec.language
+            notes.append(f"language={dec.language} by {dec.source}")
+        if notes:
+            changes["justification"] = "; ".join(
+                [
+                    *(p for p in doc.justification.split("; ") if p != "type undecided by rules"),
+                    *notes,
+                ]
+            )
+        out.append(dataclasses.replace(doc, **changes) if changes else doc)  # type: ignore[arg-type]
+    return out

@@ -10,3 +10,8 @@ build/
 downloads/
 bench/snapshots/*/pages/
 bench/results/
+
+# Local secrets (LLM API key)
+.env
+bench/.llm_cache/
+.retrievr/

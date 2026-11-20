@@ -1,0 +1,318 @@
+{
+ "cache_format": 1,
+ "output": {
+  "labels": [
+   {
+    "id": "D1",
+    "type": "fixed_income_call_transcript",
+    "period": "2022-Q1",
+    "language": "en"
+   },
+   {
+    "id": "D2",
+    "type": "analyst_call_transcript",
+    "period": "2021-Q4",
+    "language": "en"
+   },
+   {
+    "id": "D3",
+    "type": "fixed_income_call_transcript",
+    "period": "2021-Q4",
+    "language": "en"
+   },
+   {
+    "id": "D4",
+    "type": "quarterly_report",
+    "period": "2021-Q3",
+    "language": "en"
+   },
+   {
+    "id": "D5",
+    "type": "analyst_call_transcript",
+    "period": "2021-Q3",
+    "language": "en"
+   },
+   {
+    "id": "D6",
+    "type": "fixed_income_call_transcript",
+    "period": "2021-Q3",
+    "language": "en"
+   },
+   {
+    "id": "D7",
+    "type": "half_year_report",
+    "period": "2021-H1",
+    "language": "en"
+   },
+   {
+    "id": "D8",
+    "type": "analyst_call_transcript",
+    "period": "2021-Q2",
+    "language": "en"
+   },
+   {
+    "id": "D9",
+    "type": "fixed_income_call_transcript",
+    "period": "2021-Q2",
+    "language": "en"
+   },
+   {
+    "id": "D10",
+    "type": "financial_data_supplement",
+    "period": "2021-Q1",
+    "language": "en"
+   },
+   {
+    "id": "D11",
+    "type": "financial_data_supplement",
+    "period": "2021-Q1",
+    "language": "en"
+   },
+   {
+    "id": "D12",
+    "type": "quarterly_report",
+    "period": "2021-Q1",
+    "language": "en"
+   },
+   {
+    "id": "D13",
+    "type": "financial_data_supplement",
+    "period": "2020-Q4",
+    "language": "en"
+   },
+   {
+    "id": "D14",
+    "type": "financial_data_supplement",
+    "period": "2020-Q4",
+    "language": "en"
+   },
+   {
+    "id": "D15",
+    "type": "financial_data_supplement",
+    "period": "2020-Q3",
+    "language": "en"
+   },
+   {
+    "id": "D16",
+    "type": "press_release",
+    "period": "2020-Q2",
+    "language": "en"
+   },
+   {
+    "id": "D17",
+    "type": "financial_data_supplement",
+    "period": "2020-Q2",
+    "language": "en"
+   },
+   {
+    "id": "D18",
+    "type": "financial_data_supplement",
+    "period": "2020-Q2",
+    "language": "en"
+   },
+   {
+    "id": "D19",
+    "type": "half_year_report",
+    "period": "2020-H1",
+    "language": "en"
+   },
+   {
+    "id": "D20",
+    "type": "press_release",
+    "period": "2020-Q1",
+    "language": "en"
+   },
+   {
+    "id": "D21",
+    "type": "financial_data_supplement",
+    "period": "2019-Q3",
+    "language": "en"
+   },
+   {
+    "id": "D22",
+    "type": "press_release",
+    "period": "2019-Q1",
+    "language": null
+   },
+   {
+    "id": "D23",
+    "type": "press_release",
+    "period": "2018-Q2",
+    "language": null
+   },
+   {
+    "id": "D24",
+    "type": "fixed_income_presentation",
+    "period": "2016-Q1",
+    "language": "en"
+   },
+   {
+    "id": "D25",
+    "type": "press_release",
+    "period": "2015-FY",
+    "language": "en"
+   },
+   {
+    "id": "D26",
+    "type": "press_release",
+    "period": "2015-FY",
+    "language": "en"
+   },
+   {
+    "id": "D27",
+    "type": "press_release",
+    "period": "2014-FY",
+    "language": "en"
+   },
+   {
+    "id": "D28",
+    "type": "press_release",
+    "period": "2013-FY",
+    "language": "en"
+   },
+   {
+    "id": "D29",
+    "type": "press_release",
+    "period": "2012-FY",
+    "language": "en"
+   },
+   {
+    "id": "D30",
+    "type": "press_release",
+    "period": "2012-FY",
+    "language": "en"
+   },
+   {
+    "id": "D31",
+    "type": "press_release",
+    "period": "2012-Q2",
+    "language": "en"
+   },
+   {
+    "id": "D32",
+    "type": "press_release",
+    "period": "2011-FY",
+    "language": "en"
+   },
+   {
+    "id": "D33",
+    "type": "analyst_call_transcript",
+    "period": "2011-FY",
+    "language": "en"
+   },
+   {
+    "id": "D34",
+    "type": "analyst_call_transcript",
+    "period": "2011-FY",
+    "language": "en"
+   },
+   {
+    "id": "D35",
+    "type": "press_release",
+    "period": "2011-Q3",
+    "language": "en"
+   },
+   {
+    "id": "D36",
+    "type": "press_release",
+    "period": "2010-FY",
+    "language": "en"
+   },
+   {
+    "id": "D37",
+    "type": "press_release",
+    "period": "2010-FY",
+    "language": "en"
+   },
+   {
+    "id": "D38",
+    "type": "analyst_call_transcript",
+    "period": "2010-FY",
+    "language": "en"
+   },
+   {
+    "id": "D39",
+    "type": "press_release",
+    "period": "2009-FY",
+    "language": "en"
+   },
+   {
+    "id": "D40",
+    "type": "analyst_call_transcript",
+    "period": "2009-FY",
+    "language": "en"
+   },
+   {
+    "id": "D41",
+    "type": "press_release",
+    "period": "2009-Q3",
+    "language": null
+   },
+   {
+    "id": "D42",
+    "type": "press_release",
+    "period": "2008-FY",
+    "language": "en"
+   },
+   {
+    "id": "D43",
+    "type": "press_release",
+    "period": "2008-FY",
+    "language": null
+   },
+   {
+    "id": "D44",
+    "type": "analyst_call_transcript",
+    "period": "2008-FY",
+    "language": "en"
+   },
+   {
+    "id": "D45",
+    "type": "press_release",
+    "period": "2008-Q2",
+    "language": null
+   },
+   {
+    "id": "D46",
+    "type": "press_release",
+    "period": "2007-FY",
+    "language": "en"
+   },
+   {
+    "id": "D47",
+    "type": "financial_data_supplement",
+    "period": "2007-Q4",
+    "language": "en"
+   },
+   {
+    "id": "D48",
+    "type": "analyst_call_transcript",
+    "period": "2007-FY",
+    "language": "en"
+   },
+   {
+    "id": "D49",
+    "type": "press_release",
+    "period": "2007-Q3",
+    "language": null
+   },
+   {
+    "id": "D50",
+    "type": "financial_data_supplement",
+    "period": "2007-Q3",
+    "language": "en"
+   }
+  ]
+ },
+ "usage": {
+  "input_tokens": 7403,
+  "output_tokens": 1662,
+  "cost_usd": 0.0017563
+ },
+ "strategy": "json_schema",
+ "attempts": 1,
+ "latency_s": 11.078,
+ "model": "openai/gpt-6-luna",
+ "schema": "LabelBatch",
+ "step": "classify"
+}

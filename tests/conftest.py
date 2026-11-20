@@ -5,6 +5,7 @@ from __future__ import annotations
 import io
 import zipfile
 from collections.abc import Iterator
+from contextlib import contextmanager
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -118,7 +119,7 @@ class SiteSnapshot:
             return httpx.Response(
                 200, content=pdf_bytes(key), headers={"content-type": "application/pdf"}
             )
-        if ext == "xlsx":
+        if ext in ("xlsx", "xlsb"):
             return httpx.Response(
                 200,
                 content=xlsx_bytes(key),
@@ -133,7 +134,14 @@ class SiteSnapshot:
 
 @pytest.fixture
 def sg_site() -> Iterator[SiteSnapshot]:
-    snap = SiteSnapshot.load("societegenerale")
+    with serve_site("societegenerale") as snap:
+        yield snap
+
+
+@contextmanager
+def serve_site(name: str) -> Iterator[SiteSnapshot]:
+    """Serve tests/fixtures/<name>/ through respx for the duration of the block."""
+    snap = SiteSnapshot.load(name)
     with respx.mock(assert_all_called=False) as router:
         router.route().mock(side_effect=snap.handler)
         yield snap

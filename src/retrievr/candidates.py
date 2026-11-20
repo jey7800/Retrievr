@@ -5,7 +5,7 @@ Deterministic, never calls an LLM. HTML pruning for prompts comes with the LLM m
 
 from __future__ import annotations
 
-from collections.abc import Collection, Iterable
+from collections.abc import Collection
 from dataclasses import dataclass
 from functools import lru_cache
 from typing import Any
@@ -35,6 +35,25 @@ class Candidate:
     """Text of the item (or of the closest row-like ancestor) the link belongs to."""
     heading: str | None
     dom_path: str
+    link_title: str | None = None
+    """The link's ``title`` attribute."""
+    row_header: str | None = None
+    """Table context: first cell of the link's row, carried down over blank cells."""
+    column_header: str | None = None
+    """Table context: header cell above the link's column (colspan/rowspan aware)."""
+
+    def fields(self) -> dict[str, str | None]:
+        """Named texts that classification rules can target."""
+        return {
+            "title": self.title,
+            "link_text": self.link_text,
+            "link_title": self.link_title,
+            "context": self.context_text,
+            "heading": self.heading,
+            "row_header": self.row_header,
+            "column_header": self.column_header,
+            "text": f"{self.title} {self.context_text}",
+        }
 
 
 @lru_cache(maxsize=256)
@@ -79,7 +98,7 @@ def dom_path(el: HtmlElement) -> str:
 
 def nearest_heading(el: HtmlElement) -> str | None:
     found = el.xpath(_HEADINGS_XPATH)
-    return text_of(found[0]) or None if found else None
+    return (text_of(found[0]) or None) if found else None
 
 
 def extract_candidates(
@@ -91,6 +110,7 @@ def extract_candidates(
     link: str = "a[href]",
     title: str | None = None,
     extensions: Collection[str] | None = None,
+    table_context: bool = False,
 ) -> list[Candidate]:
     """Extract document links from ``root``.
 
@@ -100,62 +120,55 @@ def extract_candidates(
     - ``link``: CSS selector of the link element (relative to item or container).
     - ``title``: CSS selector of the title, relative to the item.
     - ``extensions``: keep only links whose path ends with one of these extensions.
+    - ``table_context``: for links inside a table cell, also read the row header and
+      the column header.
     """
     scopes = select(root, container) if container else [root]
     exts = {e.lower().lstrip(".") for e in extensions} if extensions else None
+    grids: dict[int, _Grid] | None = {} if table_context else None
     out: list[Candidate] = []
     for scope in scopes:
         if item:
             for item_el in select(scope, item):
-                out.extend(_from_item(item_el, base_url, link, title, exts))
+                context = text_of(item_el)
+                title_text = None
+                if title:
+                    matches = select(item_el, title)
+                    title_text = text_of(matches[0]) if matches else None
+                for a in _links(item_el, link, base_url, exts):
+                    out.append(_candidate(a, base_url, context, title_text, grids))
         else:
-            out.extend(_from_scope(scope, base_url, link, exts))
+            for a in _links(scope, link, base_url, exts):
+                own = normalize_url(resolve_url(a.get("href"), base_url))
+                context = text_of(_row_element(a, own, base_url))
+                out.append(_candidate(a, base_url, context, None, grids))
     return out
 
 
-def _from_item(
-    item_el: HtmlElement,
+def _candidate(
+    a: HtmlElement,
     base_url: str,
-    link: str,
-    title: str | None,
-    exts: set[str] | None,
-) -> Iterable[Candidate]:
-    context = text_of(item_el)
-    title_text = None
-    if title:
-        matches = select(item_el, title)
-        title_text = text_of(matches[0]) if matches else None
-    for a in _links(item_el, link, base_url, exts):
-        url = resolve_url(a.get("href"), base_url)
-        link_text = text_of(a)
-        yield Candidate(
-            url=url,
-            normalized_url=normalize_url(url),
-            link_text=link_text,
-            title=title_text or a.get("data-title") or link_text or context,
-            context_text=context,
-            heading=nearest_heading(a),
-            dom_path=dom_path(a),
-        )
-
-
-def _from_scope(
-    scope: HtmlElement, base_url: str, link: str, exts: set[str] | None
-) -> Iterable[Candidate]:
-    for a in _links(scope, link, base_url, exts):
-        url = resolve_url(a.get("href"), base_url)
-        normalized = normalize_url(url)
-        link_text = text_of(a)
-        context = text_of(_row_element(a, normalized, base_url))
-        yield Candidate(
-            url=url,
-            normalized_url=normalized,
-            link_text=link_text,
-            title=link_text or a.get("data-title") or context,
-            context_text=context,
-            heading=nearest_heading(a),
-            dom_path=dom_path(a),
-        )
+    context: str,
+    title_text: str | None,
+    grids: dict[int, _Grid] | None,
+) -> Candidate:
+    url = resolve_url(a.get("href"), base_url)
+    link_text = text_of(a)
+    row_header = column_header = None
+    if grids is not None:
+        row_header, column_header = _table_headers(a, grids)
+    return Candidate(
+        url=url,
+        normalized_url=normalize_url(url),
+        link_text=link_text,
+        title=title_text or a.get("data-title") or link_text or context,
+        context_text=context,
+        heading=nearest_heading(a),
+        dom_path=dom_path(a),
+        link_title=" ".join((a.get("title") or "").split()) or None,
+        row_header=row_header,
+        column_header=column_header,
+    )
 
 
 def _links(
@@ -186,6 +199,84 @@ def _row_element(a: HtmlElement, own_url: str, base_url: str) -> HtmlElement:
                 return best
         best = anc
     return best
+
+
+@dataclass
+class _Grid:
+    """Cell positions of a table, with row and column spans expanded.
+
+    Dictionaries are keyed by ``id()`` of lxml elements. lxml creates element proxies
+    on demand and an ``id`` can be reused once its proxy is gone, so the grid keeps a
+    reference to the table and to every cell for as long as it is in use.
+    """
+
+    table: HtmlElement
+    cells: dict[tuple[int, int], HtmlElement]
+    positions: dict[int, tuple[int, int]]
+    header_row: int | None
+
+
+def _own_rows(table: HtmlElement) -> list[HtmlElement]:
+    """Rows of ``table`` itself, excluding rows of nested tables."""
+    return [tr for tr in table.iter("tr") if next(tr.iterancestors("table"), None) is table]
+
+
+def _span(cell: HtmlElement, attr: str) -> int:
+    try:
+        return max(1, min(int(cell.get(attr) or 1), 100))
+    except ValueError:
+        return 1
+
+
+def _build_grid(table: HtmlElement) -> _Grid:
+    cells: dict[tuple[int, int], HtmlElement] = {}
+    positions: dict[int, tuple[int, int]] = {}
+    header_row = None
+    for r, tr in enumerate(_own_rows(table)):
+        row_cells = [c for c in tr if isinstance(c.tag, str) and c.tag in ("td", "th")]
+        if (
+            header_row is None
+            and row_cells
+            and (tr.getparent().tag == "thead" or all(c.tag == "th" for c in row_cells))
+        ):
+            header_row = r
+        col = 0
+        for cell in row_cells:
+            while (r, col) in cells:
+                col += 1
+            positions[id(cell)] = (r, col)
+            for dr in range(_span(cell, "rowspan")):
+                for dc in range(_span(cell, "colspan")):
+                    cells[(r + dr, col + dc)] = cell
+            col += _span(cell, "colspan")
+    return _Grid(table, cells, positions, header_row)
+
+
+def _table_headers(a: HtmlElement, grids: dict[int, _Grid]) -> tuple[str | None, str | None]:
+    cell = next((e for e in a.iterancestors() if e.tag in ("td", "th")), None)
+    table = next(a.iterancestors("table"), None)
+    if cell is None or table is None:
+        return None, None
+    grid = grids.get(id(table))
+    if grid is None:
+        grid = grids[id(table)] = _build_grid(table)
+    if id(cell) not in grid.positions:
+        return None, None
+    row, col = grid.positions[id(cell)]
+    column_header = None
+    if grid.header_row is not None and grid.header_row != row:
+        header = grid.cells.get((grid.header_row, col))
+        column_header = (text_of(header) or None) if header is not None else None
+    row_header = None
+    first_data_row = -1 if grid.header_row is None else grid.header_row
+    for r in range(row, first_data_row, -1):
+        first = grid.cells.get((r, 0))
+        if first is None or first is cell:
+            break
+        if text := text_of(first):
+            row_header = text
+            break
+    return row_header, column_header
 
 
 def to_string(el: HtmlElement) -> str:

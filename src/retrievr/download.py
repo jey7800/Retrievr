@@ -35,6 +35,7 @@ MAGIC: dict[str, tuple[bytes, ...]] = {
     "pdf": (b"%PDF-",),
     "xlsx": _ZIP,
     "xlsm": _ZIP,
+    "xlsb": _ZIP,
     "docx": _ZIP,
     "pptx": _ZIP,
     "zip": _ZIP,
@@ -43,7 +44,13 @@ MAGIC: dict[str, tuple[bytes, ...]] = {
     "ppt": _OLE,
 }
 _HTML_TYPES = ("text/html", "application/xhtml+xml")
-_OOXML_MAIN_PART = {"xlsx": "xl/", "xlsm": "xl/", "docx": "word/", "pptx": "ppt/"}
+_OOXML_MAIN_PART = {
+    "xlsx": "xl/",
+    "xlsm": "xl/",
+    "xlsb": "xl/",
+    "docx": "word/",
+    "pptx": "ppt/",
+}
 _UNSAFE = re.compile(r"[^A-Za-z0-9_-]+")
 
 

@@ -177,3 +177,14 @@ def test_settings_reject_unknown_keys(tmp_path: Path) -> None:
     path.write_text("[fetch]\nstealth = true\n", encoding="utf-8")
     with pytest.raises(pydantic.ValidationError):
         load_settings(path)
+
+
+def test_xlsb_is_checked_like_ooxml(
+    site: respx.MockRouter, make_fetcher: Any, recipe: Recipe, tmp_path: Path
+) -> None:
+    site.get(SITE + "/files/a.xlsb").respond(200, content=xlsx_bytes("binary workbook"))
+    site.get(SITE + "/files/b.xlsb").respond(200, content=pdf_bytes("not a workbook"))
+    outcomes = Downloader(make_fetcher(), tmp_path).download_all(
+        recipe, [_doc("a.xlsb"), _doc("b.xlsb", period="2025-Q3")]
+    )
+    assert [o.status for o in outcomes] == ["downloaded", "rejected"]

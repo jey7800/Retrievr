@@ -26,7 +26,7 @@ from retrievr.urls import is_allowed, normalize_url, path_extension, resolve_url
 
 log = logging.getLogger("retrievr.recipe")
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 _SLUG = r"^[a-z0-9][a-z0-9-]*$"
 _PLACEHOLDER = re.compile(r"\{([a-z_][a-z0-9_]*)\}")
 
@@ -86,6 +86,8 @@ class ItemsSpec(_Model):
     title: str | None = None
     date: DateSpec | None = None
     extensions: list[str] | None = None
+    table_context: bool = False
+    """Schema v2: read row and column headers of links inside table cells."""
 
     @field_validator("container", "item", "link", "title")
     @classmethod
@@ -168,7 +170,7 @@ class Provenance(_Model):
 
 
 class Recipe(_Model):
-    schema_version: Literal[1]
+    schema_version: Literal[1, 2]
     recipe: str = Field(pattern=_SLUG)
     version: int = Field(ge=1)
     issuer: str = Field(pattern=_SLUG)
@@ -202,7 +204,16 @@ class Recipe(_Model):
             probe = _PLACEHOLDER.sub("2000", source.url)
             if not is_allowed(probe, self.allowed_domains):
                 raise ValueError(f"source {source.id!r} URL is outside allowed_domains")
+        if self.schema_version == 1:
+            self._check_v1_subset()
         return self
+
+    def _check_v1_subset(self) -> None:
+        """Schema v1 recipes cannot use features added in v2."""
+        if any(s.items.table_context for s in self.sources):
+            raise ValueError("items.table_context requires schema_version 2")
+        if not all(rule.uses_v1_targets_only for rule in self.classify.all_rules()):
+            raise ValueError("rule targets other than url/text/any require schema_version 2")
 
     @property
     def key(self) -> str:
@@ -321,6 +332,7 @@ def _run_listing(
             link=source.items.link,
             title=source.items.title,
             extensions=source.items.extensions,
+            table_context=source.items.table_context,
         )
         result.pages.append(PageVisit(source.id, url, page.final_url, page.status, len(candidates)))
         for cand in candidates:
@@ -352,9 +364,11 @@ def _to_document(
     page_url: str,
     cand: Candidate,
 ) -> FoundDocument:
-    text = f"{cand.title} {cand.context_text}"
     cls = classify(
-        recipe.classify, url=cand.url, text=text, default_language=recipe.defaults.language
+        recipe.classify,
+        url=cand.url,
+        fields=cand.fields(),
+        default_language=recipe.defaults.language,
     )
     doc_date = source.items.date.parse(cand.context_text) if source.items.date else None
     fiscal_year = cls.period_year or params.get("year") or (doc_date.year if doc_date else None)

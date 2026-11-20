@@ -78,3 +78,42 @@ def test_extract_without_item_uses_row_heuristic() -> None:
 def test_invalid_selector_is_rejected() -> None:
     with pytest.raises(ValueError, match="invalid CSS selector"):
         compile_selector("li[[")
+
+
+TABLE = b"""<html><body>
+<h2>2025</h2>
+<table>
+  <thead><tr><th></th><th>Releases</th><th colspan="2">Presentations</th></tr></thead>
+  <tbody>
+    <tr><td>Q2</td><td><a href="/r2.pdf">PDF</a></td>
+        <td><a href="/p2.pdf" title="  Q2   deck ">PDF</a></td><td>-</td></tr>
+    <tr><td></td><td></td><td colspan="2"><a href="/fi2.pdf">Fixed income</a></td></tr>
+    <tr><td rowspan="2">Q1</td><td><a href="/r1.pdf">PDF</a></td><td></td><td></td></tr>
+    <tr><td><table><tr><td><a href="/nested.pdf">n</a></td></tr></table></td>
+        <td><a href="/p1.pdf">PDF</a></td><td></td></tr>
+  </tbody>
+</table>
+<p><a href="/outside.pdf">outside</a></p>
+</body></html>"""
+
+
+def test_table_context_reads_row_and_column_headers() -> None:
+    cands = extract_candidates(
+        parse_html(TABLE), "https://ir.example.com/", extensions=["pdf"], table_context=True
+    )
+    ctx = {c.url.rsplit("/", 1)[-1]: (c.row_header, c.column_header) for c in cands}
+    assert ctx["r2.pdf"] == ("Q2", "Releases")
+    assert ctx["p2.pdf"] == ("Q2", "Presentations")
+    assert ctx["fi2.pdf"] == ("Q2", "Presentations")  # blank row header carried down
+    assert ctx["r1.pdf"] == ("Q1", "Releases")
+    assert ctx["p1.pdf"] == ("Q1", "Presentations")  # rowspan shifts the cells right
+    assert ctx["nested.pdf"] == (None, None)  # nested table without headers
+    assert ctx["outside.pdf"] == (None, None)
+    p2 = next(c for c in cands if c.url.endswith("/p2.pdf"))
+    assert p2.link_title == "Q2 deck"
+    assert p2.heading == "2025"
+
+
+def test_table_context_is_off_by_default() -> None:
+    cands = extract_candidates(parse_html(TABLE), "https://ir.example.com/", extensions=["pdf"])
+    assert all(c.row_header is None and c.column_header is None for c in cands)

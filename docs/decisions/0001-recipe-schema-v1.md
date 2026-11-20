@@ -1,6 +1,6 @@
 # 0001 — Recipe schema v1
 
-Date: 2026-11-20 · Status: accepted
+Date: 2026-11-20 · Status: accepted (extended by 0004)
 
 ## Context
 

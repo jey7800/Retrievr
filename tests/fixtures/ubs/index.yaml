@@ -1,0 +1,15 @@
+pages:
+- url: https://www.ubs.com/global/en/investor-relations/financial-information/quarterly-reporting/qr-archive/qr-archive21-25.html
+  normalized_url: https://www.ubs.com/global/en/investor-relations/financial-information/quarterly-reporting/qr-archive/qr-archive21-25.html
+  file: pages/global-en-investor-relations-financial-information-quarterly-reporting-qr-archive-qr-archive21-25-html.html
+  status: 200
+  content_type: text/html;charset=utf-8
+  etag: W/"45dca-660b2535d21cf-gzip"
+  last_modified: null
+  sha256: 4a417f2aac1e5482d4a7db71f358721af0c7eaa549b3821d74270ab265d86426
+  captured_at: '2026-11-20T10:02:33+00:00'
+robots:
+  https://www.ubs.com:
+    status: 200
+    final_url: https://www.ubs.com/robots.txt
+    file: robots-www.ubs.com.txt

@@ -1,0 +1,44 @@
+# Hand-written recipe: quarterly reporting archive 2021-2025 (one static page).
+# Verified against the snapshot in tests/fixtures/ubs/ (2026-11-20).
+# The current year lives on the quarterly-reporting page itself; this recipe
+# covers the archive only.
+schema_version: 1
+recipe: ubs-ir
+version: 1
+issuer: ubs
+site: www.ubs.com
+allowed_domains:
+  - www.ubs.com
+fetch:
+  mode: http
+defaults:
+  language: en
+sources:
+  - id: quarterly-reporting-archive
+    kind: url_template
+    url: "https://www.ubs.com/global/en/investor-relations/financial-information/quarterly-reporting/qr-archive/qr-archive21-25.html"
+    items:
+      # Links are AEM ".file/<base64 path>/<name>.pdf" URLs; the readable file name
+      # is the last path segment and the quarter is also in "qr-shared/<year>/<nqyy>/".
+      container: "main"
+      link: "a[href]"
+      extensions: [pdf, xlsx]
+classify:
+  type:
+    - {pattern: 'media-release|mr-results', type: press_release}
+    - {pattern: 'fixed-income-presentation', type: fixed_income_presentation}
+    - {pattern: 'results-presentation', type: results_presentation}
+    - {pattern: 'earnings-call-remarks', type: analyst_call_transcript}
+    - {pattern: 'full-report', type: quarterly_report}
+  period:
+    - {pattern: '(?<![0-9a-z])(?P<q>[1-4])q(?P<year>\d{2})(?![0-9])'}
+  language:
+    - {pattern: '-(?P<lang>en|de)\.pdf$'}
+health:
+  anchors:
+    - https://www.ubs.com/global/en/investor-relations/financial-information/quarterly-reporting/qr-shared/2025/3q25/_jcr_content/root/contentarea/mainpar/toplevelgrid_copy_co/col_1/linklistreimagined_c/link_1319571161.629556051.file/PS9jb250ZW50L2RhbS9hc3NldHMvY2MvaW52ZXN0b3ItcmVsYXRpb25zL3F1YXJ0ZXJsaWVzLzIwMjUvM3EyNS8zcTI1LW1lZGlhLXJlbGVhc2UtZW4ucGRm/3q25-media-release-en.pdf
+  items_per_year: [10, 30]
+  cadence: {every: quarter, max_gap_days: 110}
+provenance:
+  method: hand_written
+  created_at: 2026-11-20

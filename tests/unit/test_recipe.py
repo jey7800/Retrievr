@@ -58,7 +58,7 @@ def test_minimal_recipe_validates() -> None:
     ("override", "message"),
     [
         ({"unknown_key": 1}, "Extra inputs"),
-        ({"schema_version": 2}, "schema_version"),
+        ({"schema_version": 3}, "schema_version"),
         ({"allowed_domains": ["other.example.com"]}, "allowed_domains"),
         (
             {"sources": [{"id": "s", "url": "https://evil.test/x"}]},
@@ -156,3 +156,42 @@ def test_run_never_follows_next_link_outside_domains(
     )
     assert result.status == "ok"
     assert len(result.pages) == 1
+
+
+def test_rule_can_target_joined_fields() -> None:
+    rules = ClassifyRules.model_validate(
+        {
+            "type": [{"pattern": "^releases$", "target": "column_header", "type": "press_release"}],
+            "period": [
+                {
+                    "pattern": r"^Q(?P<q>[1-4]) \| (?P<year>20\d{2})$",
+                    "target": ["row_header", "heading"],
+                }
+            ],
+        }
+    )
+    c = classify(
+        rules,
+        url="https://x/a.pdf",
+        fields={"column_header": "Releases", "row_header": "Q2", "heading": "2025"},
+    )
+    assert (c.type, c.period) == ("press_release", "2025-Q2")
+    assert "row_header+heading" in "; ".join(c.justification)
+
+
+@pytest.mark.parametrize(
+    "override",
+    [
+        {"sources": [{"id": "s", "url": SITE, "items": {"table_context": True}}]},
+        {"classify": {"type": [{"pattern": "x", "target": "column_header", "type": "t"}]}},
+    ],
+)
+def test_v2_features_need_schema_version_2(override: dict[str, Any]) -> None:
+    with pytest.raises(pydantic.ValidationError, match=r"requires? schema_version 2"):
+        recipe_from_mapping(_recipe(**override))
+    assert recipe_from_mapping(_recipe(schema_version=2, **override)).schema_version == 2
+
+
+def test_target_list_is_bounded() -> None:
+    with pytest.raises(pydantic.ValidationError, match="1 to 4 fields"):
+        ClassifyRules.model_validate({"type": [{"pattern": "x", "target": [], "type": "t"}]})

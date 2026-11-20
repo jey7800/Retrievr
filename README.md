@@ -18,7 +18,7 @@ from retrievr.download import Downloader
 from retrievr.fetch import Fetcher
 from retrievr.recipe import load_recipe, run_recipe
 
-settings = load_settings("retrievr.toml")          # or load_settings() for defaults
+settings = load_settings("retrievr.toml")  # or load_settings() for defaults
 recipe = load_recipe("recipes/societegenerale-ir@1.yaml")
 with Fetcher(settings.fetch) as fetcher:
     result = run_recipe(recipe, fetcher, years=[2024, 2025])

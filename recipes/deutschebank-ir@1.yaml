@@ -1,0 +1,53 @@
+# Hand-written recipe: quarterly results page (one static page, one table per year).
+# Verified against the snapshot in tests/fixtures/deutschebank/ (2026-11-20).
+schema_version: 2
+recipe: deutschebank-ir
+version: 1
+issuer: deutschebank
+site: investor-relations.db.com
+allowed_domains:
+  - investor-relations.db.com
+fetch:
+  mode: http
+defaults:
+  language: en                   # English pages; bilingual supplements are recorded as en
+sources:
+  - id: quarterly-results
+    kind: url_template
+    url: "https://investor-relations.db.com/reports-and-events/quarterly-results"
+    items:
+      # Each fiscal year is an <h2> followed by a table: columns are document
+      # categories, the first cell of each row names the quarter (blank on the
+      # second row of a quarter, so it is carried down). Link texts are often just
+      # "PDF"/"XLS", and the quarter is not always in the file name.
+      link: "table td a[href]"
+      extensions: [pdf, xlsx, xlsb]  # audio files (mp3) are out of scope
+      table_context: true
+classify:
+  type:
+    # Order matters: the first matching rule wins.
+    - {pattern: 'transcript\W+fixed\W+income', target: link_text, type: fixed_income_call_transcript}
+    - {pattern: 'transcript', target: [link_text, url], type: analyst_call_transcript}
+    - {pattern: 'fixed\W+income', target: [link_text, url], type: fixed_income_presentation}
+    - {pattern: '^financial data supplements?$', target: column_header, type: financial_data_supplement}
+    - {pattern: '^(ir )?releases?$', target: column_header, type: press_release}
+    - {pattern: '^(interim )?reports?$', target: column_header, type: quarterly_report}
+    - {pattern: '^presentations?$', target: column_header, type: results_presentation}
+  period:
+    # Row header then the year heading, e.g. "Q2 | 2025", "Q4/FY2017 | 2017",
+    # "4Q/FY2014 | 2014"; a row without a quarter keeps the year only.
+    - {pattern: '^Q(?P<q>[1-4])\b[^|]*\| (?P<year>(?:19|20)\d{2})$', target: [row_header, heading]}
+    - {pattern: '^(?P<q>[1-4])Q\b[^|]*\| (?P<year>(?:19|20)\d{2})$', target: [row_header, heading]}
+    - {pattern: '\| (?P<year>(?:19|20)\d{2})$', target: [row_header, heading]}
+health:
+  anchors:
+    - https://investor-relations.db.com/files/documents/quarterly-results/2025/Q3-2025-Media-Release.pdf?language_id=1
+    - https://investor-relations.db.com/files/documents/quarterly-results/2025/Deutsche-Bank-Q3-2025-Presentation.pdf?language_id=1
+  items_per_year: [15, 40]
+  cadence: {every: quarter, max_gap_days: 110}
+provenance:
+  method: hand_written
+  created_at: 2026-11-20
+  notes: >-
+    robots.txt answers 404 (allow all). Supplements are linked as PDF plus XLSB
+    (sometimes served with an .xlsx name).

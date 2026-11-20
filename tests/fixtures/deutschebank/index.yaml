@@ -1,0 +1,14 @@
+pages:
+- url: https://investor-relations.db.com/reports-and-events/quarterly-results
+  normalized_url: https://investor-relations.db.com/reports-and-events/quarterly-results
+  file: pages/reports-and-events-quarterly-results.html
+  status: 200
+  content_type: text/html;charset=UTF-8
+  etag: null
+  last_modified: null
+  sha256: 87684396d3885da63df9858ed54f8b2eb28ac5af9d092abd3ef889fe7a5cdf2b
+  captured_at: '2026-11-20T10:02:31+00:00'
+robots:
+  https://investor-relations.db.com:
+    status: 404
+    final_url: https://investor-relations.db.com/robots.txt

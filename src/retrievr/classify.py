@@ -8,6 +8,7 @@ an LLM fallback for them comes in a later milestone.
 from __future__ import annotations
 
 import re
+from collections.abc import Mapping
 from dataclasses import dataclass, field
 from functools import cached_property
 from typing import Literal
@@ -18,14 +19,41 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator, model_valida
 MAX_PATTERN_LENGTH = 500
 _ID = r"^[a-z][a-z0-9_]*$"
 
+FieldName = Literal[
+    "url",
+    "text",
+    "title",
+    "link_text",
+    "link_title",
+    "context",
+    "heading",
+    "row_header",
+    "column_header",
+]
+"""Texts a rule can read. ``url`` is the decoded URL path; ``text`` is title + context."""
+V1_TARGETS = frozenset({"url", "text", "any"})
+JOIN = " | "
+
 
 class _Rule(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
     pattern: str = Field(min_length=1, max_length=MAX_PATTERN_LENGTH)
-    target: Literal["url", "text", "any"] = "url"
-    """``url``: decoded URL path; ``text``: title and surrounding text; ``any``: both."""
+    target: Literal["any"] | FieldName | list[FieldName] = "url"
+    """One field, ``any`` (url, then text), or a list of fields searched as one string
+    joined with ``" | "`` (e.g. ``[row_header, heading]`` -> ``"Q2 | 2025"``)."""
     ignore_case: bool = True
+
+    @field_validator("target")
+    @classmethod
+    def _short_list(cls, value: str | list[str]) -> str | list[str]:
+        if isinstance(value, list) and not 1 <= len(value) <= 4:
+            raise ValueError("a target list holds 1 to 4 fields")
+        return value
+
+    @property
+    def uses_v1_targets_only(self) -> bool:
+        return isinstance(self.target, str) and self.target in V1_TARGETS
 
     @field_validator("pattern")
     @classmethod
@@ -40,15 +68,19 @@ class _Rule(BaseModel):
     def regex(self) -> re.Pattern[str]:
         return re.compile(self.pattern, re.IGNORECASE if self.ignore_case else 0)
 
-    def search(self, url_text: str, text: str) -> re.Match[str] | None:
-        if self.target in ("url", "any") and (m := self.regex.search(url_text)):
-            return m
-        if self.target in ("text", "any") and (m := self.regex.search(text)):
-            return m
-        return None
+    def search(self, fields: Mapping[str, str | None]) -> re.Match[str] | None:
+        """Search the targeted field(s); ``fields`` must include ``url`` and ``text``."""
+        if self.target == "any":
+            return self.regex.search(fields.get("url") or "") or self.regex.search(
+                fields.get("text") or ""
+            )
+        if isinstance(self.target, list):
+            return self.regex.search(JOIN.join(fields.get(n) or "" for n in self.target))
+        return self.regex.search(fields.get(self.target) or "")
 
     def describe(self) -> str:
-        return f"{self.target} /{self.pattern}/"
+        target = "+".join(self.target) if isinstance(self.target, list) else self.target
+        return f"{target} /{self.pattern}/"
 
 
 class TypeRule(_Rule):
@@ -85,6 +117,9 @@ class ClassifyRules(BaseModel):
     period: list[PeriodRule] = []
     language: list[LanguageRule] = []
 
+    def all_rules(self) -> list[_Rule]:
+        return [*self.type, *self.period, *self.language]
+
 
 @dataclass(frozen=True)
 class Classification:
@@ -100,29 +135,33 @@ def classify(
     rules: ClassifyRules,
     *,
     url: str,
-    text: str,
+    text: str = "",
+    fields: Mapping[str, str | None] | None = None,
     default_language: str | None = None,
 ) -> Classification:
-    url_text = unquote(urlsplit(url).path)
+    """Apply the rules. ``fields`` are the candidate's named texts (see ``FieldName``);
+    when omitted, only ``text`` is available besides the URL."""
+    values: dict[str, str | None] = {"text": text, **(fields or {})}
+    values["url"] = unquote(urlsplit(url).path)
     notes: list[str] = []
 
     doc_type = None
     for type_rule in rules.type:
-        if type_rule.search(url_text, text):
+        if type_rule.search(values):
             doc_type = type_rule.type
             notes.append(f"type={doc_type} by {type_rule.describe()}")
             break
 
     period = period_year = None
     for period_rule in rules.period:
-        if m := period_rule.search(url_text, text):
+        if m := period_rule.search(values):
             period, period_year = normalize_period(m)
             notes.append(f"period={period} by {period_rule.describe()}")
             break
 
     language = None
     for lang_rule in rules.language:
-        if m := lang_rule.search(url_text, text):
+        if m := lang_rule.search(values):
             language = lang_rule.language or m.group("lang").lower()
             notes.append(f"language={language} by {lang_rule.describe()}")
             break

@@ -1,0 +1,53 @@
+# Ground truth recorded on 2026-11-20 in a browser (the list is loaded with JavaScript
+# from a POST /api/search endpoint, 20 items per page), from what a visitor sees: title,
+# date, tags. Reviewed entry by entry. Set `reviewed: true` once checked by a human.
+ground_truth_version: 1
+site: lvmh
+scope: >-
+  Downloadable publications (TÉLÉCHARGER) of the French publications page tagged
+  RÉSULTATS or VENTES that relate to fiscal years 2024 and 2025: sales and results
+  presentations, half-year financial reports, financial documents, consolidated accounts,
+  "LVMH en bref" fact sheets, universal registration documents (PDF and ESEF) and annual
+  reports. Items that open a web page (VISUALISER: press releases, interactive annual
+  report) and items tagged only ESG or AUTRES THÉMATIQUES are out of scope.
+fiscal_years: [2024, 2025]
+captured_at: 2026-11-20
+reviewed: false
+notes: >-
+  Files are served from the CMS CDN (lvmh-com.cdn.prismic.io) and, for older items, from
+  a WordPress proxy path on www.lvmh.com. The 2025 ESEF package is published with an
+  unusual ".xbri" extension. Annual documents published in the following year sit under
+  the fiscal year they cover. No HTML snapshot can hold this list (XHR POST); it needs the
+  browser capture planned for milestone 4.
+requests:
+  - text: Les rapports financiers semestriels et annuels depuis 2024
+    expect: {types: [half_year_report, annual_report], fiscal_years: [2024, 2025]}
+  - text: Sales and results presentations for 2025
+    expect: {types: [results_presentation], fiscal_years: [2025]}
+  - text: Consolidated accounts and universal registration documents for 2024
+    expect: {types: [financial_statements, urd], fiscal_years: [2024]}
+documents:
+  # -- fiscal 2025 ---------------------------------------------------------------
+  - {url: 'https://lvmh-com.cdn.prismic.io/lvmh-com/Z_0pc-vxEdbNPBim_LVMHQ12025.pdf', type: results_presentation, period: 2025-Q1, fiscal_year: 2025, language: fr, date: 2025-04-14, title: 'Ventes du 1er trimestre 2025'}
+  - {url: 'https://lvmh-com.cdn.prismic.io/lvmh-com/aIJI7lGsbswqTOPS_LVMH_ResultatsSemestriels2025.pdf', type: results_presentation, period: 2025-H1, fiscal_year: 2025, language: fr, date: 2025-07-24, title: 'Résultats semestriels 2025'}
+  - {url: 'https://lvmh-com.cdn.prismic.io/lvmh-com/aIJQGFGsbswqTOVE_LVMH_Rapportfinanciersemestriel2025.pdf', type: half_year_report, period: 2025-H1, fiscal_year: 2025, language: fr, date: 2025-07-24, title: 'Rapport financier semestriel 2025'}
+  - {url: 'https://lvmh-com.cdn.prismic.io/lvmh-com/aO5reZ5xUNkB184B_LVMHQ32025_Presentation.pdf', type: results_presentation, period: 2025-Q3, fiscal_year: 2025, language: fr, date: 2025-10-14, title: 'Ventes du 3e trimestre 2025'}
+  - {url: 'https://lvmh-com.cdn.prismic.io/lvmh-com/aXjpYwIvOtkhB_7e_LVMH-R%C3%A9sultatsannuels2025.pdf', type: results_presentation, period: 2025-FY, fiscal_year: 2025, language: fr, date: 2026-01-27, title: 'Résultats annuels 2025'}
+  - {url: 'https://lvmh-com.cdn.prismic.io/lvmh-com/aXjp9QIvOtkhB_8D_Documentsfinanciers-31d%C3%A9cembre2025.pdf', type: financial_statements, period: 2025-FY, fiscal_year: 2025, language: fr, date: 2026-01-27, title: 'Documents financiers 2025'}
+  - {url: 'https://lvmh-com.cdn.prismic.io/lvmh-com/aYB3gt0YXLCxVQVN_LVMH_SNAPSHOT_2025VF.pdf', type: other, period: 2025-FY, fiscal_year: 2025, language: fr, date: 2026-02-02, title: 'LVMH en bref - Données 2025'}
+  - {url: 'https://lvmh-com.cdn.prismic.io/lvmh-com/aY24gt0YXLCxVuFq_LVMHComptesconsolid%C3%A9s2025-VF--VDEFpubli%C3%A9e.pdf', type: financial_statements, period: 2025-FY, fiscal_year: 2025, language: fr, date: 2026-02-12, title: 'Comptes consolidés 2025'}
+  - {url: 'https://lvmh-com.cdn.prismic.io/lvmh-com/aczoaJGXnQHGZKQt_Documentd%27enregistrementuniversel2025.pdf', type: urd, period: 2025-FY, fiscal_year: 2025, language: fr, date: 2026-04-01, title: 'Document d''enregistrement universel 2025, incluant le rapport de durabilité (CSRD)'}
+  - {url: 'https://lvmh-com.cdn.prismic.io/lvmh-com/aczrjZGXnQHGZKSC_IOG4E947OATN0KJYSD45-2025-12-31-1-fr.xbri', type: urd, period: 2025-FY, fiscal_year: 2025, language: fr, date: 2026-04-01, title: 'Document d''enregistrement universel 2025 - Format ESEF'}
+  - {url: 'https://lvmh-com.cdn.prismic.io/lvmh-com/ac0pqZGXnQHGZK4M_LVMH_RA2025_FR_MEL1.pdf', type: annual_report, period: 2025-FY, fiscal_year: 2025, language: fr, date: 2026-04-01, title: 'Rapport Annuel 2025'}
+  # -- fiscal 2024 ---------------------------------------------------------------
+  - {url: 'https://www.lvmh.com/proxyApi/v1/wordpress/attachment/lvmh-q1-2024.pdf', type: results_presentation, period: 2024-Q1, fiscal_year: 2024, language: fr, title: 'Ventes du 1er trimestre 2024'}
+  - {url: 'https://lvmh-com.cdn.prismic.io/lvmh-com/Zp_GHh5LeNNTxbfA_LVMH_ResultatsSemestriels2024.pdf', type: results_presentation, period: 2024-H1, fiscal_year: 2024, language: fr, date: 2024-07-23, title: 'Résultats semestriels 2024'}
+  - {url: 'https://lvmh-com.cdn.prismic.io/lvmh-com/Zp_Gwx5LeNNTxbfk_LVMH_Rapportfinanciersemestriel2024.pdf', type: half_year_report, period: 2024-H1, fiscal_year: 2024, language: fr, date: 2024-07-23, title: 'Rapport financier semestriel 2024'}
+  - {url: 'https://lvmh-com.cdn.prismic.io/lvmh-com/Zw6EcoF3NbkBXeDD_LVMHQ32024.pdf', type: results_presentation, period: 2024-Q3, fiscal_year: 2024, language: fr, date: 2024-10-15, title: 'Ventes du 3e trimestre 2024'}
+  - {url: 'https://lvmh-com.cdn.prismic.io/lvmh-com/Z5j64JbqstJ998kr_LVMH-Resultatsannuels2024.pdf', type: results_presentation, period: 2024-FY, fiscal_year: 2024, language: fr, date: 2025-01-28, title: 'Résultats annuels 2024'}
+  - {url: 'https://lvmh-com.cdn.prismic.io/lvmh-com/Z5kVRZbqstJ999KV_Documentsfinanciers-31d%C3%A9cembre2024.pdf', type: financial_statements, period: 2024-FY, fiscal_year: 2024, language: fr, date: 2025-01-28, title: 'Documents financiers 2024'}
+  - {url: 'https://lvmh-com.cdn.prismic.io/lvmh-com/Z5pKn5bqstJ9-AHd_LVMH_SNAPSHOT_2024.pdf', type: other, period: 2024-FY, fiscal_year: 2024, language: fr, date: 2025-01-28, title: 'LVMH en bref - Données 2024'}
+  - {url: 'https://lvmh-com.cdn.prismic.io/lvmh-com/Z6yrrpbqstJ9-hwX_LVMHComptesconsolid%C3%A9s2024-VF-.pdf', type: financial_statements, period: 2024-FY, fiscal_year: 2024, language: fr, date: 2025-02-12, title: 'Comptes consolidés 2024'}
+  - {url: 'https://lvmh-com.cdn.prismic.io/lvmh-com/Z-PYoHdAxsiBv6v5_Documentd%27enregistrementuniversel2024.pdf', type: urd, period: 2024-FY, fiscal_year: 2024, language: fr, date: 2025-03-26, title: 'Document d''enregistrement universel 2024, incluant le rapport de durabilité (CSRD)'}
+  - {url: 'https://lvmh-com.cdn.prismic.io/lvmh-com/Z-PZhXdAxsiBv6w-_IOG4E947OATN0KJYSD45-2024-12-31-0-fr.zip', type: urd, period: 2024-FY, fiscal_year: 2024, language: fr, date: 2025-03-26, title: 'Document d''enregistrement universel 2024 - Format ESEF'}
+  - {url: 'https://lvmh-com.cdn.prismic.io/lvmh-com/Z-QTGndAxsiBv7ql_LVMH_RapportAnnuel2024_FR.pdf', type: annual_report, period: 2024-FY, fiscal_year: 2024, language: fr, date: 2025-03-26, title: 'Rapport Annuel 2024'}

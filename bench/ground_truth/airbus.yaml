@@ -1,0 +1,32 @@
+# Ground truth drafted on 2026-11-20 from the snapshot in bench/snapshots/airbus/ (what a
+# visitor sees: section heading, link label, tile), then reviewed entry by entry.
+# Set `reviewed: true` once a human has checked it against the live site.
+ground_truth_version: 1
+site: airbus
+scope: >-
+  Documents in the 2024 and 2025 panels of the annual reports page: annual report,
+  annual report overview or annual review, report of the board of directors, financial
+  statements and the ESEF package.
+fiscal_years: [2024, 2025]
+captured_at: 2026-11-20
+reviewed: false
+notes: >-
+  The 2025 panel had no full annual report on the capture date. The ESEF zip is the
+  annual financial report in its regulated format and is typed annual_report.
+requests:
+  - text: Airbus financial statements since 2024
+    expect: {types: [financial_statements], fiscal_years: [2024, 2025]}
+  - text: Annual reports and board reports for 2024
+    expect: {types: [annual_report], fiscal_years: [2024]}
+  - text: Tous les documents annuels 2025
+    expect: {fiscal_years: [2025]}
+documents:
+  - {url: 'https://mediaassets.airbus.com/pm_38_919_919350-ko9v34j5cg.pdf?fileName=airbus-report-of-the-board-of-directors-2025.pdf', type: annual_report, period: 2025-FY, fiscal_year: 2025, language: en, title: 'Airbus Report of the Board of Directors 2025'}
+  - {url: 'https://www.airbus.com/sites/default/files/2026-02/mino79wloo247m1il051-2025-12-31-1-en.zip', type: annual_report, period: 2025-FY, fiscal_year: 2025, language: en, title: 'Airbus FY 2025 ESEF'}
+  - {url: 'https://www.airbus.com/sites/default/files/2026-02/airbus_fy_2025_financial_statements_1.pdf', type: financial_statements, period: 2025-FY, fiscal_year: 2025, language: en, title: 'FY 2025 Financial statements'}
+  - {url: 'https://www.airbus.com/sites/default/files/2026-04/airbus_annual_review_1.pdf', type: annual_report, period: 2025-FY, fiscal_year: 2025, language: en, title: 'Airbus Annual Review'}
+  - {url: 'https://www.airbus.com/sites/default/files/2025-04/Airbus%20Financial%20Statements%202024%20%281%29.pdf', type: financial_statements, period: 2024-FY, fiscal_year: 2024, language: en, title: 'Airbus FY 2024 Financial Statements'}
+  - {url: 'https://www.airbus.com/sites/default/files/2025-04/Airbus%20Annual%20Report%202024.pdf', type: annual_report, period: 2024-FY, fiscal_year: 2024, language: en, title: 'Airbus Annual Report 2024'}
+  - {url: 'https://www.airbus.com/sites/default/files/2025-04/Airbus%20Report%20of%20the%20Board%20of%20Directors%202024%20%282%29.pdf', type: annual_report, period: 2024-FY, fiscal_year: 2024, language: en, title: 'Airbus Report of the Board of Directors 2024'}
+  - {url: 'https://www.airbus.com/sites/default/files/2025-04/Airbus%20Annual%20Report%20Overview%202024.pdf', type: annual_report, period: 2024-FY, fiscal_year: 2024, language: en, title: 'Airbus Annual Report 2024 Overview'}
+  - {url: 'https://www.airbus.com/sites/default/files/2025-02/mino79wloo247m1il051-2024-12-31-1-en.zip', type: annual_report, period: 2024-FY, fiscal_year: 2024, language: en, title: 'Airbus FY 2024 ESEF'}

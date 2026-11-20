@@ -1,0 +1,20 @@
+snapshot_version: 1
+site: bankofamerica
+user_agent: retrievr/0.1.0.dev0 (+https://pypi.org/project/retrievr/)
+responses:
+- url: https://investor.bankofamerica.com/quarterly-earnings
+  normalized_url: https://investor.bankofamerica.com/quarterly-earnings
+  status: 200
+  content_type: text/html; charset=UTF-8
+  file: pages/investor-bankofamerica-com-quarterly-earnings-995a392f.html
+  sha256: 40529ccd866c0fa5d8e6cdd5d97f1c2db2daf65c62e13013dbf81c7c480897cd
+  size: 169175
+  captured_at: '2026-11-20T10:35:28Z'
+- url: https://investor.bankofamerica.com/robots.txt
+  normalized_url: https://investor.bankofamerica.com/robots.txt
+  status: 200
+  content_type: text/html; charset=UTF-8
+  file: pages/investor-bankofamerica-com-robots-txt-7cbc6f33.html
+  sha256: 8a25612f0e385adcddd31c114e061c4a9e919cf0a0aa07a55bc35c5c991f2e46
+  size: 210
+  captured_at: '2026-11-20T10:35:27Z'

@@ -1,0 +1,41 @@
+# Ground truth drafted on 2026-11-20 from the snapshot in bench/snapshots/loreal/ (what a
+# visitor sees: section heading, link label, tile), then reviewed entry by entry.
+# Set `reviewed: true` once a human has checked it against the live site.
+ground_truth_version: 1
+site: loreal
+scope: >-
+  Documents listed under the 2024 and 2025 headings of the results page: half-year
+  results presentations, half-year financial report, and the annual results presentations
+  (CEO, CFO and division presidents, published the following February).
+fiscal_years: [2024, 2025]
+captured_at: 2026-11-20
+reviewed: false
+notes: >-
+  Annual results presentations sit under the fiscal year they cover. Half-year
+  documents are period H1, annual results presentations FY.
+requests:
+  - text: Half-year financial reports since 2024
+    expect: {types: [half_year_report], fiscal_years: [2024, 2025]}
+  - text: All results presentations for 2025
+    expect: {types: [results_presentation], fiscal_years: [2025]}
+  - text: Les documents de résultats 2024
+    expect: {fiscal_years: [2024]}
+documents:
+  - {url: 'https://www.loreal-finance.com/sites/default/files/2025-07/HALF_YEAR_RESULTS_NH_29_07_25_19h30.pdf', type: results_presentation, period: 2025-H1, fiscal_year: 2025, language: en, title: 'Presentation by Nicolas Hieronimus, Chief Executive Officer 30 July 2025'}
+  - {url: 'https://www.loreal-finance.com/sites/default/files/2025-07/C.B.%20Presentation_1H25_EN%2030.07.pdf', type: results_presentation, period: 2025-H1, fiscal_year: 2025, language: en, title: 'Presentation by Christophe Babule, Chief Financial Officer 30 July 2025'}
+  - {url: 'https://www.loreal-finance.com/sites/default/files/2025-08/LOREAL_RFS_2025_VA.pdf', type: half_year_report, period: 2025-H1, fiscal_year: 2025, language: en, title: 'Half-Year Financial Report 2025 01 August 2025'}
+  - {url: 'https://www.loreal-finance.com/sites/default/files/2026-02/Mr%20Nicolas%20Hieronimus%2C%20Chief%20Executive%20Officer.pdf', type: results_presentation, period: 2025-FY, fiscal_year: 2025, language: en, title: 'Mr Nicolas Hieronimus, Chief Executive Officer 13 February 2026'}
+  - {url: 'https://www.loreal-finance.com/sites/default/files/2026-07/C.B.%20Presentation%20_%20RIF26_EN%20V.13.02.2026%208h.pdf', type: results_presentation, period: 2025-FY, fiscal_year: 2025, language: en, title: 'Mr Christophe Babule, Chief Financial Officer 13 February 2026'}
+  - {url: 'https://www.loreal-finance.com/sites/default/files/2026-02/RIF_2026_EN_FLAT_compressed_VF_0.pdf', type: results_presentation, period: 2025-FY, fiscal_year: 2025, language: en, title: 'Mr Omar Hajeri, President Professional Products 13 February 2026'}
+  - {url: 'https://www.loreal-finance.com/sites/default/files/2026-02/Mr%20Fabrice%20MEGARBANE%2C%20President%20Consumer%20Products.pdf', type: results_presentation, period: 2025-FY, fiscal_year: 2025, language: en, title: 'Mr Fabrice MEGARBANE, President Consumer Products 13 February 2026'}
+  - {url: 'https://www.loreal-finance.com/sites/default/files/2026-02/Ms%20Myriam%20Cohen-Welgryn%2C%20President%20Dermatological%20Beauty.pdf', type: results_presentation, period: 2025-FY, fiscal_year: 2025, language: en, title: 'Ms Myriam Cohen-Welgryn, President Dermatological Beauty 13 February 2026'}
+  - {url: 'https://www.loreal-finance.com/sites/default/files/2026-02/FINAL_EN_RIF%202026.pdf', type: results_presentation, period: 2025-FY, fiscal_year: 2025, language: en, title: 'Mr Cyril Chapuy, President Luxe 13 February 2026'}
+  - {url: 'https://www.loreal-finance.com/sites/default/files/migrate-files/LOREAL_NH_SEMESTRIELS%202024_EN_31072024_07h30.pdf', type: results_presentation, period: 2024-H1, fiscal_year: 2024, language: en, title: 'Presentation by Nicolas Hieronimus, Chief Executive Officer 31 July 2024'}
+  - {url: 'https://www.loreal-finance.com/sites/default/files/migrate-files/H1%2024%20-%20CB%20Presentation%20-%20v30.07.24%20EN%20v10.30.pdf', type: results_presentation, period: 2024-H1, fiscal_year: 2024, language: en, title: 'Presentation by Christophe Babule, Chief Financial Officer 31 July 2024'}
+  - {url: 'https://www.loreal-finance.com/sites/default/files/migrate-files/LOREAL_RFS_2024_UK_.pdf', type: half_year_report, period: 2024-H1, fiscal_year: 2024, language: en, title: '2024 Half-Year financial report 01 August 2024'}
+  - {url: 'https://www.loreal-finance.com/sites/default/files/2025-02/LOREAL_RIF_N.HIERONIMUS_EN.pdf', type: results_presentation, period: 2024-FY, fiscal_year: 2024, language: en, title: 'Mr Nicolas Hieronimus, Chief Executive Officer 07 February 2025'}
+  - {url: 'https://www.loreal-finance.com/sites/default/files/2025-02/C.B.%20Presentation%20_%20RIF25%20_%20V06.02.2025_EN_20.00.pdf', type: results_presentation, period: 2024-FY, fiscal_year: 2024, language: en, title: 'Mr Christophe Babule, Chief Financial Officer 07 February 2025'}
+  - {url: 'https://www.loreal-finance.com/sites/default/files/2025-02/RIF-2025%20copie.pdf', type: results_presentation, period: 2024-FY, fiscal_year: 2024, language: en, title: 'Mr Alexis Perakis-Valat, President Consumer Products 07 February 2025'}
+  - {url: 'https://www.loreal-finance.com/sites/default/files/2025-02/RIF%20LL%202025%20CC%20EN%20060225%2008H15%20LowRes.pdf', type: results_presentation, period: 2024-FY, fiscal_year: 2024, language: en, title: 'Mr Cyril Chapuy, President Luxe 07 February 2025'}
+  - {url: 'https://www.loreal-finance.com/sites/default/files/2025-02/RIF_2025_EN_VF_FLAT_compressed.pdf', type: results_presentation, period: 2024-FY, fiscal_year: 2024, language: en, title: 'Mr Omar Hajeri, President Professional Products 07 February 2025'}
+  - {url: 'https://www.loreal-finance.com/sites/default/files/2025-02/250206%20LDB%20RIF%20ENG_Compressee.pdf', type: results_presentation, period: 2024-FY, fiscal_year: 2024, language: en, title: 'Ms Myriam Cohen-Welgryn, President Dermatological Beauty 07 February 2025'}

@@ -1,0 +1,23 @@
+snapshot_version: 1
+site: totalenergies
+user_agent: retrievr/0.1.0.dev0 (+https://pypi.org/project/retrievr/)
+responses:
+- url: https://totalenergies.com/investors/publications-and-regulated-information/regulated-information/annual-financial-reports
+  normalized_url: https://totalenergies.com/investors/publications-and-regulated-information/regulated-information/annual-financial-reports
+  status: 200
+  content_type: text/html; charset=UTF-8
+  last_modified: Fri, 20 Nov 2026 09:51:22 GMT
+  file: pages/totalenergies-com-investors-publications-and-regulated-information-regulated-information-a-f138f5e6.html
+  sha256: 7393fae95ca528f47236283ee81206faa2e781e95d7d0e459e31a017ba66f8e1
+  size: 71490
+  captured_at: '2026-11-20T10:35:31Z'
+- url: https://totalenergies.com/robots.txt
+  normalized_url: https://totalenergies.com/robots.txt
+  status: 200
+  content_type: text/plain; charset=UTF-8
+  etag: W/"1795119740"
+  last_modified: Thu, 19 Nov 2026 20:22:20 GMT
+  file: pages/totalenergies-com-robots-txt-8ead304c.txt
+  sha256: 464fe32f2d841a296b063a278b74ab492867a9bdee91b1fdfe0ad42dc82d7056
+  size: 4498
+  captured_at: '2026-11-20T10:35:30Z'

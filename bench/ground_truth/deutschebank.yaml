@@ -1,17 +1,25 @@
-# Ground truth: quarterly results page, fiscal years 2024 and 2025, as shown on the
-# snapshot captured 2026-11-20 (one static page, one table per year).
-#
-# Drafted from what a reader sees in each table cell (column header, quarter row,
-# link label), then reviewed by hand. Audio files (MP3) are out of scope.
-# The page carries no publication dates, so documents have no `date`.
-#
-# Note: the Q2 2024 report link title says "Quartalsergebnisse ... (PDF) - DE" while
-# the file name is English ("Interim-Report-as-of-June-30-2024.pdf") and sits on the
-# English page; it is recorded as `en` (to confirm by opening the file).
-site: investor-relations.db.com
-source: quarterly-results
-captured_at: 2026-11-20
+# Ground truth: Deutsche Bank quarterly results page, fiscal years 2024-2025.
+# Snapshot: tests/fixtures/deutschebank. Drafted from what a reader sees in each table
+# cell (column header, quarter row, link label), then reviewed. No dates on the page.
+# Note: the Q2 2024 report link title says "Quartalsergebnisse ... (PDF) - DE" while the
+# file name is English; it is recorded as `en` (to confirm by opening the file).
+ground_truth_version: 1
+site: deutschebank
+scope: >-
+  Documents linked from the 2024 and 2025 tables of the quarterly results page
+  (releases, financial data supplements in PDF and XLSB, reports, presentations, call
+  transcripts). Audio recordings (MP3) are out of scope.
 fiscal_years: [2024, 2025]
+captured_at: 2026-11-20
+reviewed: false
+notes: One static page with one table per year since 2007.
+requests:
+  - text: Financial data supplements for 2025
+    expect: {types: [financial_data_supplement], fiscal_years: [2025]}
+  - text: Transcripts of the analyst and fixed income calls since 2024
+    expect: {types: [analyst_call_transcript, fixed_income_call_transcript], fiscal_years: [2024, 2025]}
+  - text: Earnings reports and results presentations for 2024 only, no press releases
+    expect: {types: [quarterly_report, results_presentation], fiscal_years: [2024]}
 documents:
   - {url: 'https://investor-relations.db.com/files/documents/quarterly-results/2025/Q4-2025-Media-Release.pdf', type: press_release, period: 2025-Q4, fiscal_year: 2025, language: en}  # Releases / PDF
   - {url: 'https://investor-relations.db.com/files/documents/quarterly-results/2025/FDS-Q4-2025-final-12032026.pdf?language_id=1', type: financial_data_supplement, period: 2025-Q4, fiscal_year: 2025, language: en}  # Financial Data Supplements / PDF

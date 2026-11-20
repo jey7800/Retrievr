@@ -1,0 +1,24 @@
+snapshot_version: 1
+site: airbus
+user_agent: retrievr/0.1.0.dev0 (+https://pypi.org/project/retrievr/)
+responses:
+- url: https://www.airbus.com/en/investors/annual-reports
+  normalized_url: https://www.airbus.com/en/investors/annual-reports
+  status: 200
+  content_type: text/html; charset=utf-8
+  etag: W/"1795170695"
+  last_modified: Fri, 20 Nov 2026 10:31:35 GMT
+  file: pages/www-airbus-com-en-investors-annual-reports-0c6da03e.html
+  sha256: 71aaf6dddb2c53efc939cffeeebf6dfa62efe109631d214fde1fc515cf097d8b
+  size: 593298
+  captured_at: '2026-11-20T10:35:34Z'
+- url: https://www.airbus.com/robots.txt
+  normalized_url: https://www.airbus.com/robots.txt
+  status: 200
+  content_type: text/plain; charset=utf-8
+  etag: W/"1795170662"
+  last_modified: Fri, 20 Nov 2026 10:31:02 GMT
+  file: pages/www-airbus-com-robots-txt-cf75a647.txt
+  sha256: d9ba536a4da8509bd4e03651d33e54bf938097eb22bedd76eab2b0e673ebfedb
+  size: 6906
+  captured_at: '2026-11-20T10:35:33Z'

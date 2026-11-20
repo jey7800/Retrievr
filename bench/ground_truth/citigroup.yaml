@@ -1,0 +1,68 @@
+# Ground truth drafted on 2026-11-20 from the snapshot in bench/snapshots/citigroup/ (what a
+# visitor sees: section heading, link label, tile), then reviewed entry by entry.
+# Set `reviewed: true` once a human has checked it against the live site.
+ground_truth_version: 1
+site: citigroup
+scope: >-
+  Documents linked in the First Quarter 2024 to Fourth Quarter 2025 sections of the
+  quarterly earnings page (press release, financial supplement in PDF and XLSX,
+  presentation, transcript) and the Historical Quarterly Summary files published for 2025.
+  Audio and webcast links are out of scope.
+fiscal_years: [2024, 2025]
+captured_at: 2026-11-20
+reviewed: false
+notes: >-
+  Most links have no text (icons); the category is shown next to them and is also
+  encoded in file names (pr, fs, ps...). Historical Quarterly Summary files are typed
+  quarterly_series_restated.
+requests:
+  - text: Citi earnings call transcripts for 2024 and 2025
+    expect: {types: [analyst_call_transcript], fiscal_years: [2024, 2025]}
+  - text: Financial supplements for 2025, Excel and PDF
+    expect: {types: [financial_data_supplement], fiscal_years: [2025]}
+  - text: Les communiqués de résultats de 2024
+    expect: {types: [press_release], fiscal_years: [2024]}
+documents:
+  - {url: 'https://www.citigroup.com/rcs/citigpa/storage/public/4Q25-supp-web.pdf', type: quarterly_series_restated, period: 2025-Q4, fiscal_year: 2025, language: en, title: 'Historical Quarterly Summary 4Q2025'}
+  - {url: 'https://www.citigroup.com/rcs/citigpa/storage/public/4Q25-supp-web.xlsx', type: quarterly_series_restated, period: 2025-Q4, fiscal_year: 2025, language: en, title: 'Historical Quarterly Summary 4Q2025'}
+  - {url: 'https://www.citigroup.com/rcs/citigpa/storage/public/Earnings/Q42025/2025prqtr4rslt.pdf', type: press_release, period: 2025-Q4, fiscal_year: 2025, language: en, title: 'Fourth Quarter 2025 press_release'}
+  - {url: 'https://www.citigroup.com/rcs/citigpa/storage/public/Earnings/Q42025/2025fsqtr4rslt.pdf', type: financial_data_supplement, period: 2025-Q4, fiscal_year: 2025, language: en, title: 'Fourth Quarter 2025 financial_data_supplement'}
+  - {url: 'https://www.citigroup.com/rcs/citigpa/storage/public/Earnings/Q42025/2025fsqtr4rslt.xlsx', type: financial_data_supplement, period: 2025-Q4, fiscal_year: 2025, language: en, title: 'Fourth Quarter 2025 financial_data_supplement'}
+  - {url: 'https://www.citigroup.com/rcs/citigpa/storage/public/Earnings/Q42025/2025psqtr4rslt.pdf', type: results_presentation, period: 2025-Q4, fiscal_year: 2025, language: en, title: 'Fourth Quarter 2025 results_presentation'}
+  - {url: 'https://www.citigroup.com/rcs/citigpa/storage/public/2025psqtr4-transcript.pdf', type: analyst_call_transcript, period: 2025-Q4, fiscal_year: 2025, language: en, title: 'Fourth Quarter 2025 analyst_call_transcript'}
+  - {url: 'https://www.citigroup.com/rcs/citigpa/storage/public/Earnings/Q32025/2025prqtr3rslt.pdf', type: press_release, period: 2025-Q3, fiscal_year: 2025, language: en, title: 'Third Quarter 2025 press_release'}
+  - {url: 'https://www.citigroup.com/rcs/citigpa/storage/public/Earnings/Q32025/2025fsqtr3rslt.pdf', type: financial_data_supplement, period: 2025-Q3, fiscal_year: 2025, language: en, title: 'Third Quarter 2025 financial_data_supplement'}
+  - {url: 'https://www.citigroup.com/rcs/citigpa/storage/public/Earnings/Q32025/2025fsqtr3rslt.xlsx', type: financial_data_supplement, period: 2025-Q3, fiscal_year: 2025, language: en, title: 'Third Quarter 2025 financial_data_supplement'}
+  - {url: 'https://www.citigroup.com/rcs/citigpa/storage/public/Earnings/Q32025/2025psqtr3rslt.pdf', type: results_presentation, period: 2025-Q3, fiscal_year: 2025, language: en, title: 'Third Quarter 2025 results_presentation'}
+  - {url: 'https://www.citigroup.com/rcs/citigpa/storage/public/Earnings/Q32025/2025psqtr3-transcript.pdf', type: analyst_call_transcript, period: 2025-Q3, fiscal_year: 2025, language: en, title: 'Third Quarter 2025 analyst_call_transcript'}
+  - {url: 'https://www.citigroup.com/rcs/citigpa/storage/public/2025prqtr2rslt.pdf', type: press_release, period: 2025-Q2, fiscal_year: 2025, language: en, title: 'Second Quarter 2025 press_release'}
+  - {url: 'https://www.citigroup.com/rcs/citigpa/storage/public/2025fsqtr2rslt.pdf', type: financial_data_supplement, period: 2025-Q2, fiscal_year: 2025, language: en, title: 'Second Quarter 2025 financial_data_supplement'}
+  - {url: 'https://www.citigroup.com/rcs/citigpa/storage/public/2025fsqtr2rslt.xlsx', type: financial_data_supplement, period: 2025-Q2, fiscal_year: 2025, language: en, title: 'Second Quarter 2025 financial_data_supplement'}
+  - {url: 'https://www.citigroup.com/rcs/citigpa/storage/public/2025psqtr2rslt.pdf', type: results_presentation, period: 2025-Q2, fiscal_year: 2025, language: en, title: 'Second Quarter 2025 results_presentation'}
+  - {url: 'https://www.citigroup.com/rcs/citigpa/storage/public/Earnings/Q22025/transcript.pdf', type: analyst_call_transcript, period: 2025-Q2, fiscal_year: 2025, language: en, title: 'Second Quarter 2025 analyst_call_transcript'}
+  - {url: 'https://www.citigroup.com/rcs/citigpa/storage/public/Earnings/Q12025/2025fqtr1hstr.xlsx', type: quarterly_series_restated, period: 2025-Q1, fiscal_year: 2025, language: en, title: 'Historical Quarterly Summary 1Q2025'}
+  - {url: 'https://www.citigroup.com/rcs/citigpa/storage/public/Earnings/Q12025/2025prqtr1rslt.pdf', type: press_release, period: 2025-Q1, fiscal_year: 2025, language: en, title: 'First Quarter 2025 press_release'}
+  - {url: 'https://www.citigroup.com/rcs/citigpa/storage/public/Earnings/Q12025/2025fsqtr1rslt.pdf', type: financial_data_supplement, period: 2025-Q1, fiscal_year: 2025, language: en, title: 'First Quarter 2025 financial_data_supplement'}
+  - {url: 'https://www.citigroup.com/rcs/citigpa/storage/public/Earnings/Q12025/2025fqtr1rslt.xlsx', type: financial_data_supplement, period: 2025-Q1, fiscal_year: 2025, language: en, title: 'First Quarter 2025 financial_data_supplement'}
+  - {url: 'https://www.citigroup.com/rcs/citigpa/storage/public/Earnings/Q12025/2025psqtr1rslt.pdf', type: results_presentation, period: 2025-Q1, fiscal_year: 2025, language: en, title: 'First Quarter 2025 results_presentation'}
+  - {url: 'https://www.citigroup.com/rcs/citigpa/storage/public/Earnings/Q12025/transcript.pdf', type: analyst_call_transcript, period: 2025-Q1, fiscal_year: 2025, language: en, title: 'First Quarter 2025 analyst_call_transcript'}
+  - {url: 'https://www.citigroup.com/rcs/citigpa/storage/public/Earnings/Q42024/4Q24-earnings-press-release.pdf', type: press_release, period: 2024-Q4, fiscal_year: 2024, language: en, title: 'Fourth Quarter 2024 press_release'}
+  - {url: 'https://www.citigroup.com/rcs/citigpa/storage/public/Earnings/Q42024/Q42024-Financial-Supplement.pdf', type: financial_data_supplement, period: 2024-Q4, fiscal_year: 2024, language: en, title: 'Fourth Quarter 2024 financial_data_supplement'}
+  - {url: 'https://www.citigroup.com/rcs/citigpa/storage/public/Earnings/Q42024/Q42024-Financial-Supplement.xlsx', type: financial_data_supplement, period: 2024-Q4, fiscal_year: 2024, language: en, title: 'Fourth Quarter 2024 financial_data_supplement'}
+  - {url: 'https://www.citigroup.com/rcs/citigpa/storage/public/Earnings/Q42024/4Q24-earnings-presentation.pdf', type: results_presentation, period: 2024-Q4, fiscal_year: 2024, language: en, title: 'Fourth Quarter 2024 results_presentation'}
+  - {url: 'https://www.citigroup.com/rcs/citigpa/storage/public/Earnings/Q42024/4Q24-Earnings-Transcript.pdf', type: analyst_call_transcript, period: 2024-Q4, fiscal_year: 2024, language: en, title: 'Fourth Quarter 2024 analyst_call_transcript'}
+  - {url: 'https://www.citigroup.com/rcs/citigpa/storage/public/Earnings/Q32024/2024pr-qtr3rslt.pdf', type: press_release, period: 2024-Q3, fiscal_year: 2024, language: en, title: 'Third Quarter 2024 press_release'}
+  - {url: 'https://www.citigroup.com/rcs/citigpa/storage/public/Earnings/Q32024/3Q24-SUPP-ForWeb.pdf', type: financial_data_supplement, period: 2024-Q3, fiscal_year: 2024, language: en, title: 'Third Quarter 2024 financial_data_supplement'}
+  - {url: 'https://www.citigroup.com/rcs/citigpa/storage/public/Earnings/Q32024/3Q24-SUPP-ForWeb.xlsx', type: financial_data_supplement, period: 2024-Q3, fiscal_year: 2024, language: en, title: 'Third Quarter 2024 financial_data_supplement'}
+  - {url: 'https://www.citigroup.com/rcs/citigpa/storage/public/Earnings/Q32024/2024psqtr3rslt.pdf', type: results_presentation, period: 2024-Q3, fiscal_year: 2024, language: en, title: 'Third Quarter 2024 results_presentation'}
+  - {url: 'https://www.citigroup.com/rcs/citigpa/storage/public/3Q24-Earnings-Transcript.pdf', type: analyst_call_transcript, period: 2024-Q3, fiscal_year: 2024, language: en, title: 'Third Quarter 2024 analyst_call_transcript'}
+  - {url: 'https://www.citigroup.com/rcs/citigpa/storage/public/Earnings/Q22024/2024prqtr2rslt.pdf', type: press_release, period: 2024-Q2, fiscal_year: 2024, language: en, title: 'Second Quarter 2024 press_release'}
+  - {url: 'https://www.citigroup.com/rcs/citigpa/storage/public/Earnings/Q22024/2Q24-SUPP-ForWeb.pdf', type: financial_data_supplement, period: 2024-Q2, fiscal_year: 2024, language: en, title: 'Second Quarter 2024 financial_data_supplement'}
+  - {url: 'https://www.citigroup.com/rcs/citigpa/storage/public/Earnings/Q22024/2024fqtr2rslt.xlsx', type: financial_data_supplement, period: 2024-Q2, fiscal_year: 2024, language: en, title: 'Second Quarter 2024 financial_data_supplement'}
+  - {url: 'https://www.citigroup.com/rcs/citigpa/storage/public/Earnings/Q22024/2024psqtr2rslt.pdf', type: results_presentation, period: 2024-Q2, fiscal_year: 2024, language: en, title: 'Second Quarter 2024 results_presentation'}
+  - {url: 'https://www.citigroup.com/rcs/citigpa/storage/public/transcript07122024.pdf', type: analyst_call_transcript, period: 2024-Q2, fiscal_year: 2024, language: en, title: 'Second Quarter 2024 analyst_call_transcript'}
+  - {url: 'https://www.citigroup.com/rcs/citigpa/storage/public/Earnings/Q12024/2024prq1.pdf', type: press_release, period: 2024-Q1, fiscal_year: 2024, language: en, title: 'First Quarter 2024 press_release'}
+  - {url: 'https://www.citigroup.com/rcs/citigpa/storage/public/Earnings/Q12024/2024fnq1.pdf', type: financial_data_supplement, period: 2024-Q1, fiscal_year: 2024, language: en, title: 'First Quarter 2024 financial_data_supplement'}
+  - {url: 'https://www.citigroup.com/rcs/citigpa/storage/public/Earnings/Q12024/2024fnq1.xlsx', type: financial_data_supplement, period: 2024-Q1, fiscal_year: 2024, language: en, title: 'First Quarter 2024 financial_data_supplement'}
+  - {url: 'https://www.citigroup.com/rcs/citigpa/storage/public/Earnings/Q12024/2024pstq1.pdf', type: results_presentation, period: 2024-Q1, fiscal_year: 2024, language: en, title: 'First Quarter 2024 results_presentation'}
+  - {url: 'https://www.citigroup.com/rcs/citigpa/storage/public/2024q1tr.pdf', type: analyst_call_transcript, period: 2024-Q1, fiscal_year: 2024, language: en, title: 'First Quarter 2024 analyst_call_transcript'}

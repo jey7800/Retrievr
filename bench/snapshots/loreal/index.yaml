@@ -1,0 +1,23 @@
+snapshot_version: 1
+site: loreal
+user_agent: retrievr/0.1.0.dev0 (+https://pypi.org/project/retrievr/)
+responses:
+- url: https://www.loreal-finance.com/eng/results
+  normalized_url: https://www.loreal-finance.com/eng/results
+  status: 200
+  content_type: text/html; charset=utf-8
+  last_modified: Thu, 19 Nov 2026 09:48:22 GMT
+  file: pages/www-loreal-finance-com-eng-results-df1f45e9.html
+  sha256: 6e18a8c79deec35f28210bc887b7efe47d4cf9597ddb5548e35ab041adc99b51
+  size: 207370
+  captured_at: '2026-11-20T10:35:33Z'
+- url: https://www.loreal-finance.com/robots.txt
+  normalized_url: https://www.loreal-finance.com/robots.txt
+  status: 200
+  content_type: text/plain; charset=utf-8
+  etag: W/"1795081696"
+  last_modified: Thu, 19 Nov 2026 09:48:16 GMT
+  file: pages/www-loreal-finance-com-robots-txt-39fa70cd.txt
+  sha256: 5f336473647810411f3c2f6e5b5d4d6c341411bef1b649e2c99c0e5e8207569c
+  size: 2570
+  captured_at: '2026-11-20T10:35:32Z'

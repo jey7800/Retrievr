@@ -1,0 +1,203 @@
+# Benchmark sites. Qualified 2026-11-20 with the library's Fetcher (identifiable
+# User-Agent, robots.txt respected, 1 request/s): one robots.txt and one start-page GET.
+# Profiles are defined in bench/model.py. Blocked sites are never worked around: they
+# stay in the list as cases for block detection.
+sites:
+  # -- European banks -------------------------------------------------------------
+  - id: bnpparibas
+    name: BNP Paribas
+    category: european_bank
+    start_url: https://invest.bnpparibas/analystes-investisseurs
+    profile: no_direct_links
+    qualified_on: 2026-11-20
+  - id: societegenerale
+    name: Société Générale
+    category: european_bank
+    start_url: https://investors.societegenerale.com/fr/base-documentaire?theme=finance&category[resultats-financiers]&fiscal[2025]
+    profile: static_url_filters
+    qualified_on: 2026-11-20
+    recipe: societegenerale-ir@1.yaml
+    snapshot: tests/fixtures/societegenerale
+    ground_truth: true
+    notes: >-
+      The English results page links to this server-rendered document database.
+      Paginated (rel=next); a page beyond the last returns unrelated documents.
+  - id: creditagricole
+    name: Crédit Agricole
+    category: european_bank
+    start_url: https://www.credit-agricole.com/finance/publications-financieres
+    profile: js_xhr
+    qualified_on: 2026-11-20
+    snapshot: bench/snapshots/creditagricole
+    ground_truth: true
+    notes: >-
+      Server-rendered for the default selection, previous years load by XHR
+      (/display_next_publications) from year selectors. Opaque links (/pdfPreview/<id>)
+      with the file name in the title attribute. The snapshot holds the default view only.
+  - id: hsbc
+    name: HSBC
+    category: european_bank
+    start_url: https://www.hsbc.com/investors/results-and-announcements
+    profile: static
+    qualified_on: 2026-11-20
+    snapshot: bench/snapshots/hsbc
+    ground_truth: true
+  - id: barclays
+    name: Barclays
+    category: european_bank
+    start_url: https://home.barclays/investor-relations/reports-and-events/financial-results/
+    profile: static
+    qualified_on: 2026-11-20
+    snapshot: bench/snapshots/barclays
+    ground_truth: true
+  - id: santander
+    name: Banco Santander
+    category: european_bank
+    start_url: https://www.santander.com/en/shareholders-and-investors/financial-and-economic-information/quarterly-results
+    profile: no_direct_links
+    qualified_on: 2026-11-20
+  - id: deutschebank
+    name: Deutsche Bank
+    category: european_bank
+    start_url: https://investor-relations.db.com/reports-and-events/quarterly-results
+    profile: static
+    qualified_on: 2026-11-20
+    recipe: deutschebank-ir@1.yaml
+    snapshot: tests/fixtures/deutschebank
+    ground_truth: true
+    notes: One table per year; needs recipe schema v2 table context. robots.txt is 404.
+  - id: ubs
+    name: UBS
+    category: european_bank
+    start_url: https://www.ubs.com/global/en/investor-relations/financial-information/quarterly-reporting/qr-archive/qr-archive21-25.html
+    profile: static
+    qualified_on: 2026-11-20
+    recipe: ubs-ir@1.yaml
+    snapshot: tests/fixtures/ubs
+    ground_truth: true
+    notes: >-
+      Archive page for 2021-2025; the current year is on the quarterly-reporting page.
+      AEM ".file/<base64>/<name>.pdf" links.
+  # -- US banks -------------------------------------------------------------------
+  - id: jpmorgan
+    name: JPMorgan Chase
+    category: us_bank
+    start_url: https://www.jpmorganchase.com/ir/quarterly-earnings
+    profile: no_direct_links
+    qualified_on: 2026-11-20
+  - id: goldmansachs
+    name: Goldman Sachs
+    category: us_bank
+    start_url: https://www.goldmansachs.com/investor-relations/financials/quarterly-earnings-releases
+    profile: blocked
+    qualified_on: 2026-11-20
+    notes: HTTP 403 on the start page.
+  - id: bankofamerica
+    name: Bank of America
+    category: us_bank
+    start_url: https://investor.bankofamerica.com/quarterly-earnings
+    profile: static
+    qualified_on: 2026-11-20
+    snapshot: bench/snapshots/bankofamerica
+    ground_truth: true
+    notes: Some files are served from a CloudFront host.
+  - id: citigroup
+    name: Citigroup
+    category: us_bank
+    start_url: https://www.citigroup.com/global/investors/quarterly-earnings
+    profile: static
+    qualified_on: 2026-11-20
+    snapshot: bench/snapshots/citigroup
+    ground_truth: true
+    notes: Next.js, links rendered server-side.
+  - id: morganstanley
+    name: Morgan Stanley
+    category: us_bank
+    start_url: https://www.morganstanley.com/about-us-ir
+    profile: unreachable
+    qualified_on: 2026-11-20
+    notes: Server closed the connection without a response (robots.txt and start page).
+  # -- European companies ---------------------------------------------------------
+  - id: lvmh
+    name: LVMH
+    category: european_company
+    start_url: https://www.lvmh.com/fr/publications
+    profile: js_xhr
+    qualified_on: 2026-11-20
+    ground_truth: true
+    notes: >-
+      Next.js page; the list (544 items, 20 per page) comes from POST /api/search.
+      Files on the CMS CDN (lvmh-com.cdn.prismic.io) and a WordPress proxy path.
+  - id: totalenergies
+    name: TotalEnergies
+    category: european_company
+    start_url: https://totalenergies.com/investors/publications-and-regulated-information/regulated-information/annual-financial-reports
+    profile: static
+    qualified_on: 2026-11-20
+    snapshot: bench/snapshots/totalenergies
+    ground_truth: true
+  - id: sanofi
+    name: Sanofi
+    category: european_company
+    start_url: https://www.sanofi.com/fr/investisseurs/resultats-et-evenements/resultats-financiers
+    profile: no_direct_links
+    qualified_on: 2026-11-20
+  - id: loreal
+    name: L'Oréal
+    category: european_company
+    start_url: https://www.loreal-finance.com/eng/results
+    profile: static
+    qualified_on: 2026-11-20
+    snapshot: bench/snapshots/loreal
+    ground_truth: true
+  - id: airbus
+    name: Airbus
+    category: european_company
+    start_url: https://www.airbus.com/en/investors/annual-reports
+    profile: static
+    qualified_on: 2026-11-20
+    snapshot: bench/snapshots/airbus
+    ground_truth: true
+    notes: Files are served from mediaassets.airbus.com.
+  - id: asml
+    name: ASML
+    category: european_company
+    start_url: https://investor.asml.com/quarterly-results
+    profile: blocked
+    qualified_on: 2026-11-20
+    notes: HTTP 403 on the start page.
+  # -- US companies ---------------------------------------------------------------
+  - id: apple
+    name: Apple
+    category: us_company
+    start_url: https://investor.apple.com/investor-relations/default.aspx
+    profile: blocked
+    qualified_on: 2026-11-20
+    notes: HTTP 403 on the start page.
+  - id: microsoft
+    name: Microsoft
+    category: us_company
+    start_url: https://www.microsoft.com/en-us/investor/default
+    profile: no_direct_links
+    qualified_on: 2026-11-20
+  - id: alphabet
+    name: Alphabet
+    category: us_company
+    start_url: https://abc.xyz/investor/earnings/
+    profile: blocked
+    qualified_on: 2026-11-20
+    notes: HTTP 403 on the start page.
+  - id: amazon
+    name: Amazon
+    category: us_company
+    start_url: https://ir.aboutamazon.com/quarterly-results/default.aspx
+    profile: blocked
+    qualified_on: 2026-11-20
+    notes: HTTP 403 on the start page.
+  - id: nvidia
+    name: NVIDIA
+    category: us_company
+    start_url: https://investor.nvidia.com/financial-info/quarterly-results/default.aspx
+    profile: blocked
+    qualified_on: 2026-11-20
+    notes: HTTP 403 on the start page.

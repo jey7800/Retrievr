@@ -1,14 +1,17 @@
-pages:
+snapshot_version: 1
+site: deutschebank
+user_agent: retrievr/0.1.0.dev0 (+https://pypi.org/project/retrievr/) snapshot-capture
+responses:
 - url: https://investor-relations.db.com/reports-and-events/quarterly-results
   normalized_url: https://investor-relations.db.com/reports-and-events/quarterly-results
-  file: pages/reports-and-events-quarterly-results.html
   status: 200
   content_type: text/html;charset=UTF-8
-  etag: null
-  last_modified: null
+  file: pages/reports-and-events-quarterly-results.html
   sha256: 87684396d3885da63df9858ed54f8b2eb28ac5af9d092abd3ef889fe7a5cdf2b
-  captured_at: '2026-11-20T10:02:31+00:00'
-robots:
-  https://investor-relations.db.com:
-    status: 404
-    final_url: https://investor-relations.db.com/robots.txt
+  size: 226908
+  captured_at: '2026-11-20T10:02:31Z'
+- url: https://investor-relations.db.com/robots.txt
+  normalized_url: https://investor-relations.db.com/robots.txt
+  status: 404
+  content_type: text/html
+  captured_at: '2026-11-20T10:02:31Z'

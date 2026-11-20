@@ -8,3 +8,5 @@ dist/
 build/
 *.egg-info/
 downloads/
+bench/snapshots/*/pages/
+bench/results/

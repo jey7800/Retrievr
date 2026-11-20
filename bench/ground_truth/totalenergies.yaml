@@ -1,0 +1,29 @@
+# Ground truth drafted on 2026-11-20 from the snapshot in bench/snapshots/totalenergies/ (what a
+# visitor sees: section heading, link label, tile), then reviewed entry by entry.
+# Set `reviewed: true` once a human has checked it against the live site.
+ground_truth_version: 1
+site: totalenergies
+scope: >-
+  Annual financial reports for fiscal years 2024 and 2025 on the regulated
+  information page: universal registration document (PDF and ESEF zip) and Form 20-F.
+fiscal_years: [2024, 2025]
+captured_at: 2026-11-20
+reviewed: false
+notes: >-
+  File names carry the fiscal year and the publication year
+  (..._2025_2026_en.pdf is the 2025 report). The online XHTML versions on another host are
+  out of scope.
+requests:
+  - text: Universal registration documents since 2024
+    expect: {types: [urd], fiscal_years: [2024, 2025]}
+  - text: Form 20-F for 2025
+    expect: {types: [annual_report], fiscal_years: [2025]}
+  - text: Tous les rapports financiers annuels 2024
+    expect: {fiscal_years: [2024]}
+documents:
+  - {url: 'https://totalenergies.com/system/files/documents/totalenergies_universal-registration-document-2025_2026_en.pdf', type: urd, period: 2025-FY, fiscal_year: 2025, language: en, title: '2025 Universal Registration Document (including the annual financial report) - (PDF version)'}
+  - {url: 'https://totalenergies.com/system/files/documents/totalenergies_universal-registration-document-2025_2026_en.zip', type: urd, period: 2025-FY, fiscal_year: 2025, language: en, title: '2025 Universal Registration Document (including the annual financial report) - (XBRL version)'}
+  - {url: 'https://totalenergies.com/system/files/documents/totalenergies_form-20-f-2025_2026_en.pdf', type: annual_report, period: 2025-FY, fiscal_year: 2025, language: en, title: 'Form 20-F 2025 (PDF)'}
+  - {url: 'https://totalenergies.com/system/files/documents/totalenergies_universal-registration-document-2024_2025_en.pdf', type: urd, period: 2024-FY, fiscal_year: 2024, language: en, title: '2024 Universal Registration Document (including the annual financial report) - (PDF version)'}
+  - {url: 'https://totalenergies.com/system/files/documents/totalenergies_universal-registration-document-2024_2025_en.zip', type: urd, period: 2024-FY, fiscal_year: 2024, language: en, title: '2024 Universal Registration Document (including the annual financial report) - (XBRL version)'}
+  - {url: 'https://totalenergies.com/system/files/documents/totalenergies_form-20-f-2024_2025_en.pdf', type: annual_report, period: 2024-FY, fiscal_year: 2024, language: en, title: 'Form 20-F 2024 (PDF)'}

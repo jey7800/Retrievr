@@ -3,7 +3,7 @@
 Find and download documents (PDF, XLSX…) from websites, such as the investor-relations
 pages of listed companies, with an LLM used **only when needed**.
 
-> Status: early development (milestone 1, deterministic core). No LLM support yet.
+> Status: early development (deterministic core and benchmark). No LLM support yet.
 
 ## How it works
 
@@ -52,6 +52,9 @@ uv run pytest        # offline: HTML snapshots + respx, never the network
 uv run ruff check . && uv run ruff format --check .
 uv run mypy
 ```
+
+The benchmark (`bench/`, opt-in) measures recall on real sites against hand-made ground
+truth; see `bench/README.md`.
 
 ## License
 

@@ -1,4 +1,4 @@
-"""Milestone 1 acceptance: 100 % recall against hand-made ground truth, from snapshots.
+"""Milestone 1 acceptance: 100 % recall against the benchmark ground truth, from snapshots.
 
 One parametrized suite for every hand-written recipe. Ground truth covers a window of
 fiscal years; documents outside that window are ignored, but every returned document
@@ -14,12 +14,12 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-import yaml
+from bench.model import Document, load_ground_truth, load_sites
 
 from retrievr.download import Downloader, Manifest
 from retrievr.recipe import FoundDocument, Recipe, RunResult, load_recipe, run_recipe
-from retrievr.urls import normalize_url
-from tests.conftest import FIXTURES, RECIPES, SiteSnapshot, serve_site
+from retrievr.snapshots import ReplayTransport
+from tests.conftest import RECIPES, serve_site
 
 TODAY = date(2026, 11, 20)
 COMPARED_FIELDS = ("type", "period", "fiscal_year", "language", "date", "title")
@@ -46,9 +46,9 @@ SITES = [
 @dataclass
 class Case:
     site: Site
-    snapshot: SiteSnapshot
+    snapshot: ReplayTransport
     recipe: Recipe
-    truth: dict[str, dict[str, Any]]
+    truth: dict[str, Document]
     years: list[int]
 
     def run(self, make_fetcher: Any) -> RunResult:
@@ -61,11 +61,13 @@ class Case:
 @pytest.fixture(params=SITES, ids=str)
 def case(request: pytest.FixtureRequest) -> Iterator[Case]:
     site: Site = request.param
-    data = yaml.safe_load((FIXTURES / site.fixture / "ground_truth.yaml").read_text("utf-8"))
-    truth = {normalize_url(d["url"]): d for d in data["documents"]}
-    assert len(truth) == len(data["documents"]) == site.expected
+    bench_site = next(s for s in load_sites().sites if s.id == site.fixture)
+    assert bench_site.recipe == site.recipe and bench_site.ground_truth
+    gt = load_ground_truth(bench_site.ground_truth_path())
+    truth = gt.by_url()
+    assert len(truth) == site.expected
     with serve_site(site.fixture) as snapshot:
-        yield Case(site, snapshot, load_recipe(RECIPES / site.recipe), truth, data["fiscal_years"])
+        yield Case(site, snapshot, load_recipe(RECIPES / site.recipe), truth, gt.fiscal_years)
 
 
 def test_recall_is_100_percent(case: Case, make_fetcher: Any) -> None:
@@ -82,16 +84,16 @@ def test_no_extra_documents_in_window(case: Case, make_fetcher: Any) -> None:
     assert not undated, "documents without fiscal year escape the precision check"
     extra = sorted({d.normalized_url for d in case.in_window(result)} - set(case.truth))
     assert not extra
-    assert not case.snapshot.unexpected
+    assert not case.snapshot.misses
 
 
 def test_metadata_matches_ground_truth(case: Case, make_fetcher: Any) -> None:
     mismatches = []
     for doc in case.in_window(case.run(make_fetcher)):
         expected = case.truth[doc.normalized_url]
-        keys = [k for k in COMPARED_FIELDS if k in expected]
+        keys = [k for k in COMPARED_FIELDS if getattr(expected, k) is not None]
         actual = {k: getattr(doc, k) for k in keys}
-        wanted = {k: expected[k] for k in keys}
+        wanted = {k: getattr(expected, k) for k in keys}
         if actual != wanted:
             mismatches.append((doc.url, actual, wanted))
     assert not mismatches

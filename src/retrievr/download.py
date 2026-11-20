@@ -18,6 +18,7 @@ from datetime import UTC, date, datetime
 from pathlib import Path, PurePosixPath
 from typing import Literal
 
+import httpx
 from pydantic import BaseModel, ConfigDict
 
 from retrievr.fetch import BlockedError, Fetcher, FetchError
@@ -213,6 +214,8 @@ class Downloader:
             return DownloadOutcome(doc, "blocked", reason=str(exc))
         except FetchError as exc:
             return DownloadOutcome(doc, "error", reason=str(exc))
+        except httpx.RequestError as exc:  # failure while streaming the body
+            return DownloadOutcome(doc, "error", reason=f"network error: {exc!r}")
         finally:
             tmp.unlink(missing_ok=True)
 

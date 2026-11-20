@@ -10,11 +10,11 @@ import logging
 import re
 import ssl
 import time
-from collections.abc import Callable, Collection, Iterator
+from collections.abc import Callable, Collection, Iterator, Mapping
 from contextlib import contextmanager
 from dataclasses import dataclass, field
 from types import TracebackType
-from typing import Literal, Self
+from typing import Any, Literal, Self
 
 import httpx
 import truststore
@@ -82,6 +82,13 @@ class RobotsDisallowedError(FetchError):
 class DomainNotAllowedError(FetchError):
     def __init__(self, url: str) -> None:
         super().__init__(f"URL outside allowed domains: {url}", url=url)
+
+
+class NetworkError(FetchError):
+    """Connection, TLS, timeout or protocol failure (no usable HTTP response)."""
+
+    def __init__(self, url: str, exc: Exception) -> None:
+        super().__init__(f"network error at {url}: {type(exc).__name__}: {exc}", url=url)
 
 
 class HTTPStatusError(FetchError):
@@ -172,11 +179,17 @@ class Fetcher:
         settings: FetchSettings | None = None,
         *,
         client: httpx.Client | None = None,
+        transport: httpx.BaseTransport | None = None,
+        event_hooks: Mapping[str, list[Callable[..., Any]]] | None = None,
         clock: Callable[[], float] = time.monotonic,
         sleep: Callable[[float], None] = time.sleep,
     ) -> None:
+        """``transport`` replaces the network (e.g. a snapshot replay); environment
+        proxies are then ignored. ``event_hooks`` are httpx hooks (e.g. a recorder)."""
         self.settings = settings or FetchSettings()
-        self._client = client or _default_client(self.settings)
+        self._client = client or _default_client(
+            self.settings, transport=transport, event_hooks=event_hooks
+        )
         self._owns_client = client is None
         self._limiter = RateLimiter(self.settings.rate_limit_rps, clock=clock, sleep=sleep)
         self._robots = _RobotsCache()
@@ -271,7 +284,10 @@ class Fetcher:
             request = self._client.build_request(
                 "GET", current, headers={"User-Agent": self.settings.user_agent, **headers}
             )
-            resp = self._client.send(request, stream=True)
+            try:
+                resp = self._client.send(request, stream=True)
+            except httpx.RequestError as exc:
+                raise NetworkError(current, exc) from exc
             try:
                 if resp.status_code in REDIRECT_STATUSES and "location" in resp.headers:
                     current = resolve_url(resp.headers["location"], current)
@@ -296,11 +312,14 @@ class Fetcher:
         limit = self.settings.max_download_bytes
         chunks: list[bytes] = []
         size = 0
-        for chunk in resp.iter_bytes():
-            size += len(chunk)
-            if size > limit:
-                raise FetchError(f"response larger than {limit} bytes", url=str(resp.url))
-            chunks.append(chunk)
+        try:
+            for chunk in resp.iter_bytes():
+                size += len(chunk)
+                if size > limit:
+                    raise FetchError(f"response larger than {limit} bytes", url=str(resp.url))
+                chunks.append(chunk)
+        except httpx.RequestError as exc:
+            raise NetworkError(str(resp.url), exc) from exc
         return b"".join(chunks)
 
     def _robots_allows(self, url: str) -> bool:
@@ -354,11 +373,20 @@ class Fetcher:
         return _RobotsEntry("server_error", allow_all=False)
 
 
-def _default_client(settings: FetchSettings) -> httpx.Client:
+def _default_client(
+    settings: FetchSettings,
+    *,
+    transport: httpx.BaseTransport | None = None,
+    event_hooks: Mapping[str, list[Callable[..., Any]]] | None = None,
+) -> httpx.Client:
     ctx = truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
     return httpx.Client(
         verify=ctx,
-        trust_env=True,  # HTTP(S)_PROXY, ALL_PROXY, NO_PROXY
+        # HTTP(S)_PROXY, ALL_PROXY, NO_PROXY; never with a custom transport, where an
+        # environment proxy would silently route around it.
+        trust_env=transport is None,
+        transport=transport,
+        event_hooks=dict(event_hooks or {}),
         timeout=settings.timeout_s,
         headers={"User-Agent": settings.user_agent},
         follow_redirects=False,

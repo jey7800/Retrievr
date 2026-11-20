@@ -183,3 +183,37 @@ def test_proxy_is_read_from_environment(monkeypatch: pytest.MonkeyPatch) -> None
         assert transport is not client._transport  # a proxy transport was mounted
     finally:
         client.close()
+
+
+def test_network_errors_become_fetch_errors(
+    no_network: respx.MockRouter, make_fetcher: Any
+) -> None:
+    from retrievr.fetch import NetworkError
+
+    no_network.get(f"{SITE}/robots.txt").respond(404)
+    no_network.get(f"{SITE}/docs").mock(side_effect=httpx.RemoteProtocolError("disconnected"))
+    with pytest.raises(NetworkError, match="RemoteProtocolError"):
+        make_fetcher().get(f"{SITE}/docs")
+
+
+def test_recipe_run_reports_network_error(no_network: respx.MockRouter, make_fetcher: Any) -> None:
+    from datetime import date
+
+    from retrievr.recipe import recipe_from_mapping, run_recipe
+
+    no_network.get(f"{SITE}/robots.txt").respond(404)
+    no_network.get(f"{SITE}/docs").mock(side_effect=httpx.ConnectTimeout("slow"))
+    recipe = recipe_from_mapping(
+        {
+            "schema_version": 1,
+            "recipe": "x",
+            "version": 1,
+            "issuer": "x",
+            "site": "ir.example.com",
+            "allowed_domains": ["ir.example.com"],
+            "sources": [{"id": "s", "url": f"{SITE}/docs"}],
+        }
+    )
+    result = run_recipe(recipe, make_fetcher(), today=date(2026, 1, 1))
+    assert result.status == "error"
+    assert "ConnectTimeout" in result.errors[0]

@@ -1,0 +1,111 @@
+# Ground truth recorded on 2026-11-20 in a browser (the year selectors load their lists
+# with JavaScript), from what a visitor sees: section, item heading, file title, date,
+# language label. Reviewed entry by entry. Set `reviewed: true` once checked by a human.
+ground_truth_version: 1
+site: creditagricole
+scope: >-
+  Documents of the financial publications page for fiscal years 2024 and 2025 in three
+  sections, each with a year selector: financial results (Crédit Agricole S.A. quarterly
+  results), Crédit Agricole S.A. reference documents (universal registration document,
+  Pillar 3, remuneration) and Crédit Agricole Group documents. Theme presentations and
+  credit updates are out of scope.
+fiscal_years: [2024, 2025]
+captured_at: 2026-11-20
+reviewed: false
+notes: >-
+  Links are opaque (/pdfPreview/<id>); the file name is only in the link title. Previous
+  years load through an XHR call (/display_next_publications) when a year is chosen;
+  the HTML snapshot only holds the default selection. Every card is labelled "Français";
+  transcripts are recorded as fr although their file names are English (to confirm).
+  Amendments to the universal registration document are typed urd with the period of
+  the figures they publish.
+requests:
+  - text: Communiqués de presse et séries trimestrielles de 2025
+    expect: {types: [press_release, quarterly_series], fiscal_years: [2025]}
+  - text: Universal registration documents and their amendments since 2024
+    expect: {types: [urd], fiscal_years: [2024, 2025]}
+  - text: Pillar 3 risk reports for 2024
+    expect: {types: [pillar3], fiscal_years: [2024]}
+documents:
+  - {url: 'https://www.credit-agricole.com/pdfPreview/205574', type: results_presentation, period: 2024-Q4, fiscal_year: 2024, language: fr, date: 2025-02-05, title: 'Résultats du 4e trimestre et de l''année 2024'}
+  - {url: 'https://www.credit-agricole.com/pdfPreview/205575', type: press_release, period: 2024-Q4, fiscal_year: 2024, language: fr, date: 2025-02-05, title: 'Communiqué de presse'}
+  - {url: 'https://www.credit-agricole.com/pdfPreview/205593', type: quarterly_series, period: 2024-Q4, fiscal_year: 2024, language: fr, date: 2025-02-05, title: 'Séries trimestrielles'}
+  - {url: 'https://www.credit-agricole.com/pdfPreview/205573', type: analyst_call_transcript, period: 2024-Q4, fiscal_year: 2024, language: fr, date: 2025-02-05, title: 'Transcript T4-2024'}
+  - {url: 'https://www.credit-agricole.com/pdfPreview/205576', type: results_presentation, period: 2024-Q4, fiscal_year: 2024, language: fr, date: 2025-02-05, title: 'Présentation de la conférence de presse'}
+  - {url: 'https://www.credit-agricole.com/pdfPreview/204611', type: analyst_call_transcript, period: 2024-Q3, fiscal_year: 2024, language: fr, date: 2024-11-18, title: 'Transcript des résultats du 3e trimestre et des 9 premiers mois 2024'}
+  - {url: 'https://www.credit-agricole.com/pdfPreview/204612', type: results_presentation, period: 2024-Q3, fiscal_year: 2024, language: fr, date: 2024-11-06, title: 'Résultats du 3e trimestre et des 9 premiers mois 2024'}
+  - {url: 'https://www.credit-agricole.com/pdfPreview/204613', type: press_release, period: 2024-Q3, fiscal_year: 2024, language: fr, date: 2024-11-06, title: 'Communiqué de presse'}
+  - {url: 'https://www.credit-agricole.com/pdfPreview/204614', type: quarterly_series, period: 2024-Q3, fiscal_year: 2024, language: fr, date: 2024-11-06, title: 'Séries trimestrielles'}
+  - {url: 'https://www.credit-agricole.com/pdfPreview/204615', type: results_presentation, period: 2024-Q3, fiscal_year: 2024, language: fr, date: 2024-11-06, title: 'Présentation de la conférence de presse'}
+  - {url: 'https://www.credit-agricole.com/pdfPreview/203769', type: results_presentation, period: 2024-Q2, fiscal_year: 2024, language: fr, date: 2024-08-01, title: 'Résultats du 2e trimestre et du 1er semestre 2024'}
+  - {url: 'https://www.credit-agricole.com/pdfPreview/203770', type: press_release, period: 2024-Q2, fiscal_year: 2024, language: fr, date: 2024-08-01, title: 'Communiqué de presse'}
+  - {url: 'https://www.credit-agricole.com/pdfPreview/203771', type: quarterly_series, period: 2024-Q2, fiscal_year: 2024, language: fr, date: 2024-08-01, title: 'Séries trimestrielles'}
+  - {url: 'https://www.credit-agricole.com/pdfPreview/203813', type: urd, period: 2024-H1, fiscal_year: 2024, language: fr, date: 2024-08-08, title: 'Amendement A03 du Document d''Enregistrement Universel 2023 - Eléments financiers au 30 juin 2024'}
+  - {url: 'https://www.credit-agricole.com/pdfPreview/203817', type: analyst_call_transcript, period: 2024-Q2, fiscal_year: 2024, language: fr, date: 2024-08-09, title: 'Transcript des résultats du 2e trimestre et du 1er semestre 2024'}
+  - {url: 'https://www.credit-agricole.com/pdfPreview/203772', type: results_presentation, period: 2024-Q2, fiscal_year: 2024, language: fr, date: 2024-08-01, title: 'Présentation de la conférence de presse'}
+  - {url: 'https://www.credit-agricole.com/pdfPreview/203098', type: analyst_call_transcript, period: 2024-Q1, fiscal_year: 2024, language: fr, date: 2024-05-14, title: 'Transcript des résultats du 1er trimestre 2024'}
+  - {url: 'https://www.credit-agricole.com/pdfPreview/203031', type: results_presentation, period: 2024-Q1, fiscal_year: 2024, language: fr, date: 2024-05-03, title: 'Résultats du 1er trimestre 2024'}
+  - {url: 'https://www.credit-agricole.com/pdfPreview/203032', type: press_release, period: 2024-Q1, fiscal_year: 2024, language: fr, date: 2024-05-03, title: 'Communiqué de presse'}
+  - {url: 'https://www.credit-agricole.com/pdfPreview/203033', type: quarterly_series, period: 2024-Q1, fiscal_year: 2024, language: fr, date: 2024-05-03, title: 'Séries trimestrielles'}
+  - {url: 'https://www.credit-agricole.com/pdfPreview/203034', type: results_presentation, period: 2024-Q1, fiscal_year: 2024, language: fr, date: 2024-05-03, title: 'Présentation de la conférence de presse'}
+  - {url: 'https://www.credit-agricole.com/pdfPreview/208647', type: press_release, period: 2025-Q4, fiscal_year: 2025, language: fr, date: 2026-02-04, title: 'Communiqué de presse'}
+  - {url: 'https://www.credit-agricole.com/pdfPreview/208648', type: quarterly_series, period: 2025-Q4, fiscal_year: 2025, language: fr, date: 2026-02-04, title: 'Séries trimestrielles'}
+  - {url: 'https://www.credit-agricole.com/pdfPreview/208649', type: results_presentation, period: 2025-Q4, fiscal_year: 2025, language: fr, date: 2026-02-04, title: 'Présentation de la conférence de presse'}
+  - {url: 'https://www.credit-agricole.com/pdfPreview/208677', type: financial_statements, period: 2025-FY, fiscal_year: 2025, language: fr, date: 2026-02-04, title: 'Crédit Agricole S.A. - Comptes consolidés au 31 décembre 2025'}
+  - {url: 'https://www.credit-agricole.com/pdfPreview/208889', type: analyst_call_transcript, period: 2025-Q4, fiscal_year: 2025, language: fr, date: 2026-02-27, title: 'Transcript des résultats du 4e trimestre et de l''année 2025'}
+  - {url: 'https://www.credit-agricole.com/pdfPreview/208645', type: results_presentation, period: 2025-Q4, fiscal_year: 2025, language: fr, date: 2026-02-04, title: 'Résultats du 4e trimestre et de l''année 2025'}
+  - {url: 'https://www.credit-agricole.com/pdfPreview/208015', type: results_presentation, period: 2025-Q3, fiscal_year: 2025, language: fr, date: 2025-10-30, title: 'Résultats du 3e trimestre et des 9 premiers mois'}
+  - {url: 'https://www.credit-agricole.com/pdfPreview/208016', type: press_release, period: 2025-Q3, fiscal_year: 2025, language: fr, date: 2025-10-30, title: 'Communiqué de presse'}
+  - {url: 'https://www.credit-agricole.com/pdfPreview/208017', type: quarterly_series, period: 2025-Q3, fiscal_year: 2025, language: fr, date: 2025-10-30, title: 'Séries trimestrielles'}
+  - {url: 'https://www.credit-agricole.com/pdfPreview/208018', type: results_presentation, period: 2025-Q3, fiscal_year: 2025, language: fr, date: 2025-10-30, title: 'Présentation de la conférence de presse'}
+  - {url: 'https://www.credit-agricole.com/pdfPreview/208233', type: analyst_call_transcript, period: 2025-Q3, fiscal_year: 2025, language: fr, date: 2025-11-28, title: 'Transcript Q3 2025 Results'}
+  - {url: 'https://www.credit-agricole.com/pdfPreview/207481', type: results_presentation, period: 2025-Q2, fiscal_year: 2025, language: fr, date: 2025-07-31, title: 'Résultats du 2e trimestre et du 1er semestre 2025'}
+  - {url: 'https://www.credit-agricole.com/pdfPreview/207482', type: press_release, period: 2025-Q2, fiscal_year: 2025, language: fr, date: 2025-07-31, title: 'Communiqué de presse'}
+  - {url: 'https://www.credit-agricole.com/pdfPreview/207483', type: quarterly_series, period: 2025-Q2, fiscal_year: 2025, language: fr, date: 2025-07-31, title: 'Séries trimestrielles'}
+  - {url: 'https://www.credit-agricole.com/pdfPreview/207484', type: results_presentation, period: 2025-Q2, fiscal_year: 2025, language: fr, date: 2025-07-31, title: 'Présentation de la conférence de presse'}
+  - {url: 'https://www.credit-agricole.com/pdfPreview/207597', type: analyst_call_transcript, period: 2025-Q2, fiscal_year: 2025, language: fr, date: 2025-09-03, title: 'Transcript T2-25'}
+  - {url: 'https://www.credit-agricole.com/pdfPreview/206513', type: results_presentation, period: 2025-Q1, fiscal_year: 2025, language: fr, date: 2025-04-30, title: 'Résultats du 1er trimestre 2025'}
+  - {url: 'https://www.credit-agricole.com/pdfPreview/206744', type: analyst_call_transcript, period: 2025-Q1, fiscal_year: 2025, language: fr, date: 2025-05-20, title: 'Transcript T1-25'}
+  - {url: 'https://www.credit-agricole.com/pdfPreview/206514', type: press_release, period: 2025-Q1, fiscal_year: 2025, language: fr, date: 2025-04-30, title: 'Communiqué de presse'}
+  - {url: 'https://www.credit-agricole.com/pdfPreview/206515', type: quarterly_series, period: 2025-Q1, fiscal_year: 2025, language: fr, date: 2025-04-30, title: 'Séries trimestrielles'}
+  - {url: 'https://www.credit-agricole.com/pdfPreview/206516', type: results_presentation, period: 2025-Q1, fiscal_year: 2025, language: fr, date: 2025-04-30, title: 'Présentation de la conférence de presse'}
+  - {url: 'https://www.credit-agricole.com/pdfPreview/206536', type: other, period: 2024-FY, fiscal_year: 2024, language: fr, date: 2025-04-30, title: '2024 Rapport Annuel Relatif à la Politique et aux pratiques de rémunération'}
+  - {url: 'https://www.credit-agricole.com/pdfPreview/206113', type: pillar3, period: 2024-FY, fiscal_year: 2024, language: fr, date: 2025-03-24, title: 'CASA 2024 Rapport sur les risques – Pilier 3'}
+  - {url: 'https://www.credit-agricole.com/pdfPreview/206107', type: urd, period: 2024-FY, fiscal_year: 2024, language: fr, date: 2025-03-24, title: 'Document d’Enregistrement Universel 2024 enregistré auprès de l’AMF sous le numéro D.25-0137 (format zip)'}
+  - {url: 'https://www.credit-agricole.com/pdfPreview/206109', type: pillar3, period: 2024-FY, fiscal_year: 2024, language: fr, date: 2025-03-24, title: 'CASA - Composition du capital au 31122024 (Annexe VI)'}
+  - {url: 'https://www.credit-agricole.com/pdfPreview/206110', type: pillar3, period: 2024-FY, fiscal_year: 2024, language: fr, date: 2025-03-24, title: 'CASA - Principales caractérisques des instruments de fonds propres au 31122024'}
+  - {url: 'https://www.credit-agricole.com/pdfPreview/206106', type: urd, period: 2024-FY, fiscal_year: 2024, language: fr, date: 2025-03-24, title: 'Document d’Enregistrement Universel 2024 enregistré auprès de l’AMF sous le numéro D.25-0137 au format xHtml)'}
+  - {url: 'https://www.credit-agricole.com/pdfPreview/206108', type: other, period: 2024-FY, fiscal_year: 2024, language: fr, date: 2025-03-24, title: 'Informations relatives aux entités non intégrées dans le périmètre de consolidation et aux titres de participa'}
+  - {url: 'https://www.credit-agricole.com/pdfPreview/206105', type: urd, period: 2024-FY, fiscal_year: 2024, language: fr, date: 2025-03-24, title: 'Document d’Enregistrement Universel 2024 enregistré auprès de l’AMF sous le numéro D.25-0137 (format pdf)'}
+  - {url: 'https://www.credit-agricole.com/pdfPreview/204678', type: urd, period: 2024-Q3, fiscal_year: 2024, language: fr, date: 2024-11-13, title: 'Amendement A04 du Document d''Enregistrement Universel 2023 - Eléments financiers au 30 septembre 2024'}
+  - {url: 'https://www.credit-agricole.com/pdfPreview/204045', type: pillar3, period: 2024, fiscal_year: 2024, language: fr, date: 2024-09-09, title: 'Principales caractéristiques des instruments de fonds propres CAsa (Annexe II)'}
+  - {url: 'https://www.credit-agricole.com/pdfPreview/210201', type: other, period: 2025-FY, fiscal_year: 2025, language: fr, date: 2026-04-27, title: '2025 Rapport Annuel Relatif à la Politique et aux pratiques de rémunération'}
+  - {url: 'https://www.credit-agricole.com/pdfPreview/210133', type: pillar3, period: 2025-FY, fiscal_year: 2025, language: fr, date: 2026-04-10, title: 'Rapport sur les risques Pilier 3 - Crédit Agricole S.A. et Groupe Crédit Agricole au 31 décembre 2025'}
+  - {url: 'https://www.credit-agricole.com/pdfPreview/210020', type: urd, period: 2025-FY, fiscal_year: 2025, language: fr, date: 2026-03-30, title: 'Document d’Enregistrement Universel 2025 enregistré auprès de l’AMF sous le numéro D.26-0155 (format zip)'}
+  - {url: 'https://www.credit-agricole.com/pdfPreview/209967', type: urd, period: 2025-FY, fiscal_year: 2025, language: fr, date: 2026-03-27, title: 'Document d’Enregistrement Universel 2025 enregistré auprès de l’AMF sous le numéro D.26-0155 (format pdf)'}
+  - {url: 'https://www.credit-agricole.com/pdfPreview/210029', type: urd, period: 2025-FY, fiscal_year: 2025, language: fr, date: 2026-03-30, title: 'Document d’Enregistrement Universel 2025 enregistré auprès de l’AMF sous le numéro D.26-0155 (format xHTML)'}
+  - {url: 'https://www.credit-agricole.com/pdfPreview/209970', type: other, period: 2025-FY, fiscal_year: 2025, language: fr, date: 2026-03-27, title: 'Informations relatives aux entités non intégrées dans le périmètre de consolidation et aux titres de participa'}
+  - {url: 'https://www.credit-agricole.com/pdfPreview/209971', type: other, period: 2025-FY, fiscal_year: 2025, language: fr, date: 2026-03-27, title: 'Informations relatives aux entités non intégrées dans le périmètre de consolidation et aux titres de participa'}
+  - {url: 'https://www.credit-agricole.com/pdfPreview/210134', type: pillar3, period: 2025, fiscal_year: 2025, language: fr, date: 2026-04-10, title: 'CASA Principales caractéristiques des instruments de fonds propres CAsa (Annexe II)'}
+  - {url: 'https://www.credit-agricole.com/pdfPreview/210135', type: pillar3, period: 2025-FY, fiscal_year: 2025, language: fr, date: 2026-04-10, title: 'CASA - Composition-du-capital - 31 décembre 2025 (Annexe VI)'}
+  - {url: 'https://www.credit-agricole.com/pdfPreview/207697', type: pillar3, period: 2025-H1, fiscal_year: 2025, language: fr, date: 2025-09-15, title: 'Composition du capital Casa au 30 juin 2025 (Annexe VI)'}
+  - {url: 'https://www.credit-agricole.com/pdfPreview/207446', type: other, period: 2024-FY, fiscal_year: 2024, language: fr, date: 2025-07-25, title: 'Rapport 2024 sur la politique et les pratiques de rémunérations des Caisses régionales'}
+  - {url: 'https://www.credit-agricole.com/pdfPreview/206456', type: other, period: 2024-FY, fiscal_year: 2024, language: fr, date: 2025-07-15, title: 'Crédit Agricole Group: disclosure on global systemically important banks’ (G-SIBs) indicators'}
+  - {url: 'https://www.credit-agricole.com/pdfPreview/206194', type: other, period: 2024-FY, fiscal_year: 2024, language: fr, date: 2025-03-31, title: 'Groupe Crédit Agricole : informations relatives aux entités non intégrées dans le périmètre de consolidation e'}
+  - {url: 'https://www.credit-agricole.com/pdfPreview/206193', type: pillar3, period: 2024-FY, fiscal_year: 2024, language: fr, date: 2025-03-31, title: 'Principales caractéristiques des instruments de fonds propres au 31 12 2024'}
+  - {url: 'https://www.credit-agricole.com/pdfPreview/206192', type: pillar3, period: 2024-FY, fiscal_year: 2024, language: fr, date: 2025-03-31, title: 'Composition du capital au 31122024 (Annexe VI)'}
+  - {url: 'https://www.credit-agricole.com/pdfPreview/206191', type: urd, period: 2024-FY, fiscal_year: 2024, language: fr, date: 2025-03-31, title: '2024 Amendement A01 au Document d''Enregistrement Universel - Groupe Crédit Agricole'}
+  - {url: 'https://www.credit-agricole.com/pdfPreview/206189', type: pillar3, period: 2024-FY, fiscal_year: 2024, language: fr, date: 2025-03-31, title: 'Groupe Crédit Agricole - Pilier 3 - Rapport sur les risques - 31 décembre 2024'}
+  - {url: 'https://www.credit-agricole.com/pdfPreview/206188', type: urd, period: 2024-FY, fiscal_year: 2024, language: fr, date: 2025-03-31, title: 'Amendement A01 du Document d''Enregistrement Universel (version zip)'}
+  - {url: 'https://www.credit-agricole.com/pdfPreview/206187', type: urd, period: 2024-FY, fiscal_year: 2024, language: fr, date: 2025-03-31, title: 'Amendement A01 du Document d''Enregistrement Universel au format xHtml (ne s''affiche pas sous Internet Explorer'}
+  - {url: 'https://www.credit-agricole.com/pdfPreview/206112', type: pillar3, period: 2024-FY, fiscal_year: 2024, language: fr, date: 2025-03-24, title: 'GCA - Principales caractérisques des instruments de fonds propres au 31122024'}
+  - {url: 'https://www.credit-agricole.com/pdfPreview/210596', type: other, period: 2025-FY, fiscal_year: 2025, language: fr, date: 2026-06-05, title: 'Rapport 2025 sur la politique et les pratiques de rémunérations des Caisses régionales'}
+  - {url: 'https://www.credit-agricole.com/pdfPreview/210227', type: other, period: 2025-FY, fiscal_year: 2025, language: fr, date: 2026-04-28, title: 'Crédit Agricole Group: disclosure on global systemically important banks’ (G-SIBs) indicators'}
+  - {url: 'https://www.credit-agricole.com/pdfPreview/210138', type: pillar3, period: 2025-FY, fiscal_year: 2025, language: fr, date: 2026-04-10, title: 'GCA - Composition du capital 31 décembre 2025 (Annexe VI)'}
+  - {url: 'https://www.credit-agricole.com/pdfPreview/210137', type: pillar3, period: 2025, fiscal_year: 2025, language: fr, date: 2026-04-10, title: 'GCA - Principales caractéristiques des instruments de fonds propres Casa (Annexe II)'}
+  - {url: 'https://www.credit-agricole.com/pdfPreview/210136', type: pillar3, period: 2025-FY, fiscal_year: 2025, language: fr, date: 2026-04-10, title: 'Rapport sur les risques - Pilier 3 - Crédit Agricole SA et Groupe Crédit Agricole au 31 décembre 2025'}
+  - {url: 'https://www.credit-agricole.com/pdfPreview/208667', type: financial_statements, period: 2025-FY, fiscal_year: 2025, language: fr, date: 2026-02-04, title: 'Groupe Crédit Agricole - Comptes consolidés au 31 décembre 2025'}
+  - {url: 'https://www.credit-agricole.com/pdfPreview/207700', type: pillar3, period: 2025-H1, fiscal_year: 2025, language: fr, date: 2025-09-15, title: 'Composition du capital GCA au 30 juin 2025 (Annexe VI)'}
+  - {url: 'https://www.credit-agricole.com/pdfPreview/208104', type: pillar3, period: 2025-Q3, fiscal_year: 2025, language: fr, date: 2025-11-14, title: 'Groupe Crédit Agricole - Rapport des Risques - Pilier 3 – 30 Septembre 25'}
+  - {url: 'https://www.credit-agricole.com/pdfPreview/207699', type: pillar3, period: 2025-H1, fiscal_year: 2025, language: fr, date: 2025-09-15, title: 'Groupe Crédit Agricole - Rapport des Risques - Pilier 3 – 30 Juin 25'}
+  - {url: 'https://www.credit-agricole.com/pdfPreview/207701', type: pillar3, period: 2025, fiscal_year: 2025, language: fr, date: 2025-09-15, title: 'Principales caractéristiques des instruments de fonds propres Casa (Annexe II)'}

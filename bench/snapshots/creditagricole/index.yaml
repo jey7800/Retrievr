@@ -1,0 +1,21 @@
+snapshot_version: 1
+site: creditagricole
+user_agent: retrievr/0.1.0.dev0 (+https://pypi.org/project/retrievr/)
+responses:
+- url: https://www.credit-agricole.com/finance/publications-financieres
+  normalized_url: https://www.credit-agricole.com/finance/publications-financieres
+  status: 200
+  content_type: text/html; charset=UTF-8
+  file: pages/www-credit-agricole-com-finance-publications-financieres-79be2783.html
+  sha256: 2e8b970d7ec3c5853ca43fe2b7266ee2531fff5551aa427f23d1ba026b76b40a
+  size: 336346
+  captured_at: '2026-11-20T10:41:13Z'
+- url: https://www.credit-agricole.com/robots.txt
+  normalized_url: https://www.credit-agricole.com/robots.txt
+  status: 200
+  content_type: text/plain
+  last_modified: Wed, 21 Oct 2026 08:16:24 GMT
+  file: pages/www-credit-agricole-com-robots-txt-37b061ea.txt
+  sha256: aeaf9c7b351892652ae7e79db35746a93079a7c2e854eb7fbe793b7399d3191c
+  size: 441
+  captured_at: '2026-11-20T10:41:10Z'

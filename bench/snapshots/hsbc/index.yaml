@@ -1,0 +1,42 @@
+snapshot_version: 1
+site: hsbc
+user_agent: retrievr/0.1.0.dev0 (+https://pypi.org/project/retrievr/)
+responses:
+- url: https://www.hsbc.com/investors/results-and-announcements
+  normalized_url: https://www.hsbc.com/investors/results-and-announcements
+  status: 200
+  content_type: text/html; charset=utf-8
+  etag: '"XF6+BG1SSwRtY2dX4yydGw=="'
+  last_modified: Tue, 10 Nov 2026 17:47:45 GMT
+  file: pages/www-hsbc-com-investors-results-and-announcements-6664126b.html
+  sha256: 4e8f04c09bd311ba3a251b26a2b6ac845d4048994c466bd2734b37b004aaf398
+  size: 473261
+  captured_at: '2026-11-20T10:33:54Z'
+- url: https://www.hsbc.com/investors/results-and-announcements/all-reporting/group
+  normalized_url: https://www.hsbc.com/investors/results-and-announcements/all-reporting/group
+  status: 200
+  content_type: text/html; charset=utf-8
+  etag: '"nS2dNPh+0l1mNvW9KDvy0A=="'
+  last_modified: Mon, 05 Oct 2026 02:16:21 GMT
+  file: pages/www-hsbc-com-investors-results-and-announcements-all-reporting-group-a790c098.html
+  sha256: 1a3720b02b091f9b89a99e8dbf38dedc5fcd6a8c089ab6bb4a738fba5a4d463a
+  size: 587842
+  captured_at: '2026-11-20T10:33:55Z'
+- url: https://www.hsbc.com/investors/results-and-announcements/all-reporting/group?page=1&take=100
+  normalized_url: https://www.hsbc.com/investors/results-and-announcements/all-reporting/group?page=1&take=100
+  status: 200
+  content_type: text/html; charset=utf-8
+  etag: '"phrTZco6sodY/k54SidqGw=="'
+  last_modified: Mon, 05 Oct 2026 02:16:21 GMT
+  file: pages/www-hsbc-com-investors-results-and-announcements-all-reporting-group-page-1-take-100-75ec35ba.html
+  sha256: d9c0e4a1b67b03956c47e927242a9b6f26badd87d21aa3f47b33f843036fbd17
+  size: 1613738
+  captured_at: '2026-11-20T10:34:15Z'
+- url: https://www.hsbc.com/robots.txt
+  normalized_url: https://www.hsbc.com/robots.txt
+  status: 200
+  content_type: text/plain
+  file: pages/www-hsbc-com-robots-txt-67e60980.txt
+  sha256: 2c0f76ae2d26f13dbdfc883e6814ac8b7d67f808fd3ab15f182b33327f72427f
+  size: 24
+  captured_at: '2026-11-20T10:34:13Z'

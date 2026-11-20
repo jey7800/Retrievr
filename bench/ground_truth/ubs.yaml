@@ -1,14 +1,23 @@
-# Ground truth: quarterly reporting archive 2021-2025, fiscal years 2024 and 2025,
-# as shown on the snapshot captured 2026-11-20 (one static page).
-#
-# Drafted from the visible link labels, then reviewed by hand. Links are AEM
-# ".file/<base64 path>/<name>.pdf" URLs. The archive lists no quarterly full report
-# for 2025; for 2024 it lists two per quarter (UBS Group AG and UBS AG), both typed
-# quarterly_report. No publication dates on the page.
-site: www.ubs.com
-source: quarterly-reporting-archive
-captured_at: 2026-11-20
+# Ground truth: UBS quarterly reporting archive 2021-2025, fiscal years 2024-2025.
+# Snapshot: tests/fixtures/ubs. Drafted from the visible link labels, then reviewed.
+# No dates on the page.
+ground_truth_version: 1
+site: ubs
+scope: >-
+  Documents linked from the quarterly reporting archive page for 2021-2025, for the
+  quarters of 2024 and 2025: media releases, results and fixed income presentations,
+  earnings call remarks, quarterly full reports (UBS Group AG and UBS AG).
 fiscal_years: [2024, 2025]
+captured_at: 2026-11-20
+reviewed: false
+notes: The archive lists no quarterly full report for 2025.
+requests:
+  - text: UBS quarterly full reports since 2024
+    expect: {types: [quarterly_report], fiscal_years: [2024, 2025]}
+  - text: Fixed income presentations for 2025
+    expect: {types: [fixed_income_presentation], fiscal_years: [2025]}
+  - text: Rapports de presse et remarques de la conférence analystes, 2024 et 2025
+    expect: {types: [press_release, analyst_call_transcript], fiscal_years: [2024, 2025]}
 documents:
   - {url: 'https://www.ubs.com/global/en/investor-relations/financial-information/quarterly-reporting/qr-shared/2025/4q25/_jcr_content/root/contentarea/mainpar/toplevelgrid_copy_co/col_1/linklistreimagined_c/link_1319571161.143601152.file/PS9jb250ZW50L2RhbS9hc3NldHMvY2MvaW52ZXN0b3ItcmVsYXRpb25zL3F1YXJ0ZXJsaWVzLzIwMjUvNHEyNS80cTI1LW1lZGlhLXJlbGVhc2UtZW4ucGRm/4q25-media-release-en.pdf', type: press_release, period: 2025-Q4, fiscal_year: 2025, language: en, title: 'Media release'}
   - {url: 'https://www.ubs.com/global/en/investor-relations/financial-information/quarterly-reporting/qr-shared/2025/4q25/_jcr_content/root/contentarea/mainpar/toplevelgrid_copy_co/col_1/linklistreimagined_c/link_1853274911.585797463.file/PS9jb250ZW50L2RhbS9hc3NldHMvY2MvaW52ZXN0b3ItcmVsYXRpb25zL3F1YXJ0ZXJsaWVzLzIwMjUvNHEyNS80cTI1LXJlc3VsdHMtcHJlc2VudGF0aW9uLnBkZg==/4q25-results-presentation.pdf', type: results_presentation, period: 2025-Q4, fiscal_year: 2025, language: en, title: 'Presentation slidesfor fourth-quarter 2025'}

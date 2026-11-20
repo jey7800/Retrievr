@@ -1,0 +1,23 @@
+snapshot_version: 1
+site: citigroup
+user_agent: retrievr/0.1.0.dev0 (+https://pypi.org/project/retrievr/)
+responses:
+- url: https://www.citigroup.com/global/investors/quarterly-earnings
+  normalized_url: https://www.citigroup.com/global/investors/quarterly-earnings
+  status: 200
+  content_type: text/html;charset=utf-8
+  etag: W/"114cc9-F/FYFT/eSYjY25AIEVO7hquiBnk"
+  file: pages/www-citigroup-com-global-investors-quarterly-earnings-7dd30bfc.html
+  sha256: 23d5f626331bdb7e5d2dc2515a8b3fd79ad92889cd87cf275c3571aff706ebad
+  size: 1134092
+  captured_at: '2026-11-20T10:35:30Z'
+- url: https://www.citigroup.com/robots.txt
+  normalized_url: https://www.citigroup.com/robots.txt
+  status: 200
+  content_type: text/plain
+  etag: '"87-61fd9b589ec6c"'
+  last_modified: Sat, 17 Aug 2024 04:42:54 GMT
+  file: pages/www-citigroup-com-robots-txt-5bfe4dc8.txt
+  sha256: fb464b9953db241ae5e498d8db33e5ecf7b53db835bbbcaacf8b46db5bf92bec
+  size: 135
+  captured_at: '2026-11-20T10:35:29Z'

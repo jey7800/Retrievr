@@ -1,0 +1,44 @@
+snapshot_version: 1
+site: barclays
+user_agent: retrievr/0.1.0.dev0 (+https://pypi.org/project/retrievr/)
+responses:
+- url: https://home.barclays/investor-relations/reports-and-events/financial-results/
+  normalized_url: https://home.barclays/investor-relations/reports-and-events/financial-results/
+  status: 200
+  content_type: text/html; charset=UTF-8
+  etag: '"45f01-6609fc6587011-gzip"'
+  last_modified: Thu, 19 Nov 2026 11:53:24 GMT
+  file: pages/home-barclays-investor-relations-reports-and-events-financial-results-a144efec.html
+  sha256: fefc4e686a1a6a1902b6bd55ad11ee49ae815b1e865d90100163f0340e1c31fb
+  size: 286465
+  captured_at: '2026-11-20T10:35:25Z'
+- url: https://home.barclays/investor-relations/reports-and-events/financial-results/financial-results-2024/
+  normalized_url: https://home.barclays/investor-relations/reports-and-events/financial-results/financial-results-2024/
+  status: 200
+  content_type: text/html; charset=UTF-8
+  etag: '"412a8-660a43811d090-gzip"'
+  last_modified: Thu, 19 Nov 2026 17:11:31 GMT
+  file: pages/home-barclays-investor-relations-reports-and-events-financial-results-financial-results-20-1929db93.html
+  sha256: 06bf6e1469a889e7fa2675b5bfc30cd6926e0a2df659ca27917089cccc33890d
+  size: 266920
+  captured_at: '2026-11-20T10:35:27Z'
+- url: https://home.barclays/investor-relations/reports-and-events/financial-results/financial-results-2025/
+  normalized_url: https://home.barclays/investor-relations/reports-and-events/financial-results/financial-results-2025/
+  status: 200
+  content_type: text/html; charset=UTF-8
+  etag: '"402da-660a08b7db6e0-gzip"'
+  last_modified: Thu, 19 Nov 2026 12:48:31 GMT
+  file: pages/home-barclays-investor-relations-reports-and-events-financial-results-financial-results-20-612880b3.html
+  sha256: ee6a79b366b1779df9873abe044b69207114c2a821c3cb47a1bff2f9c50bb82a
+  size: 262874
+  captured_at: '2026-11-20T10:35:26Z'
+- url: https://home.barclays/robots.txt
+  normalized_url: https://home.barclays/robots.txt
+  status: 200
+  content_type: text/plain; charset=UTF-8
+  etag: '"53-653972a51dc35-gzip"'
+  last_modified: Sat, 06 Jun 2026 15:09:35 GMT
+  file: pages/home-barclays-robots-txt-9de9c7e6.txt
+  sha256: 9f3d2cd8166a2fe6d63ecb7d1ef914804be871c6ded7b1b1308b8f8f52625eea
+  size: 83
+  captured_at: '2026-11-20T10:35:24Z'

@@ -1,0 +1,64 @@
+# Ground truth drafted on 2026-11-20 from the snapshot in bench/snapshots/bankofamerica/ (what a
+# visitor sees: section heading, link label, tile), then reviewed entry by entry.
+# Set `reviewed: true` once a human has checked it against the live site.
+ground_truth_version: 1
+site: bankofamerica
+scope: >-
+  Documents linked in the Q1 2024 to Q4 2025 sections of the quarterly earnings
+  page: earnings release, presentation, supplemental information, the 10-Q or 10-K PDF, the
+  XBRL zip and, for Q4 2025, the 8-K with revised supplemental information.
+fiscal_years: [2024, 2025]
+captured_at: 2026-11-20
+reviewed: false
+notes: >-
+  The 10-K is listed in the Q4 section; it is typed annual_report with period FY.
+  Some files are served from a CloudFront host.
+requests:
+  - text: 10-K and 10-Q filings in PDF since 2024
+    expect: {types: [annual_report, quarterly_report], fiscal_years: [2024, 2025]}
+  - text: Earnings presentations for 2025
+    expect: {types: [results_presentation], fiscal_years: [2025]}
+  - text: Communiqués et suppléments financiers 2024, sans les fichiers XBRL
+    expect: {types: [press_release, financial_data_supplement], fiscal_years: [2024]}
+documents:
+  - {url: 'https://d1io3yog0oux5.cloudfront.net/_1863854573c37238d7e21de7fc584490/bankofamerica/db/806/10472/earnings_release/The+Press+Release_4Q25_ADA.pdf', type: press_release, period: 2025-Q4, fiscal_year: 2025, language: en, title: 'Q4 2025 Earnings Release PDF'}
+  - {url: 'https://d1io3yog0oux5.cloudfront.net/_1863854573c37238d7e21de7fc584490/bankofamerica/db/806/10472/presentation/The+Presentation+Materials_4Q25_ADA.pdf', type: results_presentation, period: 2025-Q4, fiscal_year: 2025, language: en, title: 'Q4 2025 Presentation PDF'}
+  - {url: 'https://d1io3yog0oux5.cloudfront.net/_1863854573c37238d7e21de7fc584490/bankofamerica/db/806/10472/supplemental_information/The+Supplemental+Information_4Q25_ADA.pdf', type: financial_data_supplement, period: 2025-Q4, fiscal_year: 2025, language: en, title: 'Q4 2025 Supplemental Information PDF'}
+  - {url: 'https://investor.bankofamerica.com/regulatory-and-other-filings/select-sec-filings/content/0000070858-26-000157/0000070858-26-000157.pdf', type: annual_report, period: 2025-FY, fiscal_year: 2025, language: en, title: 'Q4 2025 10-K'}
+  - {url: 'https://investor.bankofamerica.com/regulatory-and-other-filings/select-sec-filings/content/0000070858-26-000157/0000070858-26-000157-xbrl.zip', type: other, period: 2025-Q4, fiscal_year: 2025, language: en, title: 'Q4 2025 XBRL XBRL Zip'}
+  - {url: 'https://d1io3yog0oux5.cloudfront.net/_1863854573c37238d7e21de7fc584490/bankofamerica/db/807/10479/file/8-K+1.6.26+Tax-related+Equity+Investment+Accounting+Changes_ADA.pdf', type: quarterly_series_restated, period: 2025-Q4, fiscal_year: 2025, language: en, title: 'Q4 2025 8-K: 1.6.26 Revised Supplemental Information PDF'}
+  - {url: 'https://d1io3yog0oux5.cloudfront.net/_1863854573c37238d7e21de7fc584490/bankofamerica/db/806/10411/earnings_release/The+Press+Release_3Q25_ADA.pdf', type: press_release, period: 2025-Q3, fiscal_year: 2025, language: en, title: 'Q3 2025 Earnings Release PDF'}
+  - {url: 'https://d1io3yog0oux5.cloudfront.net/_1863854573c37238d7e21de7fc584490/bankofamerica/db/806/10411/presentation/The+Presentation+Materials_3Q25_ADA.pdf', type: results_presentation, period: 2025-Q3, fiscal_year: 2025, language: en, title: 'Q3 2025 Presentation PDF'}
+  - {url: 'https://d1io3yog0oux5.cloudfront.net/_1863854573c37238d7e21de7fc584490/bankofamerica/db/806/10411/supplemental_information/The+Supplemental+Information_3Q25_ADA.pdf', type: financial_data_supplement, period: 2025-Q3, fiscal_year: 2025, language: en, title: 'Q3 2025 Supplemental Information PDF'}
+  - {url: 'https://investor.bankofamerica.com/regulatory-and-other-filings/select-sec-filings/content/0000070858-25-000405/0000070858-25-000405.pdf', type: quarterly_report, period: 2025-Q3, fiscal_year: 2025, language: en, title: 'Q3 2025 10-Q'}
+  - {url: 'https://investor.bankofamerica.com/regulatory-and-other-filings/select-sec-filings/content/0000070858-25-000405/0000070858-25-000405-xbrl.zip', type: other, period: 2025-Q3, fiscal_year: 2025, language: en, title: 'Q3 2025 XBRL XBRL Zip'}
+  - {url: 'https://d1io3yog0oux5.cloudfront.net/_1863854573c37238d7e21de7fc584490/bankofamerica/db/806/10336/earnings_release/The+Press+Release_2Q25_ADA.pdf', type: press_release, period: 2025-Q2, fiscal_year: 2025, language: en, title: 'Q2 2025 Earnings Release PDF'}
+  - {url: 'https://d1io3yog0oux5.cloudfront.net/_1863854573c37238d7e21de7fc584490/bankofamerica/db/806/10336/presentation/The+Presentation+Materials_2Q25_ADA.pdf', type: results_presentation, period: 2025-Q2, fiscal_year: 2025, language: en, title: 'Q2 2025 Presentation PDF'}
+  - {url: 'https://d1io3yog0oux5.cloudfront.net/_1863854573c37238d7e21de7fc584490/bankofamerica/db/806/10336/supplemental_information/The+Supplemental+Information_2Q25_ADA.pdf', type: financial_data_supplement, period: 2025-Q2, fiscal_year: 2025, language: en, title: 'Q2 2025 Supplemental Information PDF'}
+  - {url: 'https://investor.bankofamerica.com/regulatory-and-other-filings/select-sec-filings/content/0000070858-25-000268/0000070858-25-000268.pdf', type: quarterly_report, period: 2025-Q2, fiscal_year: 2025, language: en, title: 'Q2 2025 10-Q'}
+  - {url: 'https://investor.bankofamerica.com/regulatory-and-other-filings/select-sec-filings/content/0000070858-25-000268/0000070858-25-000268-xbrl.zip', type: other, period: 2025-Q2, fiscal_year: 2025, language: en, title: 'Q2 2025 XBRL XBRL Zip'}
+  - {url: 'https://d1io3yog0oux5.cloudfront.net/_1863854573c37238d7e21de7fc584490/bankofamerica/db/806/10171/earnings_release/The+Press+Release_1Q25_ADA.pdf', type: press_release, period: 2025-Q1, fiscal_year: 2025, language: en, title: 'Q1 2025 Earnings Release PDF'}
+  - {url: 'https://d1io3yog0oux5.cloudfront.net/_1863854573c37238d7e21de7fc584490/bankofamerica/db/806/10171/presentation/The+Presentation+Materials_1Q25_ADA.pdf', type: results_presentation, period: 2025-Q1, fiscal_year: 2025, language: en, title: 'Q1 2025 Presentation PDF'}
+  - {url: 'https://d1io3yog0oux5.cloudfront.net/_1863854573c37238d7e21de7fc584490/bankofamerica/db/806/10171/supplemental_information/The+Supplemental+Information_1Q25_ADA.pdf', type: financial_data_supplement, period: 2025-Q1, fiscal_year: 2025, language: en, title: 'Q1 2025 Supplemental Information PDF'}
+  - {url: 'https://investor.bankofamerica.com/regulatory-and-other-filings/select-sec-filings/content/0000070858-25-000200/0000070858-25-000200.pdf', type: quarterly_report, period: 2025-Q1, fiscal_year: 2025, language: en, title: 'Q1 2025 10-Q'}
+  - {url: 'https://investor.bankofamerica.com/regulatory-and-other-filings/select-sec-filings/content/0000070858-25-000200/0000070858-25-000200-xbrl.zip', type: other, period: 2025-Q1, fiscal_year: 2025, language: en, title: 'Q1 2025 XBRL XBRL Zip'}
+  - {url: 'https://d1io3yog0oux5.cloudfront.net/_1863854573c37238d7e21de7fc584490/bankofamerica/db/806/10136/earnings_release/The+Press+Release_4Q24_ADA.pdf', type: press_release, period: 2024-Q4, fiscal_year: 2024, language: en, title: 'Q4 2024 Earnings Release PDF'}
+  - {url: 'https://d1io3yog0oux5.cloudfront.net/_1863854573c37238d7e21de7fc584490/bankofamerica/db/806/10136/presentation/The+Presentation+Materials_4Q24_ADA.pdf', type: results_presentation, period: 2024-Q4, fiscal_year: 2024, language: en, title: 'Q4 2024 Presentation PDF'}
+  - {url: 'https://d1io3yog0oux5.cloudfront.net/_1863854573c37238d7e21de7fc584490/bankofamerica/db/806/10136/supplemental_information/The+Supplemental+Information_4Q24_ADA.pdf', type: financial_data_supplement, period: 2024-Q4, fiscal_year: 2024, language: en, title: 'Q4 2024 Supplemental Information PDF'}
+  - {url: 'https://investor.bankofamerica.com/regulatory-and-other-filings/select-sec-filings/content/0000070858-25-000139/0000070858-25-000139.pdf', type: annual_report, period: 2024-FY, fiscal_year: 2024, language: en, title: 'Q4 2024 10-K'}
+  - {url: 'https://investor.bankofamerica.com/regulatory-and-other-filings/select-sec-filings/content/0000070858-25-000139/0000070858-25-000139-xbrl.zip', type: other, period: 2024-Q4, fiscal_year: 2024, language: en, title: 'Q4 2024 XBRL XBRL Zip'}
+  - {url: 'https://d1io3yog0oux5.cloudfront.net/_1863854573c37238d7e21de7fc584490/bankofamerica/db/806/10117/earnings_release/The+Press+Release_3Q24_ADA.pdf', type: press_release, period: 2024-Q3, fiscal_year: 2024, language: en, title: 'Q3 2024 Earnings Release PDF'}
+  - {url: 'https://d1io3yog0oux5.cloudfront.net/_1863854573c37238d7e21de7fc584490/bankofamerica/db/806/10117/presentation/The+Presentation+Materials_3Q24_ADA.pdf', type: results_presentation, period: 2024-Q3, fiscal_year: 2024, language: en, title: 'Q3 2024 Presentation PDF'}
+  - {url: 'https://d1io3yog0oux5.cloudfront.net/_1863854573c37238d7e21de7fc584490/bankofamerica/db/806/10117/supplemental_information/The+Supplemental+Information_3Q24_ADA.pdf', type: financial_data_supplement, period: 2024-Q3, fiscal_year: 2024, language: en, title: 'Q3 2024 Supplemental Information PDF'}
+  - {url: 'https://investor.bankofamerica.com/regulatory-and-other-filings/select-sec-filings/content/0000070858-24-000280/0000070858-24-000280.pdf', type: quarterly_report, period: 2024-Q3, fiscal_year: 2024, language: en, title: 'Q3 2024 10-Q'}
+  - {url: 'https://investor.bankofamerica.com/regulatory-and-other-filings/select-sec-filings/content/0000070858-24-000280/0000070858-24-000280-xbrl.zip', type: other, period: 2024-Q3, fiscal_year: 2024, language: en, title: 'Q3 2024 XBRL XBRL Zip'}
+  - {url: 'https://d1io3yog0oux5.cloudfront.net/_1863854573c37238d7e21de7fc584490/bankofamerica/db/806/10092/earnings_release/The+Press+Release_2Q24_ADA.pdf', type: press_release, period: 2024-Q2, fiscal_year: 2024, language: en, title: 'Q2 2024 Earnings Release PDF'}
+  - {url: 'https://d1io3yog0oux5.cloudfront.net/_1863854573c37238d7e21de7fc584490/bankofamerica/db/806/10092/presentation/The+Presentation+Materials_2Q24_ADA.pdf', type: results_presentation, period: 2024-Q2, fiscal_year: 2024, language: en, title: 'Q2 2024 Presentation PDF'}
+  - {url: 'https://d1io3yog0oux5.cloudfront.net/_1863854573c37238d7e21de7fc584490/bankofamerica/db/806/10092/supplemental_information/The+Supplemental+Information_2Q24_ADA.pdf', type: financial_data_supplement, period: 2024-Q2, fiscal_year: 2024, language: en, title: 'Q2 2024 Supplemental Information PDF'}
+  - {url: 'https://investor.bankofamerica.com/regulatory-and-other-filings/select-sec-filings/content/0000070858-24-000208/0000070858-24-000208.pdf', type: quarterly_report, period: 2024-Q2, fiscal_year: 2024, language: en, title: 'Q2 2024 10-Q'}
+  - {url: 'https://investor.bankofamerica.com/regulatory-and-other-filings/select-sec-filings/content/0000070858-24-000208/0000070858-24-000208-xbrl.zip', type: other, period: 2024-Q2, fiscal_year: 2024, language: en, title: 'Q2 2024 XBRL XBRL Zip'}
+  - {url: 'https://d1io3yog0oux5.cloudfront.net/_1863854573c37238d7e21de7fc584490/bankofamerica/db/806/10044/earnings_release/The+Press+Release_1Q24_ADA.pdf', type: press_release, period: 2024-Q1, fiscal_year: 2024, language: en, title: 'Q1 2024 Earnings Release PDF'}
+  - {url: 'https://d1io3yog0oux5.cloudfront.net/_1863854573c37238d7e21de7fc584490/bankofamerica/db/806/10044/presentation/The+Presentation+Materials_1Q24_ADA.pdf', type: results_presentation, period: 2024-Q1, fiscal_year: 2024, language: en, title: 'Q1 2024 Presentation PDF'}
+  - {url: 'https://d1io3yog0oux5.cloudfront.net/_1863854573c37238d7e21de7fc584490/bankofamerica/db/806/10044/supplemental_information/The+Supplemental+Information_1Q24_ADA.pdf', type: financial_data_supplement, period: 2024-Q1, fiscal_year: 2024, language: en, title: 'Q1 2024 Supplemental Information PDF'}
+  - {url: 'https://investor.bankofamerica.com/regulatory-and-other-filings/select-sec-filings/content/0000070858-24-000156/0000070858-24-000156.pdf', type: quarterly_report, period: 2024-Q1, fiscal_year: 2024, language: en, title: 'Q1 2024 10-Q'}
+  - {url: 'https://investor.bankofamerica.com/regulatory-and-other-filings/select-sec-filings/content/0000070858-24-000156/0000070858-24-000156-xbrl.zip', type: other, period: 2024-Q1, fiscal_year: 2024, language: en, title: 'Q1 2024 XBRL XBRL Zip'}

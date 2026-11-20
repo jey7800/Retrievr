@@ -9,7 +9,7 @@ scope: >-
   (CEO, CFO and division presidents, published the following February).
 fiscal_years: [2024, 2025]
 captured_at: 2026-11-20
-reviewed: false
+reviewed: true
 notes: >-
   Annual results presentations sit under the fiscal year they cover. Half-year
   documents are period H1, annual results presentations FY.

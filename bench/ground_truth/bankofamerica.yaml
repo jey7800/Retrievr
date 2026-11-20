@@ -9,7 +9,7 @@ scope: >-
   XBRL zip and, for Q4 2025, the 8-K with revised supplemental information.
 fiscal_years: [2024, 2025]
 captured_at: 2026-11-20
-reviewed: false
+reviewed: true
 notes: >-
   The 10-K is listed in the Q4 section; it is typed annual_report with period FY.
   Some files are served from a CloudFront host.

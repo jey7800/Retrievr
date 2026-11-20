@@ -10,7 +10,7 @@ scope: >-
   Audio and webcast links are out of scope.
 fiscal_years: [2024, 2025]
 captured_at: 2026-11-20
-reviewed: false
+reviewed: true
 notes: >-
   Most links have no text (icons); the category is shown next to them and is also
   encoded in file names (pr, fs, ps...). Historical Quarterly Summary files are typed

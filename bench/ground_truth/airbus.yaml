@@ -9,7 +9,7 @@ scope: >-
   statements and the ESEF package.
 fiscal_years: [2024, 2025]
 captured_at: 2026-11-20
-reviewed: false
+reviewed: true
 notes: >-
   The 2025 panel had no full annual report on the capture date. The ESEF zip is the
   annual financial report in its regulated format and is typed annual_report.

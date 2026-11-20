@@ -8,7 +8,7 @@ scope: >-
   information page: universal registration document (PDF and ESEF zip) and Form 20-F.
 fiscal_years: [2024, 2025]
 captured_at: 2026-11-20
-reviewed: false
+reviewed: true
 notes: >-
   File names carry the fiscal year and the publication year
   (..._2025_2026_en.pdf is the 2025 report). The online XHTML versions on another host are

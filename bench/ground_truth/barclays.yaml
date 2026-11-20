@@ -11,7 +11,7 @@ scope: >-
   scope.
 fiscal_years: [2024, 2025]
 captured_at: 2026-11-20
-reviewed: false
+reviewed: true
 notes: >-
   Tabs are categories (group, fixed income, subsidiaries, other); periods come from
   the tile headings (FY, H1, Q1, Q3) or, for subsidiaries, from the tile id. 6-K filings are

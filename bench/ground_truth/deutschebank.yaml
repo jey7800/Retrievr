@@ -11,7 +11,7 @@ scope: >-
   transcripts). Audio recordings (MP3) are out of scope.
 fiscal_years: [2024, 2025]
 captured_at: 2026-11-20
-reviewed: false
+reviewed: true
 notes: One static page with one table per year since 2007.
 requests:
   - text: Financial data supplements for 2025

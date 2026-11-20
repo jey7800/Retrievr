@@ -10,7 +10,7 @@ scope: >-
   the other regulatory documents grouped there. Chinese versions are separate documents.
 fiscal_years: [2024, 2025]
 captured_at: 2026-11-20
-reviewed: false
+reviewed: true
 notes: >-
   The start page shows only the latest year; the archive groups items by year
   heading. Documents without a period in their label (tax strategy, G-SIB indicators...) keep

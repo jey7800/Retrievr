@@ -11,7 +11,7 @@ scope: >-
   credit updates are out of scope.
 fiscal_years: [2024, 2025]
 captured_at: 2026-11-20
-reviewed: false
+reviewed: true
 notes: >-
   Links are opaque (/pdfPreview/<id>); the file name is only in the link title. Previous
   years load through an XHR call (/display_next_publications) when a year is chosen;

@@ -9,7 +9,7 @@ scope: >-
   earnings call remarks, quarterly full reports (UBS Group AG and UBS AG).
 fiscal_years: [2024, 2025]
 captured_at: 2026-11-20
-reviewed: false
+reviewed: true
 notes: The archive lists no quarterly full report for 2025.
 requests:
   - text: UBS quarterly full reports since 2024

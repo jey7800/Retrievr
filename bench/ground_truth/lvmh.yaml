@@ -12,7 +12,7 @@ scope: >-
   report) and items tagged only ESG or AUTRES THÉMATIQUES are out of scope.
 fiscal_years: [2024, 2025]
 captured_at: 2026-11-20
-reviewed: false
+reviewed: true
 notes: >-
   Files are served from the CMS CDN (lvmh-com.cdn.prismic.io) and, for older items, from
   a WordPress proxy path on www.lvmh.com. The 2025 ESEF package is published with an

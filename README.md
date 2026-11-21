@@ -49,6 +49,22 @@ responses are cached so that tests replay them offline.
 Output: `<output_dir>/<issuer>/<year>/<type>_<period>_<lang>.<ext>` plus
 `<output_dir>/manifest.json`.
 
+## Pages loaded by JavaScript
+
+When a page fills its listing with JavaScript (year selectors, "load more", a search
+API), `learn` opens it once in a browser to see which requests it makes, then stores a
+recipe that replays those requests with plain HTTP. The browser is an optional extra and
+is never needed to run a recipe:
+
+```bash
+pip install "retrievr[browser]"   # Playwright; drives the installed Edge by default
+```
+
+```toml
+[browser]
+channel = "msedge"   # or "chrome", or "" for Playwright's own Chromium
+```
+
 ## Respectful crawling
 
 robots.txt is respected by default (see `docs/decisions/0002-robots-policy.md`), requests

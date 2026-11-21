@@ -1,0 +1,62 @@
+# Hand-written recipe (schema v3): the publications page is filled by
+# POST /api/search (an Algolia-style query, 20 hits per page). The request body is the
+# one the page sends; only the page number varies. Files are on the CMS CDN or behind
+# a WordPress proxy path (field "attachment" of older items).
+# Verified live on 2026-11-21.
+schema_version: 3
+recipe: lvmh-ir
+version: 1
+issuer: lvmh
+site: www.lvmh.com
+allowed_domains:
+  - www.lvmh.com
+  - lvmh-com.cdn.prismic.io
+defaults:
+  language: fr
+sources:
+  - id: publications
+    kind: request
+    method: POST
+    url: https://www.lvmh.com/api/search
+    json:
+      queries:
+        - indexName: PRD-fr-fr-timestamp-desc
+          params:
+            facets: [publicationMonth, publicationYear, thematicId]
+            filters: "category:pressPublication OR category:publication OR category:pressPublicationHistory"
+            highlightPostTag: "__/ais-highlight__"
+            highlightPreTag: "__ais-highlight__"
+            hitsPerPage: 20
+            maxValuesPerFacet: 100
+            page: "{page}"
+            query: ""
+    pagination: {kind: page_number, start: 0, max_pages: 60}
+    response:
+      format: json
+      items:
+        path: results.0.hits
+        url: [prismicDocument.data.file.url, attachment]
+        title: name
+        file_name: prismicDocument.data.file.name
+        date: publicationDate
+        context: [category, thematic.0.thematic.data.name, thematic.1.thematic.data.name]
+    items:
+      extensions: [pdf, xlsx, zip, xbri, xhtml]
+classify:
+  type:
+    - {pattern: 'enregistrement universel', target: title, type: urd}
+    - {pattern: 'rapport financier semestriel', target: title, type: half_year_report}
+    - {pattern: 'rapport annuel', target: title, type: annual_report}
+    - {pattern: 'comptes consolid|documents financiers', target: title, type: financial_statements}
+    - {pattern: 'ventes du|r.sultats (annuels|semestriels)', target: title, type: results_presentation}
+    - {pattern: '.', target: title, type: other}
+  period:
+    - {pattern: '(?P<q>[13])(er|e) trimestre (?P<year>20\d{2})', target: title}
+    - {pattern: 'semestri\w* (?P<year>20\d{2})', target: title, period: H1}
+    - {pattern: '(annuels?|universel|consolid\w*|financiers|en bref)[^0-9]*(?P<year>20\d{2})', target: title, period: FY}
+health:
+  items_per_year: [10, 120]
+  cadence: {every: quarter, max_gap_days: 110}
+provenance:
+  method: hand_written
+  created_at: 2026-11-21

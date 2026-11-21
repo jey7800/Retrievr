@@ -26,10 +26,11 @@ from typing import Literal
 from bench.metrics import DocumentScore, score_documents, snapshot_coverage
 from bench.model import BENCH, ROOT, GroundTruth, Site, load_ground_truth, load_sites
 from retrievr.api import Retrievr
+from retrievr.browser import Discovery, ReplayDiscovery
 from retrievr.config import FetchSettings, LLMSettings, Settings, StateSettings
 from retrievr.fetch import Fetcher
 from retrievr.recipe import load_recipe, run_recipe
-from retrievr.snapshots import ReplayTransport
+from retrievr.snapshots import ReplayTransport, load_index
 
 Mode = Literal["snapshot", "live", "cold"]
 Status = Literal[
@@ -117,11 +118,16 @@ def evaluate_cold(site: Site, model: str, state_root: Path) -> SiteResult:
         return result
     cov = snapshot_coverage(snapshot, truth)
     result.coverage, result.coverage_missing = cov.ratio, cov.missing
+    # Offline: pages from the snapshot, a recorded browser discovery if there is one
+    # (never a live browser), and "today" set to the capture day (dates in bodies).
+    discovery = ReplayDiscovery(snapshot)
+    captured = load_index(snapshot).captured_on()
     retrievr = Retrievr(
         settings=cold_settings(model, state_root / site.id),
-        fetch_transport=ReplayTransport(snapshot),
+        fetch_transport=ReplayTransport(snapshot, lenient_bodies=True),
+        discoverer=discovery if discovery.available(site.start_url) else _NoDiscovery(),
         sleep=lambda _s: None,
-        today=truth.captured_at,
+        today=captured.date() if captured else truth.captured_at,
     )
     learned = retrievr.learn(site.start_url, issuer=site.id, years=truth.fiscal_years)
     result.status = learned.status
@@ -159,6 +165,13 @@ def evaluate_cold(site: Site, model: str, state_root: Path) -> SiteResult:
     result.llm_calls, result.cached_calls, result.cost_usd = calls, cached, cost
     result.tokens = (tokens_in, tokens_out)
     return result
+
+
+class _NoDiscovery:
+    """Offline benchmark without a recorded discovery: no browser either."""
+
+    def discover(self, url: str, years: object) -> Discovery:
+        return Discovery(start_url=url, notes=["no recorded discovery"])
 
 
 def _select(truth: GroundTruth, matches: object) -> set[str]:

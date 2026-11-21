@@ -28,6 +28,7 @@ sites:
     start_url: https://www.credit-agricole.com/finance/publications-financieres
     profile: js_xhr
     qualified_on: 2026-11-20
+    recipe: creditagricole-ir@1.yaml
     snapshot: bench/snapshots/creditagricole
     ground_truth: true
     notes: >-
@@ -124,6 +125,8 @@ sites:
     start_url: https://www.lvmh.com/fr/publications
     profile: js_xhr
     qualified_on: 2026-11-20
+    recipe: lvmh-ir@1.yaml
+    snapshot: bench/snapshots/lvmh
     ground_truth: true
     notes: >-
       Next.js page; the list (544 items, 20 per page) comes from POST /api/search.

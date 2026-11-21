@@ -27,6 +27,9 @@ log = logging.getLogger("retrievr.fetch")
 
 BLOCK_STATUSES = frozenset({403, 429, 503})
 REDIRECT_STATUSES = frozenset({301, 302, 303, 307, 308})
+REQUEST_HEADERS = frozenset({"accept", "content-type", "x-requested-with"})
+"""Headers a recipe may set on a request (nothing that carries identity or session)."""
+Method = Literal["GET", "POST"]
 ROBOTS_MAX_REDIRECTS = 5
 _SMALL_PAGE_BYTES = 20_000
 
@@ -223,8 +226,29 @@ class Fetcher:
         last_modified: str | None = None,
     ) -> Page:
         """GET a page (HTML/JSON) into memory. Raises on block, robots, domain or HTTP error."""
-        headers = _conditional_headers(etag, last_modified)
-        with self._open(url, allowed_domains=allowed_domains, headers=headers) as resp:
+        return self.request(
+            "GET", url, allowed_domains=allowed_domains, etag=etag, last_modified=last_modified
+        )
+
+    def request(
+        self,
+        method: Method,
+        url: str,
+        *,
+        content: bytes | None = None,
+        headers: Mapping[str, str] | None = None,
+        allowed_domains: Collection[str] | None = None,
+        etag: str | None = None,
+        last_modified: str | None = None,
+    ) -> Page:
+        """GET or POST a page (HTML/JSON) into memory, with the same checks as ``get``:
+        robots.txt, allowed domains, rate limit, block detection. Only the headers in
+        ``REQUEST_HEADERS`` can be set by the caller."""
+        extra = {k: v for k, v in (headers or {}).items() if k.lower() in REQUEST_HEADERS}
+        extra.update(_conditional_headers(etag, last_modified))
+        with self._open(
+            url, allowed_domains=allowed_domains, headers=extra, method=method, content=content
+        ) as resp:
             if resp.status_code == 304:
                 return Page(
                     url=url,
@@ -263,6 +287,13 @@ class Fetcher:
         with self._open(url, allowed_domains=allowed_domains, headers={}) as resp:
             yield resp
 
+    def allows(self, url: str, allowed_domains: Collection[str] | None = None) -> bool:
+        """Whether ``url`` may be fetched (robots.txt and allowed domains), without
+        fetching it. Used to vet the requests a browser page makes."""
+        if allowed_domains is not None and not is_allowed(url, set(allowed_domains)):
+            return False
+        return self._robots_allows(url)
+
     def robots_outcome(self, url: str) -> RobotsOutcome:
         """How robots.txt was resolved for the URL's origin (for logs and tests)."""
         return self._robots_entry(origin_of(url)).outcome
@@ -276,13 +307,18 @@ class Fetcher:
         *,
         allowed_domains: Collection[str] | None,
         headers: dict[str, str],
+        method: Method = "GET",
+        content: bytes | None = None,
     ) -> Iterator[httpx.Response]:
         current = url
         for _hop in range(self.settings.max_redirects + 1):
             self._check_url(current, allowed_domains)
             self._limiter.wait(host_of(current))
             request = self._client.build_request(
-                "GET", current, headers={"User-Agent": self.settings.user_agent, **headers}
+                method,
+                current,
+                headers={"User-Agent": self.settings.user_agent, **headers},
+                content=content,
             )
             try:
                 resp = self._client.send(request, stream=True)
@@ -291,6 +327,8 @@ class Fetcher:
             try:
                 if resp.status_code in REDIRECT_STATUSES and "location" in resp.headers:
                     current = resolve_url(resp.headers["location"], current)
+                    if resp.status_code not in (307, 308):
+                        method, content = "GET", None  # 301/302/303 turn a POST into a GET
                     continue
                 if resp.status_code in BLOCK_STATUSES:
                     raise BlockedError(current, f"HTTP {resp.status_code}", resp.status_code)

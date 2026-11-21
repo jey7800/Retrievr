@@ -19,7 +19,7 @@ from pydantic import BaseModel
 
 from retrievr.api import Retrievr, issuer_from_url
 from retrievr.classify import Decision, DocumentLabel, LabelBatch, apply_decisions
-from retrievr.config import Settings, StateSettings
+from retrievr.config import BrowserSettings, Settings, StateSettings
 from retrievr.events import Event
 from retrievr.learn import (
     Filter,
@@ -31,7 +31,7 @@ from retrievr.learn import (
     TypeRuleDraft,
 )
 from retrievr.llm import Message
-from retrievr.recipe import FoundDocument
+from retrievr.recipe import FoundDocument, YearRange
 
 T = TypeVar("T", bound=BaseModel)
 SITE = "https://ir.example-issuer.com"
@@ -187,7 +187,9 @@ def classify_answer(messages: list[Message]) -> LabelBatch:
 
 
 def make(tmp_path: Path, llm: FakeLLM, events: list[Event] | None = None) -> Retrievr:
-    settings = Settings(state=StateSettings(state_dir=tmp_path / "state"))
+    settings = Settings(
+        state=StateSettings(state_dir=tmp_path / "state"), browser=BrowserSettings(enabled=False)
+    )
     return Retrievr(
         settings=settings,
         llm=llm,
@@ -217,7 +219,8 @@ def test_learn_then_replay_without_llm(tmp_path: Path) -> None:
 
     assert result.status == "learned", result.errors
     assert result.recipe is not None and result.recipe_path is not None
-    assert result.recipe.sources[0].params["year"].from_ == 2024
+    year = result.recipe.sources[0].params["year"]
+    assert isinstance(year, YearRange) and year.from_ == 2024
     names = sorted(d.url.rsplit("/", 1)[1] for d in result.all_documents)
     assert "registration-document.pdf" not in names  # header link left out
     assert len(names) == 6
@@ -314,7 +317,9 @@ def test_blocked_site_stops(tmp_path: Path) -> None:
         return httpx.Response(403, text="Access denied")
 
     llm = default_llm()
-    settings = Settings(state=StateSettings(state_dir=tmp_path / "state"))
+    settings = Settings(
+        state=StateSettings(state_dir=tmp_path / "state"), browser=BrowserSettings(enabled=False)
+    )
     r = Retrievr(
         settings=settings,
         llm=llm,

@@ -1,7 +1,9 @@
-"""Cold learning of the three milestone-1 sites, replayed offline.
+"""Cold learning replayed offline: the three milestone-1 sites (static pages) and
+Crédit Agricole (listing loaded by JavaScript through POST requests).
 
-Pages come from the snapshots in ``tests/fixtures/<site>/``; LLM answers come from the
-response cache in ``tests/fixtures/llm_cache/`` (a missing entry fails the test). To
+Pages come from the snapshots in ``tests/fixtures/<site>/``, browser discoveries from
+their ``discovery/`` records (no browser runs), LLM answers from the response cache in
+``tests/fixtures/llm_cache/`` (a missing entry fails the test). To
 record the cache again (calls the LLM over the network, a few cents):
 
     RETRIEVR_LLM_RECORD=1 uv run --env-file .env pytest tests/integration/test_cold_learning.py
@@ -19,14 +21,18 @@ from bench.metrics import score_documents
 from bench.model import BENCH, Site, load_ground_truth, load_sites
 
 from retrievr.api import Retrievr
-from retrievr.config import LLMSettings, Settings, StateSettings
-from retrievr.snapshots import ReplayTransport
+from retrievr.browser import ReplayDiscovery
+from retrievr.config import BrowserSettings, LLMSettings, Settings, StateSettings
+from retrievr.snapshots import ReplayTransport, load_index
 
 FIXTURES = Path(__file__).resolve().parent.parent / "fixtures"
 CACHE = FIXTURES / "llm_cache"
 MODEL = "openai/gpt-6-luna"
 RECORD = os.environ.get("RETRIEVR_LLM_RECORD") == "1"
 SITES = ["societegenerale", "deutschebank", "ubs"]
+# Minimum recall and precision per site (the ground truth of Crédit Agricole leaves out a
+# few documents of the same sections).
+THRESHOLDS = {"creditagricole": (1.0, 0.8)}
 
 
 def _site(site_id: str) -> Site:
@@ -43,25 +49,33 @@ def offline() -> Iterator[None]:
         yield
 
 
-@pytest.mark.parametrize("site_id", SITES)
+@pytest.mark.parametrize("site_id", [*SITES, "creditagricole"])
 def test_cold_learning_finds_every_document(site_id: str, tmp_path: Path, offline: None) -> None:
     site = _site(site_id)
     truth = load_ground_truth(BENCH / "ground_truth" / f"{site_id}.yaml")
     settings = Settings(
         llm=LLMSettings(model_small=MODEL, cache_dir=CACHE, cache="use" if RECORD else "replay"),
         state=StateSettings(state_dir=tmp_path / "state"),
+        browser=BrowserSettings(enabled=False),
     )
-    replay = ReplayTransport(FIXTURES / site_id)
+    snapshot = FIXTURES / site_id
+    discovery = ReplayDiscovery(snapshot)
+    captured = load_index(snapshot).captured_on()
     r = Retrievr(
-        settings=settings, fetch_transport=replay, sleep=lambda _s: None, today=truth.captured_at
+        settings=settings,
+        fetch_transport=ReplayTransport(snapshot, lenient_bodies=True),
+        discoverer=discovery if discovery.available(site.start_url) else None,
+        sleep=lambda _s: None,
+        today=captured.date() if captured else truth.captured_at,
     )
     learned = r.learn(site.start_url, issuer=site.id, years=truth.fiscal_years)
     assert learned.status == "learned", learned.errors
     assert learned.recipe is not None and learned.recipe.provenance is not None
     assert learned.recipe.provenance.method == "learned"
     score = score_documents(learned.all_documents, truth)
-    assert score.recall == 1.0, score.missing[:5]
-    assert score.precision >= 0.95, score.extra[:5]
+    min_recall, min_precision = THRESHOLDS.get(site_id, (1.0, 0.95))
+    assert score.recall >= min_recall, score.missing[:5]
+    assert score.precision >= min_precision, score.extra[:5]
 
     # Warm run on the unchanged site: the recipe alone, no LLM call.
     warm = r.run(site.id, years=truth.fiscal_years, download=False)
@@ -80,6 +94,7 @@ def test_requests_compile_to_the_expected_filter(
     settings = Settings(
         llm=LLMSettings(model_small=MODEL, cache_dir=CACHE, cache="use" if RECORD else "replay"),
         state=StateSettings(state_dir=tmp_path / "state"),
+        browser=BrowserSettings(enabled=False),
     )
     r = Retrievr(settings=settings, today=truth.captured_at)
     for request in truth.requests:

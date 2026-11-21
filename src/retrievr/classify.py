@@ -35,6 +35,7 @@ FieldName = Literal[
     "title",
     "link_text",
     "link_title",
+    "file_name",
     "context",
     "heading",
     "row_header",
@@ -99,7 +100,12 @@ class TypeRule(_Rule):
 
 class PeriodRule(_Rule):
     """Named groups: ``year`` (required) and optionally ``q`` (quarter), ``h`` (half),
-    ``fy`` (full year). ``q``/``h`` may carry a prefix such as ``t3``, ``q3``, ``s1``."""
+    ``fy`` (full year). ``q``/``h`` may carry a prefix such as ``t3``, ``q3``, ``s1``.
+
+    Schema v3: ``period`` gives a fixed sub-period (``H1``, ``Q3``, ``FY``) for patterns
+    that cannot carry it in a group, e.g. "au 30 juin (?P<year>20\\d{2})" -> ``H1``."""
+
+    period: str | None = Field(default=None, pattern=r"^(Q[1-4]|H[12]|FY)$")
 
     @model_validator(mode="after")
     def _has_year_group(self) -> PeriodRule:
@@ -167,6 +173,8 @@ def classify(
         if m := period_rule.search(values):
             try:
                 period, period_year = normalize_period(m)
+                if period_rule.period is not None:
+                    period = f"{period_year}-{period_rule.period}"
             except (ValueError, IndexError):
                 continue  # e.g. a "q" group without a digit: try the next rule
             notes.append(f"period={period} by {period_rule.describe()}")

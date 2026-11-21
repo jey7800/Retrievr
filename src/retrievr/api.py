@@ -23,6 +23,7 @@ from typing import Literal
 
 import httpx
 
+from retrievr.browser import BrowserDiscovery, Discoverer
 from retrievr.classify import Decision, apply_decisions
 from retrievr.config import Settings, load_settings
 from retrievr.download import Downloader, DownloadOutcome
@@ -128,6 +129,7 @@ class Retrievr:
         settings: Settings | None = None,
         on_event: EventHandler | None = None,
         llm: StructuredLLM | None = None,
+        discoverer: Discoverer | None = None,
         fetch_transport: httpx.BaseTransport | None = None,
         llm_transport: httpx.BaseTransport | None = None,
         sleep: Callable[[float], None] = time.sleep,
@@ -137,6 +139,7 @@ class Retrievr:
         self.on_event = on_event
         self.store = StateStore(self.settings.state.state_dir)
         self._llm_override = llm
+        self._discoverer = discoverer
         self._fetch_transport = fetch_transport
         self._llm_transport = llm_transport
         self._sleep = sleep
@@ -256,7 +259,10 @@ class Retrievr:
         result: LearnResult,
     ) -> None:
         context = LearnContext(issuer=site, start_url=url, years=years, today=self.today)
-        learner = Learner(fetcher, llm, context)
+        discoverer = self._discoverer
+        if discoverer is None and self.settings.browser.enabled:
+            discoverer = BrowserDiscovery(self.settings.browser, fetcher)
+        learner = Learner(fetcher, llm, context, discoverer=discoverer)
         structure = learner.learn_structure()
         rules = learner.learn_rules(structure)
         result.notes = learner.notes

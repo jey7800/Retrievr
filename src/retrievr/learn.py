@@ -31,6 +31,7 @@ from typing import Literal, TypeVar
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator
 
+from retrievr.browser import BrowserBlockedError, BrowserUnavailableError, Discoverer
 from retrievr.candidates import (
     DOCUMENT_EXTENSIONS,
     LinkGroup,
@@ -39,6 +40,7 @@ from retrievr.candidates import (
     group_document_links,
     in_site,
     navigation_links,
+    page_controls,
     page_title,
     parse_html,
     pruned_html,
@@ -57,6 +59,15 @@ from retrievr.classify import (
     document_table,
     needs_decision,
 )
+from retrievr.endpoints import (
+    Endpoint,
+    digest_endpoints,
+    document_extensions,
+    document_hosts,
+    endpoints,
+    field_value,
+    templated_body,
+)
 from retrievr.fetch import BlockedError, Fetcher, FetchError
 from retrievr.llm import (
     UNTRUSTED_NOTICE,
@@ -72,10 +83,16 @@ from retrievr.recipe import (
     FoundDocument,
     HealthSpec,
     ItemsSpec,
+    JsonItems,
     NextLinkPagination,
+    OptionsParam,
+    PageNumberPagination,
     Provenance,
     Recipe,
+    RequestSource,
+    ResponseSpec,
     RunResult,
+    Source,
     UrlTemplateSource,
     YearRange,
     run_recipe,
@@ -92,6 +109,7 @@ MAX_NAV_PER_PAGE = 60
 MAX_OPEN_PER_ROUND = 5
 RULES_AGREEMENT = 0.9
 MIN_RULES_SAMPLE = 30
+DISCOVERY_MAX_DOCUMENTS = 5
 _YEAR_PLACEHOLDER = "{year}"
 
 
@@ -123,6 +141,38 @@ class StructureReply(_Reply):
     """Group ids (``P1.G2``) holding the documents in scope, for action ``recipe``."""
     sources: list[SourceDraft]
     default_language: str | None
+
+
+class FieldChange(_Reply):
+    field: str
+    """Form field name, or dotted path in the JSON body (``queries.0.params.page``)."""
+    value: Literal["page", "options", "year"]
+
+
+class RequestDraft(_Reply):
+    exchange: str
+    """Id (``X3``) of the captured call whose request is copied."""
+    vary: list[FieldChange]
+    options_selector: str | None
+    """CSS selector of the ``<option>`` elements on the start page, for value options."""
+    options_year: Literal["fiscal", "publication"] | None
+    year_from: int | None
+    page_start: int | None
+    has_more_path: str | None
+    html_path: str | None
+    items_path: str | None
+    url_paths: list[str]
+    title_path: str | None
+    file_name_path: str | None
+    date_path: str | None
+    context_paths: list[str]
+    container: str | None
+    item: str | None
+    title: str | None
+
+
+class StructureReplyWithRequests(StructureReply):
+    request_sources: list[RequestDraft]
 
 
 STRUCTURE_SYSTEM = f"""You configure retrievr, a deterministic engine that lists the
@@ -167,6 +217,31 @@ Choose an action:
 Keep reasoning under 60 words. Fields that do not apply to the chosen action are empty
 lists or null."""
 
+ENDPOINTS_ADDENDUM = """
+
+Some listings of this site are loaded by the page's JavaScript. The engine opened the page
+in a browser, picked years in its year selectors and pressed "load more", and lists below
+the endpoints those actions called (E ids) with each call (X ids). Prefer them when the
+static groups only show part of the listing (e.g. the default year).
+To use one, add a request_sources entry (the engine copies the request of the call you
+name, exactly as captured; fields equal to today's date are templated by the engine):
+- exchange: the X id of a call of that listing; vary: the body fields that change:
+  "page" (page number: give page_start, the first page number, and has_more_path, a JSON
+  path to a boolean telling whether another page exists, if there is one), "options" (the
+  value of a year-selector option: give options_selector, the CSS selector of its <option>
+  elements on the start page, and options_year: "fiscal" when the option year is the
+  fiscal year of the documents, "publication" when it is their publication year, e.g. a
+  2025 bucket holding the 2024 annual report), "year" (a plain year: give year_from).
+  Several sections of one endpoint (a body field telling the section) are several
+  request_sources, one per section in scope. Leave out sections that are not financial
+  reporting (thematic or marketing presentations, product news).
+- response: for a JSON list of documents give items_path (the list), url_paths (paths of
+  the document URL inside one item; several if items differ), title_path, file_name_path,
+  date_path and context_paths (texts such as category or tags). For a JSON response that
+  holds an HTML fragment give html_path, and item/title/container CSS selectors for the
+  fragment. For an HTML response give item/title/container only.
+The sources list (static pages) may stay empty when request_sources cover the listing."""
+
 
 @dataclass
 class VisitedPage:
@@ -176,6 +251,7 @@ class VisitedPage:
     title: str
     groups: list[LinkGroup]
     nav: list[NavLink]
+    year_selects: list[str] = field(default_factory=list)
 
     def group_ids(self) -> list[str]:
         return [f"{self.id}.G{i + 1}" for i in range(len(self.groups))]
@@ -223,6 +299,8 @@ class StructureResult:
     missing: list[str]
     extra: list[str]
     attempts: int
+    origins: dict[str, str] = field(default_factory=dict)
+    """Where each expected document was seen (group or captured call, DOM path)."""
 
     @property
     def clean(self) -> bool:
@@ -260,8 +338,11 @@ class Learner:
         max_repairs: int = 2,
         max_rule_repairs: int = 1,
         sample_size: int = 80,
+        discoverer: Discoverer | None = None,
     ) -> None:
         self.fetcher = fetcher
+        self.discoverer = discoverer
+        self.endpoints: list[Endpoint] = []
         self.llm = llm
         self.ctx = context
         self.max_open_rounds = max_open_rounds
@@ -295,6 +376,7 @@ class Learner:
             title=page_title(root),
             groups=group_document_links(root, page.final_url),
             nav=navigation_links(root, page.final_url, self.ctx.domain, limit=MAX_NAV_PER_PAGE),
+            year_selects=page_controls(root).year_selects,
         )
         self.pages[page_id] = visited
         return visited
@@ -326,22 +408,51 @@ class Learner:
             f"Fiscal years checked now: {years} (the recipe must still cover every year)."
             f"{notes}\n\n{untrusted('pages', digests)}"
         )
+        system = STRUCTURE_SYSTEM
+        if self.endpoints:
+            system += ENDPOINTS_ADDENDUM
+            user += "\n\n" + untrusted(
+                "endpoints", digest_endpoints(self.endpoints, self.ctx.today)
+            )
         return [
-            {"role": "system", "content": STRUCTURE_SYSTEM},
+            {"role": "system", "content": system},
             {"role": "user", "content": user},
             *history,
         ]
 
+    def _discover(self, start: VisitedPage) -> None:
+        """Open the page in a browser when its listing looks loaded by JavaScript."""
+        documents = sum(len(g.candidates) for g in start.groups)
+        if self.discoverer is None or (
+            documents >= DISCOVERY_MAX_DOCUMENTS and not start.year_selects
+        ):
+            return
+        try:
+            found = self.discoverer.discover(self.ctx.start_url, self.ctx.years)
+        except BrowserBlockedError as exc:
+            raise BlockedError(self.ctx.start_url, str(exc)) from exc
+        except BrowserUnavailableError as exc:
+            self.notes.append(f"browser discovery skipped: {exc}")
+            return
+        self.endpoints = endpoints(found.exchanges)
+        self.notes.append(
+            f"browser discovery: {len(found.actions)} actions, "
+            f"{len(found.exchanges)} calls, {len(self.endpoints)} endpoints with documents"
+        )
+
     def learn_structure(self) -> StructureResult:
-        if self.visit(self.ctx.start_url) is None:
+        start = self.visit(self.ctx.start_url)
+        if start is None:
             raise LearnError(f"start page unavailable: {'; '.join(self.notes)}")
+        self._discover(start)
+        schema: type[StructureReply] = (
+            StructureReplyWithRequests if self.endpoints else StructureReply
+        )
         history: list[Message] = []
         best: StructureResult | None = None
         opened = repairs = 0
         for attempt in range(1, 2 + self.max_open_rounds + self.max_repairs):
-            reply = self.llm.structured(
-                self._structure_messages(history), StructureReply, step="structure"
-            )
+            reply = self.llm.structured(self._structure_messages(history), schema, step="structure")
             history.append({"role": "assistant", "content": reply.model_dump_json()})
             if reply.action == "open_pages":
                 if opened >= self.max_open_rounds:
@@ -392,14 +503,15 @@ class Learner:
         health: HealthSpec | None = None,
         version: int = 1,
     ) -> Recipe:
-        if not reply.sources:
+        drafts = reply.request_sources if isinstance(reply, StructureReplyWithRequests) else []
+        if not reply.sources and not drafts:
             raise ValueError("no source given")
         chosen = [g for gid in reply.document_groups if (g := self._group(gid)) is not None]
         doc_hosts = {h for g in chosen for h in g.hosts}
         exts = {e for g in chosen for e in g.extensions if e in DOCUMENT_EXTENSIONS}
         exts |= {"pdf", "xlsx", "xls", "xlsb"}
         site = host_of(self.ctx.start_url)
-        sources = []
+        sources: list[Source] = []
         source_hosts = set()
         for i, draft in enumerate(reply.sources):
             url = draft.url.strip()
@@ -434,6 +546,11 @@ class Learner:
                     ),
                 )
             )
+        for i, request in enumerate(drafts):
+            source, hosts = self._request_source(request, i, exts)
+            sources.append(source)
+            source_hosts.add(host_of(source.url))
+            doc_hosts |= hosts
         language = (reply.default_language or "").lower() or None
         if language and not re.fullmatch(r"[a-z]{2,3}", language):
             language = None
@@ -453,6 +570,89 @@ class Learner:
             ),
         )
 
+    def _exchange(self, exchange_id: str) -> tuple[Endpoint, int]:
+        for ep in self.endpoints:
+            for index, ex in enumerate(ep.exchanges):
+                if ex.id == exchange_id:
+                    return ep, index
+        raise ValueError(f"unknown exchange {exchange_id!r} (use an X id listed above)")
+
+    def _request_source(
+        self, draft: RequestDraft, index: int, base_exts: set[str]
+    ) -> tuple[RequestSource, set[str]]:
+        endpoint, position = self._exchange(draft.exchange)
+        exchange = endpoint.exchanges[position]
+        found = endpoint.documents[exchange.id]
+        if not in_site(host_of(exchange.url), self.ctx.domain):
+            raise ValueError(f"{exchange.id} is not on the site {self.ctx.domain}")
+        vary: dict[str, str] = {}
+        params: dict[str, YearRange | OptionsParam] = {}
+        pagination = None
+        for change in draft.vary:
+            if change.value == "page":
+                vary[change.field] = "{page}"
+                start = draft.page_start
+                if start is None:
+                    current = field_value(exchange, change.field) or "1"
+                    start = int(current) if current.strip().isdigit() else 1
+                pagination = PageNumberPagination(
+                    start=start, max_pages=60, has_more=draft.has_more_path or None
+                )
+            elif change.value == "options":
+                if not draft.options_selector:
+                    raise ValueError(f"{change.field}: options need options_selector")
+                vary[change.field] = "{option}"
+                params["option"] = OptionsParam(
+                    page=self.ctx.start_url,
+                    selector=draft.options_selector,
+                    year=draft.options_year or "fiscal",
+                )
+            else:
+                vary[change.field] = "{year}"
+                first = draft.year_from or min(self.ctx.years or [self.ctx.today.year - 5])
+                params["year"] = YearRange.model_validate({"from": first, "to": "current"})
+        form, json_body = templated_body(exchange, vary, self.ctx.today)
+        if draft.items_path:
+            if not draft.url_paths:
+                raise ValueError(f"source from {exchange.id}: items_path needs url_paths")
+            response = ResponseSpec(
+                format="json",
+                items=JsonItems(
+                    path=draft.items_path,
+                    url=draft.url_paths,
+                    title=draft.title_path or None,
+                    file_name=draft.file_name_path or None,
+                    date=draft.date_path or None,
+                    context=draft.context_paths,
+                ),
+            )
+        elif draft.html_path:
+            response = ResponseSpec(format="json", html_path=draft.html_path)
+        else:
+            response = ResponseSpec(format="html")
+        # A listing endpoint only lists documents: accept every known kind of file.
+        exts = sorted(base_exts | document_extensions([found]) | DOCUMENT_EXTENSIONS | {"xhtml"})
+        source = RequestSource(
+            id=f"request-{index + 1}",
+            method="POST" if exchange.method.upper() == "POST" else "GET",
+            url=exchange.url,
+            form=form,
+            json_body=json_body,
+            headers={"X-Requested-With": exchange.requested_with}
+            if exchange.requested_with
+            else {},
+            params=params,
+            pagination=pagination,
+            response=response,
+            items=ItemsSpec(
+                container=draft.container or None,
+                item=draft.item or None,
+                title=draft.title or None,
+                extensions=exts,
+            ),
+        )
+        return source, document_hosts([found])
+
     def check_years(self, recipe: Recipe) -> set[int] | None:
         """Years to replay while learning: the requested ones plus those of the listing
         pages already seen (so the check covers what the LLM looked at)."""
@@ -462,6 +662,8 @@ class Learner:
         seen = {normalize_url(p.url) for p in self.pages.values()}
         seen |= {normalize_url(p.final_url) for p in self.pages.values()}
         for source in recipe.sources:
+            if not isinstance(source, UrlTemplateSource):
+                continue
             for params, url in source.expand(self.ctx.today):
                 if normalize_url(url) in seen:
                     years.update(params.values())
@@ -474,10 +676,29 @@ class Learner:
         chosen = {gid for gid in reply.document_groups if self._group(gid) is not None}
         expected: set[str] = set()
         others: set[str] = set()
+        origins: dict[str, str] = {}
         for page in self.pages.values():
             for gid, group in zip(page.group_ids(), page.groups, strict=True):
                 urls = {c.normalized_url for c in group.candidates}
                 (expected if gid in chosen else others).update(urls)
+                for url in urls:
+                    origins.setdefault(url, f"group {gid}, DOM path {group.example_path}")
+        if isinstance(reply, StructureReplyWithRequests):
+            for draft in reply.request_sources:
+                try:
+                    endpoint, position = self._exchange(draft.exchange)
+                except ValueError:
+                    continue
+                found_docs = endpoint.documents[endpoint.exchanges[position].id]
+                expected |= found_docs.documents
+                for group in found_docs.groups:
+                    for cand in group.candidates:
+                        origins.setdefault(
+                            cand.normalized_url,
+                            f"call {draft.exchange}, DOM path {group.example_path}",
+                        )
+                for url in found_docs.documents:
+                    origins.setdefault(url, f"call {draft.exchange}")
         others -= expected
         found = {d.normalized_url for d in run.documents}
         result = StructureResult(
@@ -489,6 +710,7 @@ class Learner:
             missing=sorted(expected - found),
             extra=sorted(found & others),
             attempts=attempt,
+            origins=origins,
         )
         log.info(
             "structure attempt %d: %s, %d documents, %d missing, %d extra",
@@ -507,13 +729,18 @@ class Learner:
             f"- status: {run.status}" + (f" ({'; '.join(run.errors[:3])})" if run.errors else ""),
             f"- {len(run.documents)} documents found on {len(run.pages)} listing page(s):",
         ]
-        lines += [f"  {v.url} -> {v.items} links" for v in run.pages[:8]]
+        for v in run.pages[:12]:
+            where = f"{v.method} {v.url}" + (f" {dict(v.values)}" if v.values else "")
+            lines.append(f"  {v.source_id}: {where} -> {v.items} links")
         if result.missing:
             lines.append(
                 f"- {len(result.missing)} documents of the groups you selected were NOT "
                 "found, e.g.:"
             )
-            lines += [f"  {u}" for u in result.missing[:8]]
+            lines += [
+                f"  {u} (seen in {result.origins.get(u, 'a selected group')})"
+                for u in result.missing[:8]
+            ]
         if result.extra:
             lines.append(
                 f"- {len(result.extra)} documents of groups you did NOT select were found "

@@ -1,0 +1,425 @@
+snapshot_version: 2
+site: lvmh
+user_agent: retrievr/0.1.0.dev0 (+https://pypi.org/project/retrievr/)
+responses:
+- url: https://www.lvmh.com/api/search
+  normalized_url: https://www.lvmh.com/api/search
+  method: POST
+  request_body: '{"queries": [{"indexName": "PRD-fr-fr-timestamp-desc", "params": {"facets": ["publicationMonth", "publicationYear",
+    "thematicId"], "filters": "category:pressPublication OR category:publication OR category:pressPublicationHistory", "highlightPostTag":
+    "__/ais-highlight__", "highlightPreTag": "__ais-highlight__", "hitsPerPage": 20, "maxValuesPerFacet": 10, "page": 0, "query":
+    ""}}]}'
+  status: 200
+  content_type: application/json
+  file: pages/www-lvmh-com-api-search-ee49c453.json
+  sha256: 0a3dbae258bbc385b128dbade03aa9d07664a96150cecb74262e36b106bc480b
+  size: 146185
+  captured_at: '2026-11-21T17:16:48Z'
+- url: https://www.lvmh.com/api/search
+  normalized_url: https://www.lvmh.com/api/search
+  method: POST
+  request_body: '{"queries": [{"indexName": "PRD-fr-fr-timestamp-desc", "params": {"facets": ["publicationMonth", "publicationYear",
+    "thematicId"], "filters": "category:pressPublication OR category:publication OR category:pressPublicationHistory", "highlightPostTag":
+    "__/ais-highlight__", "highlightPreTag": "__ais-highlight__", "hitsPerPage": 20, "maxValuesPerFacet": 100, "page": 0,
+    "query": ""}}]}'
+  status: 200
+  content_type: application/json
+  file: pages/www-lvmh-com-api-search-f3dc3d13.json
+  sha256: 7bb1f4fb82b656bee87298b420ed40cc8e10b202dcca590035184cfbb01f5cc8
+  size: 146286
+  captured_at: '2026-11-21T17:16:48Z'
+- url: https://www.lvmh.com/api/search
+  normalized_url: https://www.lvmh.com/api/search
+  method: POST
+  request_body: '{"queries": [{"indexName": "PRD-fr-fr-timestamp-desc", "params": {"facets": ["publicationMonth", "publicationYear",
+    "thematicId"], "filters": "category:pressPublication OR category:publication OR category:pressPublicationHistory", "highlightPostTag":
+    "__/ais-highlight__", "highlightPreTag": "__ais-highlight__", "hitsPerPage": 20, "maxValuesPerFacet": 100, "page": 1,
+    "query": ""}}]}'
+  status: 200
+  content_type: application/json
+  file: pages/www-lvmh-com-api-search-383b4247.json
+  sha256: b5049d76a18afbc5f14c84f685b2a40b5758786249403ed0a6f23c25057ef895
+  size: 145168
+  captured_at: '2026-11-21T17:11:51Z'
+- url: https://www.lvmh.com/api/search
+  normalized_url: https://www.lvmh.com/api/search
+  method: POST
+  request_body: '{"queries": [{"indexName": "PRD-fr-fr-timestamp-desc", "params": {"facets": ["publicationMonth", "publicationYear",
+    "thematicId"], "filters": "category:pressPublication OR category:publication OR category:pressPublicationHistory", "highlightPostTag":
+    "__/ais-highlight__", "highlightPreTag": "__ais-highlight__", "hitsPerPage": 20, "maxValuesPerFacet": 100, "page": 10,
+    "query": ""}}]}'
+  status: 200
+  content_type: application/json
+  file: pages/www-lvmh-com-api-search-02388256.json
+  sha256: 2ff5b115619ee589a19329bdc8f1c17f38905265f16afe3ad6df962c2e8d9962
+  size: 128133
+  captured_at: '2026-11-21T17:12:00Z'
+- url: https://www.lvmh.com/api/search
+  normalized_url: https://www.lvmh.com/api/search
+  method: POST
+  request_body: '{"queries": [{"indexName": "PRD-fr-fr-timestamp-desc", "params": {"facets": ["publicationMonth", "publicationYear",
+    "thematicId"], "filters": "category:pressPublication OR category:publication OR category:pressPublicationHistory", "highlightPostTag":
+    "__/ais-highlight__", "highlightPreTag": "__ais-highlight__", "hitsPerPage": 20, "maxValuesPerFacet": 100, "page": 11,
+    "query": ""}}]}'
+  status: 200
+  content_type: application/json
+  file: pages/www-lvmh-com-api-search-27bb5b78.json
+  sha256: 7e21a7fd3c3858f911ed4d532e7d0b727f7eaeb4e29ffda36b0d341290a116e4
+  size: 127454
+  captured_at: '2026-11-21T17:12:01Z'
+- url: https://www.lvmh.com/api/search
+  normalized_url: https://www.lvmh.com/api/search
+  method: POST
+  request_body: '{"queries": [{"indexName": "PRD-fr-fr-timestamp-desc", "params": {"facets": ["publicationMonth", "publicationYear",
+    "thematicId"], "filters": "category:pressPublication OR category:publication OR category:pressPublicationHistory", "highlightPostTag":
+    "__/ais-highlight__", "highlightPreTag": "__ais-highlight__", "hitsPerPage": 20, "maxValuesPerFacet": 100, "page": 12,
+    "query": ""}}]}'
+  status: 200
+  content_type: application/json
+  file: pages/www-lvmh-com-api-search-1ad196f9.json
+  sha256: 7dce87314ec4ad5c10ddc690258bedf62339a1e66b91a806215e2598db0188c8
+  size: 131990
+  captured_at: '2026-11-21T17:12:02Z'
+- url: https://www.lvmh.com/api/search
+  normalized_url: https://www.lvmh.com/api/search
+  method: POST
+  request_body: '{"queries": [{"indexName": "PRD-fr-fr-timestamp-desc", "params": {"facets": ["publicationMonth", "publicationYear",
+    "thematicId"], "filters": "category:pressPublication OR category:publication OR category:pressPublicationHistory", "highlightPostTag":
+    "__/ais-highlight__", "highlightPreTag": "__ais-highlight__", "hitsPerPage": 20, "maxValuesPerFacet": 100, "page": 13,
+    "query": ""}}]}'
+  status: 200
+  content_type: application/json
+  file: pages/www-lvmh-com-api-search-bcf551cf.json
+  sha256: 92c5108c3cda96dd67ec9290f5827019747789efe24338c898c2723d982bb8a4
+  size: 130753
+  captured_at: '2026-11-21T17:12:03Z'
+- url: https://www.lvmh.com/api/search
+  normalized_url: https://www.lvmh.com/api/search
+  method: POST
+  request_body: '{"queries": [{"indexName": "PRD-fr-fr-timestamp-desc", "params": {"facets": ["publicationMonth", "publicationYear",
+    "thematicId"], "filters": "category:pressPublication OR category:publication OR category:pressPublicationHistory", "highlightPostTag":
+    "__/ais-highlight__", "highlightPreTag": "__ais-highlight__", "hitsPerPage": 20, "maxValuesPerFacet": 100, "page": 14,
+    "query": ""}}]}'
+  status: 200
+  content_type: application/json
+  file: pages/www-lvmh-com-api-search-0ff73cce.json
+  sha256: d51f70ed349319672cb65700f5f24536a66af68d8093573ed2b4d98f8bef7676
+  size: 127045
+  captured_at: '2026-11-21T17:12:04Z'
+- url: https://www.lvmh.com/api/search
+  normalized_url: https://www.lvmh.com/api/search
+  method: POST
+  request_body: '{"queries": [{"indexName": "PRD-fr-fr-timestamp-desc", "params": {"facets": ["publicationMonth", "publicationYear",
+    "thematicId"], "filters": "category:pressPublication OR category:publication OR category:pressPublicationHistory", "highlightPostTag":
+    "__/ais-highlight__", "highlightPreTag": "__ais-highlight__", "hitsPerPage": 20, "maxValuesPerFacet": 100, "page": 15,
+    "query": ""}}]}'
+  status: 200
+  content_type: application/json
+  file: pages/www-lvmh-com-api-search-c8ab5e1b.json
+  sha256: bbd701c2463f0c8e5f24dabd55cf14364387a3ad0d01962c2566f8a57ae57681
+  size: 128476
+  captured_at: '2026-11-21T17:12:05Z'
+- url: https://www.lvmh.com/api/search
+  normalized_url: https://www.lvmh.com/api/search
+  method: POST
+  request_body: '{"queries": [{"indexName": "PRD-fr-fr-timestamp-desc", "params": {"facets": ["publicationMonth", "publicationYear",
+    "thematicId"], "filters": "category:pressPublication OR category:publication OR category:pressPublicationHistory", "highlightPostTag":
+    "__/ais-highlight__", "highlightPreTag": "__ais-highlight__", "hitsPerPage": 20, "maxValuesPerFacet": 100, "page": 16,
+    "query": ""}}]}'
+  status: 200
+  content_type: application/json
+  file: pages/www-lvmh-com-api-search-3f6c0a15.json
+  sha256: 7e880ebdad249270076d16a41882ee1fcd5b529daec5db4ec9c6e1eebe8c40fc
+  size: 127575
+  captured_at: '2026-11-21T17:12:06Z'
+- url: https://www.lvmh.com/api/search
+  normalized_url: https://www.lvmh.com/api/search
+  method: POST
+  request_body: '{"queries": [{"indexName": "PRD-fr-fr-timestamp-desc", "params": {"facets": ["publicationMonth", "publicationYear",
+    "thematicId"], "filters": "category:pressPublication OR category:publication OR category:pressPublicationHistory", "highlightPostTag":
+    "__/ais-highlight__", "highlightPreTag": "__ais-highlight__", "hitsPerPage": 20, "maxValuesPerFacet": 100, "page": 17,
+    "query": ""}}]}'
+  status: 200
+  content_type: application/json
+  file: pages/www-lvmh-com-api-search-9c0d0a31.json
+  sha256: 9d982fdfa6a24aea35185fad0da025ef6fb7a429041b3c420cb5372de1a83e3a
+  size: 127215
+  captured_at: '2026-11-21T17:12:07Z'
+- url: https://www.lvmh.com/api/search
+  normalized_url: https://www.lvmh.com/api/search
+  method: POST
+  request_body: '{"queries": [{"indexName": "PRD-fr-fr-timestamp-desc", "params": {"facets": ["publicationMonth", "publicationYear",
+    "thematicId"], "filters": "category:pressPublication OR category:publication OR category:pressPublicationHistory", "highlightPostTag":
+    "__/ais-highlight__", "highlightPreTag": "__ais-highlight__", "hitsPerPage": 20, "maxValuesPerFacet": 100, "page": 18,
+    "query": ""}}]}'
+  status: 200
+  content_type: application/json
+  file: pages/www-lvmh-com-api-search-3d336cda.json
+  sha256: 3b39881177935d6497330bc15c01bea408171767855339bd442672905306cdd6
+  size: 127431
+  captured_at: '2026-11-21T17:12:08Z'
+- url: https://www.lvmh.com/api/search
+  normalized_url: https://www.lvmh.com/api/search
+  method: POST
+  request_body: '{"queries": [{"indexName": "PRD-fr-fr-timestamp-desc", "params": {"facets": ["publicationMonth", "publicationYear",
+    "thematicId"], "filters": "category:pressPublication OR category:publication OR category:pressPublicationHistory", "highlightPostTag":
+    "__/ais-highlight__", "highlightPreTag": "__ais-highlight__", "hitsPerPage": 20, "maxValuesPerFacet": 100, "page": 19,
+    "query": ""}}]}'
+  status: 200
+  content_type: application/json
+  file: pages/www-lvmh-com-api-search-c5bdb676.json
+  sha256: 9a430ac1cb3d74e36a2a188ad1c5dd9c262fc5ef31dd55b08a6540df98719ca7
+  size: 131253
+  captured_at: '2026-11-21T17:12:09Z'
+- url: https://www.lvmh.com/api/search
+  normalized_url: https://www.lvmh.com/api/search
+  method: POST
+  request_body: '{"queries": [{"indexName": "PRD-fr-fr-timestamp-desc", "params": {"facets": ["publicationMonth", "publicationYear",
+    "thematicId"], "filters": "category:pressPublication OR category:publication OR category:pressPublicationHistory", "highlightPostTag":
+    "__/ais-highlight__", "highlightPreTag": "__ais-highlight__", "hitsPerPage": 20, "maxValuesPerFacet": 100, "page": 2,
+    "query": ""}}]}'
+  status: 200
+  content_type: application/json
+  file: pages/www-lvmh-com-api-search-0033eda5.json
+  sha256: 4e6ce864cf9ab6e17fdec6b905377e42935f267ab43682d500f23e61ac48ecf9
+  size: 147942
+  captured_at: '2026-11-21T17:11:52Z'
+- url: https://www.lvmh.com/api/search
+  normalized_url: https://www.lvmh.com/api/search
+  method: POST
+  request_body: '{"queries": [{"indexName": "PRD-fr-fr-timestamp-desc", "params": {"facets": ["publicationMonth", "publicationYear",
+    "thematicId"], "filters": "category:pressPublication OR category:publication OR category:pressPublicationHistory", "highlightPostTag":
+    "__/ais-highlight__", "highlightPreTag": "__ais-highlight__", "hitsPerPage": 20, "maxValuesPerFacet": 100, "page": 20,
+    "query": ""}}]}'
+  status: 200
+  content_type: application/json
+  file: pages/www-lvmh-com-api-search-2f95973e.json
+  sha256: 8b678f0fb30de9d8b02d0ef05a5fdd1821e03ad9544936491e44de64029ee8d8
+  size: 127051
+  captured_at: '2026-11-21T17:12:10Z'
+- url: https://www.lvmh.com/api/search
+  normalized_url: https://www.lvmh.com/api/search
+  method: POST
+  request_body: '{"queries": [{"indexName": "PRD-fr-fr-timestamp-desc", "params": {"facets": ["publicationMonth", "publicationYear",
+    "thematicId"], "filters": "category:pressPublication OR category:publication OR category:pressPublicationHistory", "highlightPostTag":
+    "__/ais-highlight__", "highlightPreTag": "__ais-highlight__", "hitsPerPage": 20, "maxValuesPerFacet": 100, "page": 21,
+    "query": ""}}]}'
+  status: 200
+  content_type: application/json
+  file: pages/www-lvmh-com-api-search-05639c0c.json
+  sha256: e3efafb5c57e8be54a72575e07f8969a7d3f958eea3539ad5258c1af1ed51ce1
+  size: 127549
+  captured_at: '2026-11-21T17:12:11Z'
+- url: https://www.lvmh.com/api/search
+  normalized_url: https://www.lvmh.com/api/search
+  method: POST
+  request_body: '{"queries": [{"indexName": "PRD-fr-fr-timestamp-desc", "params": {"facets": ["publicationMonth", "publicationYear",
+    "thematicId"], "filters": "category:pressPublication OR category:publication OR category:pressPublicationHistory", "highlightPostTag":
+    "__/ais-highlight__", "highlightPreTag": "__ais-highlight__", "hitsPerPage": 20, "maxValuesPerFacet": 100, "page": 22,
+    "query": ""}}]}'
+  status: 200
+  content_type: application/json
+  file: pages/www-lvmh-com-api-search-28c095e3.json
+  sha256: 803df4661d00c647f1f0054cbbb3c1c27d6c4277245ce905b5c237a348e8a039
+  size: 126110
+  captured_at: '2026-11-21T17:12:12Z'
+- url: https://www.lvmh.com/api/search
+  normalized_url: https://www.lvmh.com/api/search
+  method: POST
+  request_body: '{"queries": [{"indexName": "PRD-fr-fr-timestamp-desc", "params": {"facets": ["publicationMonth", "publicationYear",
+    "thematicId"], "filters": "category:pressPublication OR category:publication OR category:pressPublicationHistory", "highlightPostTag":
+    "__/ais-highlight__", "highlightPreTag": "__ais-highlight__", "hitsPerPage": 20, "maxValuesPerFacet": 100, "page": 23,
+    "query": ""}}]}'
+  status: 200
+  content_type: application/json
+  file: pages/www-lvmh-com-api-search-1474e96c.json
+  sha256: e8aed1092d339e9e50eccfad76bcc566a442aca8e0487649d19e7a90fdac9614
+  size: 125596
+  captured_at: '2026-11-21T17:12:13Z'
+- url: https://www.lvmh.com/api/search
+  normalized_url: https://www.lvmh.com/api/search
+  method: POST
+  request_body: '{"queries": [{"indexName": "PRD-fr-fr-timestamp-desc", "params": {"facets": ["publicationMonth", "publicationYear",
+    "thematicId"], "filters": "category:pressPublication OR category:publication OR category:pressPublicationHistory", "highlightPostTag":
+    "__/ais-highlight__", "highlightPreTag": "__ais-highlight__", "hitsPerPage": 20, "maxValuesPerFacet": 100, "page": 24,
+    "query": ""}}]}'
+  status: 200
+  content_type: application/json
+  file: pages/www-lvmh-com-api-search-70a15299.json
+  sha256: 0a3ca4576c516b23d2c9b947fda168ad42d1153262a494f855161118c8d7e50e
+  size: 125501
+  captured_at: '2026-11-21T17:12:14Z'
+- url: https://www.lvmh.com/api/search
+  normalized_url: https://www.lvmh.com/api/search
+  method: POST
+  request_body: '{"queries": [{"indexName": "PRD-fr-fr-timestamp-desc", "params": {"facets": ["publicationMonth", "publicationYear",
+    "thematicId"], "filters": "category:pressPublication OR category:publication OR category:pressPublicationHistory", "highlightPostTag":
+    "__/ais-highlight__", "highlightPreTag": "__ais-highlight__", "hitsPerPage": 20, "maxValuesPerFacet": 100, "page": 25,
+    "query": ""}}]}'
+  status: 200
+  content_type: application/json
+  file: pages/www-lvmh-com-api-search-82d75f2b.json
+  sha256: 9d1ddb16d238271bac5317b119d5f477393482eb7fa030d3c78b9518e568af2e
+  size: 116234
+  captured_at: '2026-11-21T17:12:15Z'
+- url: https://www.lvmh.com/api/search
+  normalized_url: https://www.lvmh.com/api/search
+  method: POST
+  request_body: '{"queries": [{"indexName": "PRD-fr-fr-timestamp-desc", "params": {"facets": ["publicationMonth", "publicationYear",
+    "thematicId"], "filters": "category:pressPublication OR category:publication OR category:pressPublicationHistory", "highlightPostTag":
+    "__/ais-highlight__", "highlightPreTag": "__ais-highlight__", "hitsPerPage": 20, "maxValuesPerFacet": 100, "page": 26,
+    "query": ""}}]}'
+  status: 200
+  content_type: application/json
+  file: pages/www-lvmh-com-api-search-4d4fd8e2.json
+  sha256: 57a83a55936edebdcfede69fa6d7cdf4f6b415ffe0cd1d1c9aa73186c94d215a
+  size: 129107
+  captured_at: '2026-11-21T17:12:16Z'
+- url: https://www.lvmh.com/api/search
+  normalized_url: https://www.lvmh.com/api/search
+  method: POST
+  request_body: '{"queries": [{"indexName": "PRD-fr-fr-timestamp-desc", "params": {"facets": ["publicationMonth", "publicationYear",
+    "thematicId"], "filters": "category:pressPublication OR category:publication OR category:pressPublicationHistory", "highlightPostTag":
+    "__/ais-highlight__", "highlightPreTag": "__ais-highlight__", "hitsPerPage": 20, "maxValuesPerFacet": 100, "page": 27,
+    "query": ""}}]}'
+  status: 200
+  content_type: application/json
+  file: pages/www-lvmh-com-api-search-f84233bd.json
+  sha256: 297600f064d2044f00dc00141183cc7b2ace734b67e4df3beb7ab174a656e1c0
+  size: 17603
+  captured_at: '2026-11-21T17:12:17Z'
+- url: https://www.lvmh.com/api/search
+  normalized_url: https://www.lvmh.com/api/search
+  method: POST
+  request_body: '{"queries": [{"indexName": "PRD-fr-fr-timestamp-desc", "params": {"facets": ["publicationMonth", "publicationYear",
+    "thematicId"], "filters": "category:pressPublication OR category:publication OR category:pressPublicationHistory", "highlightPostTag":
+    "__/ais-highlight__", "highlightPreTag": "__ais-highlight__", "hitsPerPage": 20, "maxValuesPerFacet": 100, "page": 28,
+    "query": ""}}]}'
+  status: 200
+  content_type: application/json
+  file: pages/www-lvmh-com-api-search-ff6323fc.json
+  sha256: 6fe22bcebded60863b25d7e8e721848a597894d7629ae1c4134a59d2295791a5
+  size: 2237
+  captured_at: '2026-11-21T17:12:18Z'
+- url: https://www.lvmh.com/api/search
+  normalized_url: https://www.lvmh.com/api/search
+  method: POST
+  request_body: '{"queries": [{"indexName": "PRD-fr-fr-timestamp-desc", "params": {"facets": ["publicationMonth", "publicationYear",
+    "thematicId"], "filters": "category:pressPublication OR category:publication OR category:pressPublicationHistory", "highlightPostTag":
+    "__/ais-highlight__", "highlightPreTag": "__ais-highlight__", "hitsPerPage": 20, "maxValuesPerFacet": 100, "page": 3,
+    "query": ""}}]}'
+  status: 200
+  content_type: application/json
+  file: pages/www-lvmh-com-api-search-8a4220dc.json
+  sha256: 28ff0c09c24003fe4dd745be8bee9952feead9b6d33a7268dc8d0f4cfa7eb776
+  size: 146984
+  captured_at: '2026-11-21T17:11:53Z'
+- url: https://www.lvmh.com/api/search
+  normalized_url: https://www.lvmh.com/api/search
+  method: POST
+  request_body: '{"queries": [{"indexName": "PRD-fr-fr-timestamp-desc", "params": {"facets": ["publicationMonth", "publicationYear",
+    "thematicId"], "filters": "category:pressPublication OR category:publication OR category:pressPublicationHistory", "highlightPostTag":
+    "__/ais-highlight__", "highlightPreTag": "__ais-highlight__", "hitsPerPage": 20, "maxValuesPerFacet": 100, "page": 4,
+    "query": ""}}]}'
+  status: 200
+  content_type: application/json
+  file: pages/www-lvmh-com-api-search-014bf8c2.json
+  sha256: 6e17401f6e74b10e23bab4a6f0610218e7006cf45fbbc8b3466f5f70bd91eb76
+  size: 146030
+  captured_at: '2026-11-21T17:11:54Z'
+- url: https://www.lvmh.com/api/search
+  normalized_url: https://www.lvmh.com/api/search
+  method: POST
+  request_body: '{"queries": [{"indexName": "PRD-fr-fr-timestamp-desc", "params": {"facets": ["publicationMonth", "publicationYear",
+    "thematicId"], "filters": "category:pressPublication OR category:publication OR category:pressPublicationHistory", "highlightPostTag":
+    "__/ais-highlight__", "highlightPreTag": "__ais-highlight__", "hitsPerPage": 20, "maxValuesPerFacet": 100, "page": 5,
+    "query": ""}}]}'
+  status: 200
+  content_type: application/json
+  file: pages/www-lvmh-com-api-search-b6084004.json
+  sha256: 1ed15097a0ede89e368a3fb15821c21476e271dcdb08734d8ae4c00e238d81fd
+  size: 132525
+  captured_at: '2026-11-21T17:11:55Z'
+- url: https://www.lvmh.com/api/search
+  normalized_url: https://www.lvmh.com/api/search
+  method: POST
+  request_body: '{"queries": [{"indexName": "PRD-fr-fr-timestamp-desc", "params": {"facets": ["publicationMonth", "publicationYear",
+    "thematicId"], "filters": "category:pressPublication OR category:publication OR category:pressPublicationHistory", "highlightPostTag":
+    "__/ais-highlight__", "highlightPreTag": "__ais-highlight__", "hitsPerPage": 20, "maxValuesPerFacet": 100, "page": 6,
+    "query": ""}}]}'
+  status: 200
+  content_type: application/json
+  file: pages/www-lvmh-com-api-search-1661a489.json
+  sha256: ac770245d9ece4e1aa2391e8c256ca9f36c974a0df4880146304184f3ea68a1b
+  size: 131910
+  captured_at: '2026-11-21T17:11:56Z'
+- url: https://www.lvmh.com/api/search
+  normalized_url: https://www.lvmh.com/api/search
+  method: POST
+  request_body: '{"queries": [{"indexName": "PRD-fr-fr-timestamp-desc", "params": {"facets": ["publicationMonth", "publicationYear",
+    "thematicId"], "filters": "category:pressPublication OR category:publication OR category:pressPublicationHistory", "highlightPostTag":
+    "__/ais-highlight__", "highlightPreTag": "__ais-highlight__", "hitsPerPage": 20, "maxValuesPerFacet": 100, "page": 7,
+    "query": ""}}]}'
+  status: 200
+  content_type: application/json
+  file: pages/www-lvmh-com-api-search-873498f8.json
+  sha256: bb1e8917ff418404965c3e85bbea20784d5c7c52310ef7acdcdeb1f189c80bd2
+  size: 124329
+  captured_at: '2026-11-21T17:11:57Z'
+- url: https://www.lvmh.com/api/search
+  normalized_url: https://www.lvmh.com/api/search
+  method: POST
+  request_body: '{"queries": [{"indexName": "PRD-fr-fr-timestamp-desc", "params": {"facets": ["publicationMonth", "publicationYear",
+    "thematicId"], "filters": "category:pressPublication OR category:publication OR category:pressPublicationHistory", "highlightPostTag":
+    "__/ais-highlight__", "highlightPreTag": "__ais-highlight__", "hitsPerPage": 20, "maxValuesPerFacet": 100, "page": 8,
+    "query": ""}}]}'
+  status: 200
+  content_type: application/json
+  file: pages/www-lvmh-com-api-search-d96a257d.json
+  sha256: d1bcea7acfab054b73b1ed43f41f53897117f1b07c5defe0884653cd9ca7973b
+  size: 131211
+  captured_at: '2026-11-21T17:11:58Z'
+- url: https://www.lvmh.com/api/search
+  normalized_url: https://www.lvmh.com/api/search
+  method: POST
+  request_body: '{"queries": [{"indexName": "PRD-fr-fr-timestamp-desc", "params": {"facets": ["publicationMonth", "publicationYear",
+    "thematicId"], "filters": "category:pressPublication OR category:publication OR category:pressPublicationHistory", "highlightPostTag":
+    "__/ais-highlight__", "highlightPreTag": "__ais-highlight__", "hitsPerPage": 20, "maxValuesPerFacet": 100, "page": 9,
+    "query": ""}}]}'
+  status: 200
+  content_type: application/json
+  file: pages/www-lvmh-com-api-search-931f6d99.json
+  sha256: 07102bf9409ed6d687104a8f6f51bc5a1744958db4637094f03dc1e3a310b8ff
+  size: 125850
+  captured_at: '2026-11-21T17:11:59Z'
+- url: https://www.lvmh.com/api/search
+  normalized_url: https://www.lvmh.com/api/search
+  method: POST
+  request_body: '{"queries": [{"indexName": "PRD-fr-fr-timestamp-desc", "params": {"filters": "category:pressPublication OR
+    category:publication OR category:pressPublicationHistory", "highlightPostTag": "__/ais-highlight__", "highlightPreTag":
+    "__ais-highlight__", "hitsPerPage": 20, "page": 0, "query": ""}}]}'
+  status: 200
+  content_type: application/json
+  file: pages/www-lvmh-com-api-search-c3f83276.json
+  sha256: 69bbf83d1a518171ef23c578d9ac9966a36dd904e28f07289f7cd36de022cdef
+  size: 145423
+  captured_at: '2026-11-21T17:16:48Z'
+- url: https://www.lvmh.com/fr/publications
+  normalized_url: https://www.lvmh.com/fr/publications
+  status: 200
+  content_type: text/html; charset=utf-8
+  etag: av297xEAACcA8oyR
+  file: pages/www-lvmh-com-fr-publications-dd2a8353.html
+  sha256: 7901b375a09382d378fd84519f3b73e2824e18eb7e48219a4f0c7700386f13ac
+  size: 1995725
+  captured_at: '2026-11-21T17:16:44Z'
+- url: https://www.lvmh.com/robots.txt
+  normalized_url: https://www.lvmh.com/robots.txt
+  status: 200
+  content_type: text/plain
+  etag: '"d9dd5337d41ff73cc4ad7226aba3f017:1724945973.270099"'
+  last_modified: Thu, 29 Aug 2024 15:39:33 GMT
+  file: pages/www-lvmh-com-robots-txt-57838f2f.txt
+  sha256: 6c64ab2adc64633c3ef79a515a285010b80cdaa14f3a0f5f2d81e3d6774b1ee9
+  size: 153
+  captured_at: '2026-11-21T17:16:43Z'

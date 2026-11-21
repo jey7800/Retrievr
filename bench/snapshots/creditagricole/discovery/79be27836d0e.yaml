@@ -1,0 +1,129 @@
+discovery_version: 1
+start_url: https://www.credit-agricole.com/finance/publications-financieres
+years:
+- 2024
+- 2025
+captured_at: '2026-11-21T17:16:36+00:00'
+actions:
+- load
+- 'select #select-annual-report-results_source = "2026" (value 179190)'
+- 'select #select-annual-report-results_source = "2025" (value 175235)'
+- 'select #select-annual-report-results_source = "2024" (value 171628)'
+- 'select #select-theme_presentation_source = "2026" (value 177878)'
+- 'select #select-theme_presentation_source = "2025" (value 174586)'
+- 'select #select-doc_ref_source = "2026" (value 179395)'
+- 'select #select-doc_ref_source = "2025" (value 175561)'
+- 'select #select-doc_ref_source = "2024" (value 171912)'
+- 'select #select-counts_source = "2025" (value 176212)'
+- 'select #select-counts_source = "2024" (value 171923)'
+- 'select #select-credit_update_source = "2026" (value 179293)'
+- 'select #select-credit_update_source = "2025" (value 175352)'
+exchanges:
+- id: X1
+  action: 'select #select-annual-report-results_source = "2026" (value 179190)'
+  method: POST
+  url: https://www.credit-agricole.com/display_next_publications
+  request_body: category=results_source&currentPage=1&locationId=179190&params%5B0%5D%5Bname%5D=publication%5Bkeywords%5D&params%5B0%5D%5Bvalue%5D=&params%5B1%5D%5Bname%5D=publication%5BstartDate%5D&params%5B1%5D%5Bvalue%5D=&params%5B2%5D%5Bname%5D=publication%5BendDate%5D&params%5B2%5D%5Bvalue%5D=21%2F11%2F2026&updateTab=true
+  request_content_type: application/x-www-form-urlencoded; charset=UTF-8
+  requested_with: XMLHttpRequest
+  status: 200
+  content_type: application/json
+- id: X2
+  action: 'select #select-annual-report-results_source = "2025" (value 175235)'
+  method: POST
+  url: https://www.credit-agricole.com/display_next_publications
+  request_body: category=results_source&currentPage=1&locationId=175235&params%5B0%5D%5Bname%5D=publication%5Bkeywords%5D&params%5B0%5D%5Bvalue%5D=&params%5B1%5D%5Bname%5D=publication%5BstartDate%5D&params%5B1%5D%5Bvalue%5D=&params%5B2%5D%5Bname%5D=publication%5BendDate%5D&params%5B2%5D%5Bvalue%5D=21%2F11%2F2026&updateTab=true
+  request_content_type: application/x-www-form-urlencoded; charset=UTF-8
+  requested_with: XMLHttpRequest
+  status: 200
+  content_type: application/json
+- id: X3
+  action: 'select #select-annual-report-results_source = "2024" (value 171628)'
+  method: POST
+  url: https://www.credit-agricole.com/display_next_publications
+  request_body: category=results_source&currentPage=1&locationId=171628&params%5B0%5D%5Bname%5D=publication%5Bkeywords%5D&params%5B0%5D%5Bvalue%5D=&params%5B1%5D%5Bname%5D=publication%5BstartDate%5D&params%5B1%5D%5Bvalue%5D=&params%5B2%5D%5Bname%5D=publication%5BendDate%5D&params%5B2%5D%5Bvalue%5D=21%2F11%2F2026&updateTab=true
+  request_content_type: application/x-www-form-urlencoded; charset=UTF-8
+  requested_with: XMLHttpRequest
+  status: 200
+  content_type: application/json
+- id: X4
+  action: 'select #select-theme_presentation_source = "2026" (value 177878)'
+  method: POST
+  url: https://www.credit-agricole.com/display_next_publications
+  request_body: category=theme_presentation_source&currentPage=1&locationId=177878&params%5B0%5D%5Bname%5D=publication%5Bkeywords%5D&params%5B0%5D%5Bvalue%5D=&params%5B1%5D%5Bname%5D=publication%5BstartDate%5D&params%5B1%5D%5Bvalue%5D=&params%5B2%5D%5Bname%5D=publication%5BendDate%5D&params%5B2%5D%5Bvalue%5D=21%2F11%2F2026
+  request_content_type: application/x-www-form-urlencoded; charset=UTF-8
+  requested_with: XMLHttpRequest
+  status: 200
+  content_type: application/json
+- id: X5
+  action: 'select #select-theme_presentation_source = "2025" (value 174586)'
+  method: POST
+  url: https://www.credit-agricole.com/display_next_publications
+  request_body: category=theme_presentation_source&currentPage=1&locationId=174586&params%5B0%5D%5Bname%5D=publication%5Bkeywords%5D&params%5B0%5D%5Bvalue%5D=&params%5B1%5D%5Bname%5D=publication%5BstartDate%5D&params%5B1%5D%5Bvalue%5D=&params%5B2%5D%5Bname%5D=publication%5BendDate%5D&params%5B2%5D%5Bvalue%5D=21%2F11%2F2026
+  request_content_type: application/x-www-form-urlencoded; charset=UTF-8
+  requested_with: XMLHttpRequest
+  status: 200
+  content_type: application/json
+- id: X6
+  action: 'select #select-doc_ref_source = "2026" (value 179395)'
+  method: POST
+  url: https://www.credit-agricole.com/display_next_publications
+  request_body: category=doc_ref_source&currentPage=1&locationId=179395&params%5B0%5D%5Bname%5D=publication%5Bkeywords%5D&params%5B0%5D%5Bvalue%5D=&params%5B1%5D%5Bname%5D=publication%5BstartDate%5D&params%5B1%5D%5Bvalue%5D=&params%5B2%5D%5Bname%5D=publication%5BendDate%5D&params%5B2%5D%5Bvalue%5D=21%2F11%2F2026
+  request_content_type: application/x-www-form-urlencoded; charset=UTF-8
+  requested_with: XMLHttpRequest
+  status: 200
+  content_type: application/json
+- id: X7
+  action: 'select #select-doc_ref_source = "2025" (value 175561)'
+  method: POST
+  url: https://www.credit-agricole.com/display_next_publications
+  request_body: category=doc_ref_source&currentPage=1&locationId=175561&params%5B0%5D%5Bname%5D=publication%5Bkeywords%5D&params%5B0%5D%5Bvalue%5D=&params%5B1%5D%5Bname%5D=publication%5BstartDate%5D&params%5B1%5D%5Bvalue%5D=&params%5B2%5D%5Bname%5D=publication%5BendDate%5D&params%5B2%5D%5Bvalue%5D=21%2F11%2F2026
+  request_content_type: application/x-www-form-urlencoded; charset=UTF-8
+  requested_with: XMLHttpRequest
+  status: 200
+  content_type: application/json
+- id: X8
+  action: 'select #select-doc_ref_source = "2024" (value 171912)'
+  method: POST
+  url: https://www.credit-agricole.com/display_next_publications
+  request_body: category=doc_ref_source&currentPage=1&locationId=171912&params%5B0%5D%5Bname%5D=publication%5Bkeywords%5D&params%5B0%5D%5Bvalue%5D=&params%5B1%5D%5Bname%5D=publication%5BstartDate%5D&params%5B1%5D%5Bvalue%5D=&params%5B2%5D%5Bname%5D=publication%5BendDate%5D&params%5B2%5D%5Bvalue%5D=21%2F11%2F2026
+  request_content_type: application/x-www-form-urlencoded; charset=UTF-8
+  requested_with: XMLHttpRequest
+  status: 200
+  content_type: application/json
+- id: X9
+  action: 'select #select-counts_source = "2025" (value 176212)'
+  method: POST
+  url: https://www.credit-agricole.com/display_next_publications
+  request_body: category=counts_source&currentPage=1&locationId=176212&params%5B0%5D%5Bname%5D=publication%5Bkeywords%5D&params%5B0%5D%5Bvalue%5D=&params%5B1%5D%5Bname%5D=publication%5BstartDate%5D&params%5B1%5D%5Bvalue%5D=&params%5B2%5D%5Bname%5D=publication%5BendDate%5D&params%5B2%5D%5Bvalue%5D=21%2F11%2F2026
+  request_content_type: application/x-www-form-urlencoded; charset=UTF-8
+  requested_with: XMLHttpRequest
+  status: 200
+  content_type: application/json
+- id: X10
+  action: 'select #select-counts_source = "2024" (value 171923)'
+  method: POST
+  url: https://www.credit-agricole.com/display_next_publications
+  request_body: category=counts_source&currentPage=1&locationId=171923&params%5B0%5D%5Bname%5D=publication%5Bkeywords%5D&params%5B0%5D%5Bvalue%5D=&params%5B1%5D%5Bname%5D=publication%5BstartDate%5D&params%5B1%5D%5Bvalue%5D=&params%5B2%5D%5Bname%5D=publication%5BendDate%5D&params%5B2%5D%5Bvalue%5D=21%2F11%2F2026
+  request_content_type: application/x-www-form-urlencoded; charset=UTF-8
+  requested_with: XMLHttpRequest
+  status: 200
+  content_type: application/json
+- id: X11
+  action: 'select #select-credit_update_source = "2026" (value 179293)'
+  method: POST
+  url: https://www.credit-agricole.com/display_next_publications
+  request_body: category=credit_update_source&currentPage=1&locationId=179293&params%5B0%5D%5Bname%5D=publication%5Bkeywords%5D&params%5B0%5D%5Bvalue%5D=&params%5B1%5D%5Bname%5D=publication%5BstartDate%5D&params%5B1%5D%5Bvalue%5D=&params%5B2%5D%5Bname%5D=publication%5BendDate%5D&params%5B2%5D%5Bvalue%5D=21%2F11%2F2026
+  request_content_type: application/x-www-form-urlencoded; charset=UTF-8
+  requested_with: XMLHttpRequest
+  status: 200
+  content_type: application/json
+- id: X12
+  action: 'select #select-credit_update_source = "2025" (value 175352)'
+  method: POST
+  url: https://www.credit-agricole.com/display_next_publications
+  request_body: category=credit_update_source&currentPage=1&locationId=175352&params%5B0%5D%5Bname%5D=publication%5Bkeywords%5D&params%5B0%5D%5Bvalue%5D=&params%5B1%5D%5Bname%5D=publication%5BstartDate%5D&params%5B1%5D%5Bvalue%5D=&params%5B2%5D%5Bname%5D=publication%5BendDate%5D&params%5B2%5D%5Bvalue%5D=21%2F11%2F2026
+  request_content_type: application/x-www-form-urlencoded; charset=UTF-8
+  requested_with: XMLHttpRequest
+  status: 200
+  content_type: application/json

@@ -1,0 +1,106 @@
+# Hand-written recipe (schema v3): the financial publications page loads each section
+# by year through POST /display_next_publications (a JSON reply holding an HTML
+# fragment). The year selectors carry opaque location ids, read from the start page.
+# Sections are paginated (currentPage, hasNextPage). Links are opaque
+# (/pdfPreview/<id>): the file name is in the link title.
+# Verified live on 2026-11-21.
+schema_version: 3
+recipe: creditagricole-ir
+version: 1
+issuer: creditagricole
+site: www.credit-agricole.com
+allowed_domains:
+  - www.credit-agricole.com
+defaults:
+  language: fr
+sources:
+  - id: results
+    kind: request
+    method: POST
+    url: https://www.credit-agricole.com/display_next_publications
+    headers: {X-Requested-With: XMLHttpRequest}
+    form: &form
+      "params[0][name]": "publication[keywords]"
+      "params[0][value]": ""
+      "params[1][name]": "publication[startDate]"
+      "params[1][value]": ""
+      "params[2][name]": "publication[endDate]"
+      "params[2][value]": "{today:%d/%m/%Y}"
+      locationId: "{location}"
+      category: results_source
+      updateTab: "true"
+      currentPage: "{page}"
+    params:
+      location:
+        kind: options
+        page: https://www.credit-agricole.com/finance/publications-financieres
+        selector: "#select-annual-report-results_source option"
+    pagination: {kind: page_number, start: 1, max_pages: 20, has_more: hasNextPage}
+    response: {format: json, html_path: content}
+    items: &items
+      item: "li.CA-finance-item, li.CA-finance-listItem-details-item"
+      title: h3
+      date: {regex: '(\d{2}\.\d{2}\.\d{4})', format: '%d.%m.%Y'}
+      extensions: [pdf, xlsx, xls, zip, xhtml]
+  - id: reference-documents
+    kind: request
+    method: POST
+    url: https://www.credit-agricole.com/display_next_publications
+    headers: {X-Requested-With: XMLHttpRequest}
+    form:
+      <<: *form
+      category: doc_ref_source
+    params:
+      location:
+        kind: options
+        page: https://www.credit-agricole.com/finance/publications-financieres
+        selector: "#select-doc_ref_source option"
+        year: publication
+    pagination: {kind: page_number, start: 1, max_pages: 20, has_more: hasNextPage}
+    response: {format: json, html_path: content}
+    items: *items
+  - id: group-documents
+    kind: request
+    method: POST
+    url: https://www.credit-agricole.com/display_next_publications
+    headers: {X-Requested-With: XMLHttpRequest}
+    form:
+      <<: *form
+      category: counts_source
+    params:
+      location:
+        kind: options
+        page: https://www.credit-agricole.com/finance/publications-financieres
+        selector: "#select-counts_source option"
+        year: publication
+    pagination: {kind: page_number, start: 1, max_pages: 20, has_more: hasNextPage}
+    response: {format: json, html_path: content}
+    items: *items
+classify:
+  type:
+    # Order matters: the first matching rule wins.
+    - {pattern: 'transcript', target: title, type: analyst_call_transcript}
+    - {pattern: 'amendement', target: title, type: urd}
+    - {pattern: "document d.enregistrement universel", target: title, type: urd}
+    - {pattern: 'pilier 3|rapport (sur les|des) risques|composition du capital|instruments de fonds propres', target: title, type: pillar3}
+    - {pattern: 'comptes consolid', target: title, type: financial_statements}
+    - {pattern: 'communiqu', target: title, type: press_release}
+    - {pattern: 's.ries trimestrielles', target: title, type: quarterly_series}
+    - {pattern: 'r.sultats|pr.sentation', target: title, type: results_presentation}
+    - {pattern: 'r.mun.ration|entit.s non int.gr.es|systemically|g-sib', target: title, type: other}
+  period:
+    - {pattern: '(?P<q>[1-4])e trimestre.*?(?P<year>20\d{2})', target: title}
+    - {pattern: '(?<![a-z])(?P<q>[TQ][1-4])[ _-]*(?P<year>\d{2}|20\d{2})(?!\d)', target: file_name}
+    - {pattern: '(?P<year>20\d{2})[ _-](?P<q>T[1-4])', target: file_name}
+    - {pattern: '30 (juin|06) ?(?P<year>20\d{2})', target: title, period: H1}
+    - {pattern: '30 juin (?P<year>\d{2})(?!\d)', target: title, period: H1}
+    - {pattern: '30 septembre (?P<year>20\d{2})', target: title, period: Q3}
+    - {pattern: '31 ?(d.cembre|12) ?(?P<year>20\d{2})', target: title, period: FY}
+    - {pattern: '(universel|annuel|rapport sur la politique|disclosure|risques)[^0-9]*(?P<year>20\d{2})', target: title, period: FY}
+    - {pattern: '(?P<year>20\d{2})[^0-9]*(rapport|amendement a01)', target: title, period: FY}
+health:
+  items_per_year: [20, 80]
+  cadence: {every: quarter, max_gap_days: 110}
+provenance:
+  method: hand_written
+  created_at: 2026-11-21

@@ -7,6 +7,8 @@ Examples:
     # record what a recipe run fetches
     uv run python -m bench.capture --site societegenerale \
         --recipe recipes/societegenerale-ir@1.yaml --years 2024 2025 --out tests/fixtures/x
+    # record a browser discovery of a JavaScript page (XHR it triggers), for offline learning
+    uv run python -m bench.capture --site lvmh --discover "<start URL>" --years 2024 2025
     # record start pages, their rel=next pages and the year pages they link to
     uv run python -m bench.capture --site hsbc --url "<start URL>" \
         --follow "a[href*='/results/']" --follow-next "a[rel=next]"
@@ -20,7 +22,9 @@ import sys
 from collections import deque
 from pathlib import Path
 
+from retrievr.browser import BrowserDiscovery
 from retrievr.candidates import parse_html, select
+from retrievr.config import BrowserSettings
 from retrievr.fetch import BlockedError, Fetcher, FetchError
 from retrievr.recipe import load_recipe, run_recipe
 from retrievr.snapshots import SnapshotRecorder
@@ -80,10 +84,11 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--follow-next", help="CSS selector of the next-page link")
     parser.add_argument("--max-pages", type=int, default=30)
     parser.add_argument("--recipe", type=Path, help="record a run of this recipe instead")
-    parser.add_argument("--years", type=int, nargs="*", help="years for --recipe")
+    parser.add_argument("--years", type=int, nargs="*", help="years for --recipe/--discover")
+    parser.add_argument("--discover", help="record a browser discovery of this page")
     args = parser.parse_args(argv)
-    if not args.url and not args.recipe:
-        parser.error("give --url or --recipe")
+    if not args.url and not args.recipe and not args.discover:
+        parser.error("give --url, --recipe or --discover")
 
     logging.basicConfig(level=logging.WARNING, format="%(levelname)s %(message)s")
     out: Path = args.out or BENCH / "snapshots" / args.site
@@ -91,7 +96,16 @@ def main(argv: list[str] | None = None) -> int:
     with Fetcher(event_hooks={"response": [recorder.hook]}) as fetcher:
         recorder.index.user_agent = fetcher.settings.user_agent
         try:
-            if args.recipe:
+            if args.discover:
+                fetcher.get(args.discover)  # the static page, as the learner reads it
+                found = BrowserDiscovery(BrowserSettings(), fetcher, recorder=recorder).discover(
+                    args.discover, args.years
+                )
+                for action in found.actions:
+                    print("action:", action)
+                for ex in found.exchanges:
+                    print(f"  {ex.id} {ex.status} {ex.method} {ex.url[:100]} ({ex.action})")
+            elif args.recipe:
                 result = run_recipe(load_recipe(args.recipe), fetcher, years=args.years)
                 print(f"{result.status}: {len(result.documents)} documents, {result.errors}")
             else:

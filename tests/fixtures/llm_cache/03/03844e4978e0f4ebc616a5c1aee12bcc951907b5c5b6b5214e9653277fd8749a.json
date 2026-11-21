@@ -1,0 +1,125 @@
+{
+ "cache_format": 1,
+ "output": {
+  "reasoning": "The results request parsed correctly, but the other response fragments have list entries directly under the fragment body rather than inside a ul. Use body as their container, and include the corresponding financial document groups for coverage.",
+  "action": "recipe",
+  "open_links": [],
+  "document_groups": [
+   "P1.G1",
+   "P1.G3",
+   "P1.G4",
+   "P1.G5"
+  ],
+  "sources": [],
+  "default_language": null,
+  "request_sources": [
+   {
+    "exchange": "X1",
+    "vary": [
+     {
+      "field": "locationId",
+      "value": "options"
+     }
+    ],
+    "options_selector": "#select-annual-report-results_source option",
+    "options_year": "fiscal",
+    "year_from": null,
+    "page_start": null,
+    "has_more_path": null,
+    "html_path": "content",
+    "items_path": null,
+    "url_paths": [],
+    "title_path": null,
+    "file_name_path": null,
+    "date_path": null,
+    "context_paths": [],
+    "container": "body",
+    "item": "li.CA-finance-item",
+    "title": ".CA-finance-item-content-title h3"
+   },
+   {
+    "exchange": "X7",
+    "vary": [
+     {
+      "field": "locationId",
+      "value": "options"
+     }
+    ],
+    "options_selector": "#select-doc_ref_source option",
+    "options_year": "fiscal",
+    "year_from": null,
+    "page_start": null,
+    "has_more_path": null,
+    "html_path": "content",
+    "items_path": null,
+    "url_paths": [],
+    "title_path": null,
+    "file_name_path": null,
+    "date_path": null,
+    "context_paths": [],
+    "container": "body",
+    "item": "li.CA-finance-listItem-details-item",
+    "title": "h3"
+   },
+   {
+    "exchange": "X9",
+    "vary": [
+     {
+      "field": "locationId",
+      "value": "options"
+     }
+    ],
+    "options_selector": "#select-counts_source option",
+    "options_year": "fiscal",
+    "year_from": null,
+    "page_start": null,
+    "has_more_path": null,
+    "html_path": "content",
+    "items_path": null,
+    "url_paths": [],
+    "title_path": null,
+    "file_name_path": null,
+    "date_path": null,
+    "context_paths": [],
+    "container": "body",
+    "item": "li.CA-finance-listItem-details-item",
+    "title": "h3"
+   },
+   {
+    "exchange": "X11",
+    "vary": [
+     {
+      "field": "locationId",
+      "value": "options"
+     }
+    ],
+    "options_selector": "#select-credit_update_source option",
+    "options_year": "fiscal",
+    "year_from": null,
+    "page_start": null,
+    "has_more_path": null,
+    "html_path": "content",
+    "items_path": null,
+    "url_paths": [],
+    "title_path": null,
+    "file_name_path": null,
+    "date_path": null,
+    "context_paths": [],
+    "container": "body",
+    "item": "li.CA-finance-listItem-details-item",
+    "title": "h3"
+   }
+  ]
+ },
+ "usage": {
+  "input_tokens": 10871,
+  "output_tokens": 1562,
+  "cost_usd": 0.00109652
+ },
+ "strategy": "json_schema",
+ "attempts": 1,
+ "latency_s": 12.641,
+ "model": "openai/gpt-6-luna",
+ "schema": "StructureReplyWithRequests",
+ "step": "structure"
+}

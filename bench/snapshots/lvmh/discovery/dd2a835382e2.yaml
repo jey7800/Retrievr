@@ -1,0 +1,44 @@
+discovery_version: 1
+start_url: https://www.lvmh.com/fr/publications
+years:
+- 2024
+- 2025
+captured_at: '2026-11-21T17:16:49+00:00'
+actions:
+- load
+exchanges:
+- id: X2
+  action: load
+  method: POST
+  url: https://www.lvmh.com/api/search
+  request_body: '{"queries": [{"indexName": "PRD-fr-fr-timestamp-desc", "params": {"filters": "category:pressPublication OR
+    category:publication OR category:pressPublicationHistory", "highlightPostTag": "__/ais-highlight__", "highlightPreTag":
+    "__ais-highlight__", "hitsPerPage": 20, "page": 0, "query": ""}}]}'
+  request_content_type: application/json
+  requested_with: null
+  status: 200
+  content_type: application/json
+- id: X4
+  action: load
+  method: POST
+  url: https://www.lvmh.com/api/search
+  request_body: '{"queries": [{"indexName": "PRD-fr-fr-timestamp-desc", "params": {"facets": ["publicationMonth", "publicationYear",
+    "thematicId"], "filters": "category:pressPublication OR category:publication OR category:pressPublicationHistory", "highlightPostTag":
+    "__/ais-highlight__", "highlightPreTag": "__ais-highlight__", "hitsPerPage": 20, "maxValuesPerFacet": 10, "page": 0, "query":
+    ""}}]}'
+  request_content_type: application/json
+  requested_with: null
+  status: 200
+  content_type: application/json
+- id: X5
+  action: load
+  method: POST
+  url: https://www.lvmh.com/api/search
+  request_body: '{"queries": [{"indexName": "PRD-fr-fr-timestamp-desc", "params": {"facets": ["publicationMonth", "publicationYear",
+    "thematicId"], "filters": "category:pressPublication OR category:publication OR category:pressPublicationHistory", "highlightPostTag":
+    "__/ais-highlight__", "highlightPreTag": "__ais-highlight__", "hitsPerPage": 20, "maxValuesPerFacet": 100, "page": 0,
+    "query": ""}}]}'
+  request_content_type: application/json
+  requested_with: null
+  status: 200
+  content_type: application/json

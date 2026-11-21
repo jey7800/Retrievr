@@ -10,7 +10,7 @@ import respx
 import yaml
 
 from retrievr.classify import ClassifyRules, classify, normalize_period
-from retrievr.recipe import load_recipe, recipe_from_mapping, run_recipe
+from retrievr.recipe import UrlTemplateSource, load_recipe, recipe_from_mapping, run_recipe
 from tests.conftest import RECIPES
 
 SITE = "https://ir.example.com"
@@ -48,7 +48,9 @@ def test_all_shipped_recipes_validate() -> None:
 
 def test_minimal_recipe_validates() -> None:
     recipe = recipe_from_mapping(_recipe())
-    assert [u for _, u in recipe.sources[0].expand(date(2026, 1, 1))] == [
+    source = recipe.sources[0]
+    assert isinstance(source, UrlTemplateSource)
+    assert [u for _, u in source.expand(date(2026, 1, 1))] == [
         SITE + "/docs?year=2024",
         SITE + "/docs?year=2025",
     ]
@@ -58,7 +60,7 @@ def test_minimal_recipe_validates() -> None:
     ("override", "message"),
     [
         ({"unknown_key": 1}, "Extra inputs"),
-        ({"schema_version": 3}, "schema_version"),
+        ({"schema_version": 4}, "schema_version"),
         ({"allowed_domains": ["other.example.com"]}, "allowed_domains"),
         (
             {"sources": [{"id": "s", "url": "https://evil.test/x"}]},

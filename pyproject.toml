@@ -23,6 +23,11 @@ dependencies = [
     "protego>=0.4",
 ]
 
+[project.optional-dependencies]
+browser = [
+    "playwright>=1.65",
+]
+
 [dependency-groups]
 dev = [
     "pytest>=8.3",

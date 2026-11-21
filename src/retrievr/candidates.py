@@ -49,6 +49,14 @@ class Candidate:
     """Table context: first cell of the link's row, carried down over blank cells."""
     column_header: str | None = None
     """Table context: header cell above the link's column (colspan/rowspan aware)."""
+    file_name: str | None = None
+    """File name when the page gives one (``download`` or ``title`` attribute, JSON field):
+    the only readable name of an opaque link such as ``/pdfPreview/123``."""
+
+    @property
+    def extension(self) -> str:
+        """Extension of the URL path, else of ``file_name``."""
+        return path_extension(self.url) or file_extension(self.file_name)
 
     def fields(self) -> dict[str, str | None]:
         """Named texts that classification rules can target."""
@@ -56,12 +64,22 @@ class Candidate:
             "title": self.title,
             "link_text": self.link_text,
             "link_title": self.link_title,
+            "file_name": self.file_name,
             "context": self.context_text,
             "heading": self.heading,
             "row_header": self.row_header,
             "column_header": self.column_header,
             "text": f"{self.title} {self.context_text}",
         }
+
+
+_FILE_NAME = re.compile(r"[^/\\]*\.([A-Za-z0-9]{2,5})$")
+
+
+def file_extension(name: str | None) -> str:
+    """Lowercased extension of a file name ('' if it does not look like one)."""
+    m = _FILE_NAME.search((name or "").strip())
+    return m.group(1).lower() if m else ""
 
 
 @lru_cache(maxsize=256)
@@ -119,6 +137,7 @@ def extract_candidates(
     title: str | None = None,
     extensions: Collection[str] | None = None,
     table_context: bool = False,
+    document_urls: Collection[str] | None = None,
 ) -> list[Candidate]:
     """Extract document links from ``root``.
 
@@ -127,12 +146,16 @@ def extract_candidates(
       Links, title and context text are then read inside each item.
     - ``link``: CSS selector of the link element (relative to item or container).
     - ``title``: CSS selector of the title, relative to the item.
-    - ``extensions``: keep only links whose path ends with one of these extensions.
+    - ``extensions``: keep only links whose path, or whose file name (``download`` or
+      ``title`` attribute), ends with one of these extensions.
     - ``table_context``: for links inside a table cell, also read the row header and
       the column header.
+    - ``document_urls``: regular expressions; a link whose URL matches one is a document
+      even without a known extension (opaque links such as ``/pdfPreview/123``).
     """
     scopes = select(root, container) if container else [root]
     exts = {e.lower().lstrip(".") for e in extensions} if extensions else None
+    patterns = [re.compile(p) for p in document_urls or ()]
     grids: dict[int, _Grid] | None = {} if table_context else None
     out: list[Candidate] = []
     for scope in scopes:
@@ -143,10 +166,10 @@ def extract_candidates(
                 if title:
                     matches = select(item_el, title)
                     title_text = text_of(matches[0]) if matches else None
-                for a in _links(item_el, link, base_url, exts):
+                for a in _links(item_el, link, base_url, exts, patterns):
                     out.append(_candidate(a, base_url, context, title_text, grids))
         else:
-            for a in _links(scope, link, base_url, exts):
+            for a in _links(scope, link, base_url, exts, patterns):
                 own = normalize_url(resolve_url(a.get("href"), base_url))
                 context = text_of(_row_element(a, own, base_url))
                 out.append(_candidate(a, base_url, context, None, grids))
@@ -176,18 +199,37 @@ def _candidate(
         link_title=" ".join((a.get("title") or "").split()) or None,
         row_header=row_header,
         column_header=column_header,
+        file_name=link_file_name(a),
     )
 
 
+def link_file_name(a: HtmlElement) -> str | None:
+    """A file name given by the link itself: ``download`` or ``title`` attribute."""
+    for attr in ("download", "title", "data-filename"):
+        value = " ".join((a.get(attr) or "").split())
+        if value and file_extension(value):
+            return value[-200:]
+    return None
+
+
 def _links(
-    scope: HtmlElement, link: str, base_url: str, exts: set[str] | None
+    scope: HtmlElement,
+    link: str,
+    base_url: str,
+    exts: set[str] | None,
+    patterns: Collection[re.Pattern[str]] = (),
 ) -> list[HtmlElement]:
     result = []
     for a in select(scope, link):
         href = a.get("href")
         if not href or href.strip().lower().startswith(("javascript:", "mailto:", "tel:", "#")):
             continue
-        if exts is not None and path_extension(resolve_url(href, base_url)) not in exts:
+        url = resolve_url(href, base_url)
+        if exts is not None and not (
+            path_extension(url) in exts
+            or file_extension(link_file_name(a)) in exts
+            or any(p.search(url) for p in patterns)
+        ):
             continue
         result.append(a)
     return result
@@ -317,7 +359,7 @@ class LinkGroup:
 
     @property
     def extensions(self) -> Counter[str]:
-        return Counter(path_extension(c.url) for c in self.candidates)
+        return Counter(c.extension for c in self.candidates)
 
     @property
     def hosts(self) -> set[str]:
@@ -440,3 +482,111 @@ def _fold_siblings(node: HtmlElement) -> None:
             node.remove(extra)
         marker = etree.Comment(f" {count - 2} more <{tag}> siblings ")
         same[1].addnext(marker)
+
+
+# -- JSON responses --------------------------------------------------------------------
+
+_MISSING = object()
+
+
+def json_path(data: Any, path: str) -> Any:
+    """Value at a dotted path (``results.0.hits``; list indexes are numbers), else None."""
+    node = data
+    for part in path.split(".") if path else ():
+        if isinstance(node, dict):
+            node = node.get(part, _MISSING)
+        elif isinstance(node, list) and part.lstrip("-").isdigit():
+            index = int(part)
+            node = node[index] if -len(node) <= index < len(node) else _MISSING
+        else:
+            return None
+        if node is _MISSING:
+            return None
+    return node
+
+
+def _text(value: Any) -> str:
+    if value is None or isinstance(value, (dict, list)):
+        return ""
+    return " ".join(str(value).split())
+
+
+def json_candidates(
+    data: Any,
+    base_url: str,
+    *,
+    items: str,
+    url: str | Collection[str],
+    title: str | None = None,
+    file_name: str | None = None,
+    context: Collection[str] = (),
+    extensions: Collection[str] | None = None,
+    document_urls: Collection[str] | None = None,
+) -> list[Candidate]:
+    """Documents listed in a JSON response: ``items`` is the path to the list, the other
+    arguments are paths inside one item (``url`` may list several paths: the first one
+    present wins). Items without a URL are skipped."""
+    entries = json_path(data, items)
+    if not isinstance(entries, list):
+        return []
+    url_paths = [url] if isinstance(url, str) else list(url)
+    exts = {e.lower().lstrip(".") for e in extensions} if extensions else None
+    patterns = [re.compile(p) for p in document_urls or ()]
+    out: list[Candidate] = []
+    for entry in entries:
+        raw = next((t for p in url_paths if (t := _text(json_path(entry, p)))), "")
+        if not raw:
+            continue
+        absolute = resolve_url(raw, base_url)
+        name = _text(json_path(entry, file_name)) if file_name else ""
+        ext = path_extension(absolute) or file_extension(name)
+        if exts is not None and ext not in exts and not any(p.search(absolute) for p in patterns):
+            continue
+        heading = _text(json_path(entry, title)) if title else ""
+        ctx = " | ".join(t for p in context if (t := _text(json_path(entry, p))))
+        out.append(
+            Candidate(
+                url=absolute,
+                normalized_url=normalize_url(absolute),
+                link_text=heading,
+                title=heading or name or ctx,
+                context_text=ctx,
+                heading=None,
+                dom_path=f"json:{items}",
+                file_name=name or None,
+            )
+        )
+    return out
+
+
+# -- interactive controls --------------------------------------------------------------
+
+_LOAD_MORE_TEXT = re.compile(
+    r"^\s*(load|show|view|see) more|^\s*more results|voir plus|afficher plus|plus de r[ée]sultats|"
+    r"charger plus|mehr (anzeigen|laden)",
+    re.IGNORECASE,
+)
+
+
+@dataclass(frozen=True)
+class PageControls:
+    """Controls that suggest a listing loaded by JavaScript."""
+
+    year_selects: list[str]
+    """CSS of ``<select>`` elements with at least two year options."""
+    load_more: list[str]
+    """Labels of "load more" buttons."""
+
+
+def page_controls(root: HtmlElement) -> PageControls:
+    selects = []
+    for s in select(root, "select"):
+        years = [o for o in select(s, "option") if _YEAR.search(text_of(o)) and o.get("value")]
+        if len(years) >= 2:
+            selects.append(f"#{s.get('id')}" if s.get("id") else "select")
+    buttons = [
+        text_of(b)[:60]
+        for b in select(root, "button, a[href='#'], a:not([href])")
+        if _LOAD_MORE_TEXT.search(text_of(b))
+    ]
+    return PageControls(selects, buttons)

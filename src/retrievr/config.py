@@ -65,6 +65,21 @@ class LLMSettings(_Section):
     error, used by tests), ``off`` disables it."""
 
 
+class BrowserSettings(_Section):
+    """Optional browser (extra ``retrievr[browser]``), used on cold paths to discover how
+    a page loads its listing. Never needed to replay a recipe."""
+
+    enabled: bool = True
+    channel: str | None = "msedge"
+    """Installed browser to drive (``msedge``, ``chrome``), or None for Playwright's own
+    Chromium (needs ``playwright install chromium``)."""
+    headless: bool = True
+    timeout_s: float = Field(default=45.0, gt=0)
+    settle_ms: int = Field(default=2500, ge=0, le=30000)
+    """Wait after loading the page and after each action, for its requests to finish."""
+    max_actions: int = Field(default=12, ge=0, le=50)
+
+
 class StateSettings(_Section):
     state_dir: Path = Path(".retrievr")
     """Learned recipes, SQLite state (runs, LLM ledger, decisions) and the LLM cache."""
@@ -74,6 +89,7 @@ class Settings(_Section):
     fetch: FetchSettings = FetchSettings()
     output: OutputSettings = OutputSettings()
     llm: LLMSettings = LLMSettings()
+    browser: BrowserSettings = BrowserSettings()
     state: StateSettings = StateSettings()
 
 

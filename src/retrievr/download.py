@@ -5,6 +5,7 @@ Never calls an LLM.
 
 from __future__ import annotations
 
+import dataclasses
 import hashlib
 import json
 import logging
@@ -23,6 +24,7 @@ from pydantic import BaseModel, ConfigDict
 
 from retrievr.fetch import BlockedError, Fetcher, FetchError
 from retrievr.recipe import FoundDocument, Recipe
+from retrievr.snapshots import document_extension
 
 log = logging.getLogger("retrievr.download")
 
@@ -173,7 +175,12 @@ class Downloader:
         tmp_dir.mkdir(parents=True, exist_ok=True)
         tmp = tmp_dir / f"{uuid.uuid4().hex}.part"
         try:
-            sha, size, content_type = self._fetch_to(tmp, doc, recipe)
+            sha, size, content_type, head = self._fetch_to(tmp, doc, recipe)
+            if not doc.extension:  # opaque link: name the file from what was served
+                ext = document_extension(content_type) or sniff_extension(head)
+                doc = dataclasses.replace(doc, extension=ext or "bin")
+                if reason := check_magic(doc.extension, head):
+                    return DownloadOutcome(doc, "rejected", reason=reason)
             reason = check_container(doc.extension, tmp)
             if reason:
                 return DownloadOutcome(doc, "rejected", reason=reason)
@@ -221,7 +228,7 @@ class Downloader:
 
     def _fetch_to(
         self, tmp: Path, doc: FoundDocument, recipe: Recipe
-    ) -> tuple[str, int, str | None]:
+    ) -> tuple[str, int, str | None, bytes]:
         limit = self.fetcher.settings.max_download_bytes
         digest = hashlib.sha256()
         size = 0
@@ -245,7 +252,7 @@ class Downloader:
             raise _RejectedError("empty file")
         if reason := check_magic(doc.extension, head):
             raise _RejectedError(reason)
-        return digest.hexdigest(), size, content_type
+        return digest.hexdigest(), size, content_type, head
 
     def _free_path(self, issuer: str, doc: FoundDocument, manifest: Manifest) -> str:
         base = target_path(issuer, doc)
@@ -274,6 +281,15 @@ def target_path(issuer: str, doc: FoundDocument) -> str:
     )
     ext = _safe(doc.extension or "bin").lower()
     return f"{_safe(issuer)}/{year}/{name}.{ext}"
+
+
+def sniff_extension(head: bytes) -> str | None:
+    """Extension guessed from the first bytes (PDF, or a zip container)."""
+    if head.startswith(b"%PDF-"):
+        return "pdf"
+    if head.startswith(_ZIP):
+        return "zip"
+    return None
 
 
 def check_magic(extension: str, head: bytes) -> str | None:

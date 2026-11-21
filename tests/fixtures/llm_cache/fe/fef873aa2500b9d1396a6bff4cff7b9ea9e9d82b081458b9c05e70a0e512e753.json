@@ -1,0 +1,32 @@
+{
+ "cache_format": 1,
+ "output": {
+  "reasoning": "The only opened page has no document-link groups, and its quarterly reporting navigation targets are reported as 404. With no further pages available, the current document listing and its selectors cannot be verified; the start page is the only observed source URL.",
+  "action": "recipe",
+  "open_links": [],
+  "document_groups": [],
+  "sources": [
+   {
+    "url": "https://www.ubs.com/global/en/investor-relations/financial-information/quarterly-reporting/qr-archive/qr-archive21-25.html",
+    "year_from": null,
+    "container": "main",
+    "item": null,
+    "title": null,
+    "pagination_next_selector": null,
+    "table_context": false
+   }
+  ],
+  "default_language": "en"
+ },
+ "usage": {
+  "input_tokens": 6551,
+  "output_tokens": 1136,
+  "cost_usd": 0.000644705
+ },
+ "strategy": "json_schema",
+ "attempts": 1,
+ "latency_s": 9.828,
+ "model": "openai/gpt-6-luna",
+ "schema": "StructureReply",
+ "step": "repair:structure"
+}

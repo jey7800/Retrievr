@@ -6,7 +6,9 @@
     result = r.run("example-issuer")   # replays the active recipe, no LLM call if healthy
 
 ``learn`` calls the LLM (cold path); ``run`` replays the recipe deterministically and only
-calls the LLM for documents its rules cannot classify and no earlier decision covers.
+calls the LLM for documents its rules cannot classify and no earlier decision covers, or
+when the health check finds the recipe broken (repair). ``check`` is the health check
+alone (no LLM, no download).
 """
 
 from __future__ import annotations
@@ -28,7 +30,8 @@ from retrievr.classify import Decision, apply_decisions
 from retrievr.config import Settings, load_settings
 from retrievr.download import Downloader, DownloadOutcome
 from retrievr.events import Event, EventHandler, emit
-from retrievr.fetch import BlockedError, Fetcher
+from retrievr.fetch import BlockedError, Fetcher, FetchError, HTTPStatusError
+from retrievr.health import HealthReport, Probe, assess
 from retrievr.learn import (
     Filter,
     LearnContext,
@@ -48,7 +51,8 @@ from retrievr.llm import (
     ResponseCache,
     StructuredLLM,
 )
-from retrievr.recipe import FoundDocument, Recipe, load_recipe, run_recipe
+from retrievr.recipe import FoundDocument, Recipe, RunResult, load_recipe, run_recipe
+from retrievr.repair import RepairContext, Repairer, RepairResult
 from retrievr.store import StateStore
 from retrievr.urls import host_of
 from retrievr.validate import ValidationReport, validate_runs
@@ -56,7 +60,8 @@ from retrievr.validate import ValidationReport, validate_runs
 log = logging.getLogger("retrievr")
 
 LearnStatus = Literal["learned", "rejected", "blocked", "error", "budget_exceeded"]
-RunStatus = Literal["ok", "blocked", "error", "no_recipe"]
+RunStatus = Literal["ok", "degraded", "blocked", "error", "no_recipe"]
+MAX_LLM_REPAIRS_PER_DAY = 2
 _GENERIC_LABELS = {"www", "investors", "investor", "ir", "home", "en", "fr", "de", "corporate"}
 
 
@@ -110,6 +115,9 @@ class RunOutcome:
     llm: LLMUsage = field(default_factory=LLMUsage)
     downloads: list[DownloadOutcome] = field(default_factory=list)
     errors: list[str] = field(default_factory=list)
+    health: HealthReport | None = None
+    repair: RepairResult | None = None
+    """Set when the health check found the recipe broken."""
 
 
 def issuer_from_url(url: str) -> str:
@@ -284,6 +292,8 @@ class Retrievr:
             result.recipe_path = self.store.save_recipe(recipe)
             self.store.activate(site, recipe, result.recipe_path)
             self.store.save_decisions(recipe.recipe, decisions)
+            self.store.set_site(site, start_url=url, status="ok")
+            self.store.record_documents(site, recipe.key, documents)
             result.status = "learned"
             self._emit("recipe_learned", site, recipe.key, documents=len(documents))
         else:
@@ -308,8 +318,13 @@ class Retrievr:
         request: str | None = None,
         years: Collection[int] | None = None,
         download: bool = True,
+        repair: bool = True,
     ) -> RunOutcome:
-        """Replay the active recipe of ``site`` (or a recipe file path)."""
+        """Replay the active recipe of ``site`` (or a recipe file path), check its health
+        and, when it is broken, repair it (``repair=True``) before returning documents.
+
+        A broken recipe that no repair fixes leaves the site ``degraded``: the documents
+        it still lists are returned but not downloaded."""
         run_id = self.store.start_run("run", site)
         outcome = RunOutcome(site=site, status="error", run_id=run_id)
         recipe = self._recipe(site)
@@ -317,24 +332,44 @@ class Retrievr:
             outcome.status = "no_recipe"
             self.store.finish_run(run_id, status="no_recipe", documents=0, llm_calls=0, cost_usd=0)
             return outcome
+        site = self._site_key(site, recipe)
         outcome.recipe = recipe.key
         ledger: CostLedger | None = None
         llm: StructuredLLM | None = None
         try:
             with self._fetcher() as fetcher:
                 run = run_recipe(recipe, fetcher, years=years, today=self.today)
-                outcome.errors = run.errors
-                if run.status != "ok":
-                    outcome.status = run.status
-                    if run.status == "blocked":
-                        self._emit("blocked", site, "; ".join(run.errors))
+                outcome.errors = list(run.errors)
+                if run.status == "blocked":
+                    outcome.status = "blocked"
+                    self._emit("blocked", site, "; ".join(run.errors))
                     return outcome
                 decisions = self.store.decisions(recipe.recipe)
+                listed = apply_decisions(run.documents, decisions)
+                report = self._assess(site, recipe, run, listed, fetcher, years, run_id)
+                outcome.health = report
+                documents = run.documents
+                if report.repair_needed:
+                    outcome.all_documents = listed
+                    outcome.status = "degraded"
+                    if not repair:
+                        return outcome
+                    llm, ledger = self._llm(run_id)
+                    fixed = self._repair(site, recipe, report, fetcher, years, run_id, llm, ledger)
+                    outcome.repair = fixed
+                    if fixed.status != "repaired" or fixed.recipe is None:
+                        return outcome
+                    recipe, documents, decisions = fixed.recipe, fixed.documents, fixed.decisions
+                    outcome.recipe = recipe.key
+                elif run.status != "ok":
+                    outcome.status = run.status
+                    return outcome
                 request = request or self.store.site_request(site)
                 try:
-                    llm, ledger = self._llm(run_id)
+                    if llm is None:
+                        llm, ledger = self._llm(run_id)
                     new = classify_remaining(
-                        llm, run.documents, decisions, issuer=recipe.issuer, years=years
+                        llm, documents, decisions, issuer=recipe.issuer, years=years
                     )
                     if new:
                         self.store.save_decisions(recipe.recipe, new)
@@ -342,7 +377,9 @@ class Retrievr:
                     outcome.filter = self.compile(llm, request) if request else None
                 except LLMNotConfiguredError as exc:
                     outcome.errors.append(f"LLM not configured: {exc}")
-                outcome.all_documents = apply_decisions(run.documents, decisions)
+                outcome.all_documents = apply_decisions(documents, decisions)
+                if report.verdict in ("ok", "stale") or outcome.repair is not None:
+                    self.store.record_documents(site, recipe.key, outcome.all_documents)
                 selected = (
                     outcome.filter.select(outcome.all_documents)
                     if outcome.filter
@@ -374,6 +411,185 @@ class Retrievr:
             )
             self._emit("run_finished", site, outcome.status, run="replay", run_id=run_id)
         return outcome
+
+    # -- health and repair -------------------------------------------------------------
+
+    def check(self, site: str, *, years: Collection[int] | None = None) -> HealthReport:
+        """Health check only: replay the recipe and compare it with the site's history.
+        No LLM call, no download."""
+        recipe = self._recipe(site)
+        if recipe is None:
+            raise LookupError(f"no active recipe for {site!r}")
+        site = self._site_key(site, recipe)
+        run_id = self.store.start_run("check", site)
+        report = HealthReport(site=site, recipe=recipe.key)
+        try:
+            with self._fetcher() as fetcher:
+                run = run_recipe(recipe, fetcher, years=years, today=self.today)
+                listed = apply_decisions(run.documents, self.store.decisions(recipe.recipe))
+                report = self._assess(site, recipe, run, listed, fetcher, years, run_id)
+                if report.verdict in ("ok", "stale"):
+                    self.store.record_documents(site, recipe.key, listed)
+        except BlockedError as exc:
+            report.add("run", "blocked", str(exc))
+            self._emit("blocked", site, str(exc))
+        finally:
+            self.store.finish_run(
+                run_id, status=report.verdict, documents=0, llm_calls=0, cost_usd=0.0
+            )
+        return report
+
+    def repair(self, site: str, *, years: Collection[int] | None = None) -> RepairResult:
+        """Check the health of ``site`` and run the repair ladder if it is broken."""
+        recipe = self._recipe(site)
+        if recipe is None:
+            raise LookupError(f"no active recipe for {site!r}")
+        site = self._site_key(site, recipe)
+        run_id = self.store.start_run("repair", site)
+        result = RepairResult(site=site, status="not_needed")
+        llm: StructuredLLM | None = None
+        ledger: CostLedger | None = None
+        try:
+            with self._fetcher() as fetcher:
+                run = run_recipe(recipe, fetcher, years=years, today=self.today)
+                listed = apply_decisions(run.documents, self.store.decisions(recipe.recipe))
+                report = self._assess(site, recipe, run, listed, fetcher, years, run_id)
+                if not report.repair_needed:
+                    result.reason = f"health is {report.verdict}"
+                    return result
+                llm, ledger = self._llm(run_id)
+                result = self._repair(site, recipe, report, fetcher, years, run_id, llm, ledger)
+        finally:
+            if isinstance(llm, LLMClient):
+                llm.close()
+            usage = LLMUsage.of(ledger)
+            self.store.finish_run(
+                run_id,
+                status=result.status,
+                documents=len(result.documents),
+                llm_calls=usage.calls,
+                cost_usd=usage.cost_usd,
+                detail={"reason": result.reason},
+            )
+        return result
+
+    def install(self, recipe_path: Path | str, *, site: str | None = None) -> Recipe:
+        """Store a hand-written recipe and make it the active recipe of its site."""
+        recipe = load_recipe(recipe_path)
+        site = site or recipe.issuer
+        path = self.store.recipes_dir / f"{recipe.key}.yaml"
+        if not path.exists():
+            path = self.store.save_recipe(recipe)
+        self.store.activate(site, recipe, path)
+        self.store.set_site(site, status="ok")
+        return recipe
+
+    def _site_key(self, site: str, recipe: Recipe) -> str:
+        """History is kept per site; a recipe run from a file belongs to its issuer."""
+        return recipe.issuer if site.endswith((".yaml", ".yml")) else site
+
+    def _assess(
+        self,
+        site: str,
+        recipe: Recipe,
+        run: RunResult,
+        listed: list[FoundDocument],
+        fetcher: Fetcher,
+        years: Collection[int] | None,
+        run_id: str,
+    ) -> HealthReport:
+        report = assess(
+            recipe,
+            run,
+            listed,
+            self.store.known_documents(site),
+            site=site,
+            today=self.today,
+            years=years,
+            probe=self._probe(fetcher, recipe),
+        )
+        self.store.record_health(run_id, report)
+        if report.removed:
+            self.store.mark_removed(site, report.removed)
+        if report.verdict != "ok":
+            self._emit("health_alert", site, report.summary(), verdict=report.verdict)
+        return report
+
+    def _probe(self, fetcher: Fetcher, recipe: Recipe) -> Probe:
+        """Whether a document is still online (a streamed GET, the body is not read)."""
+
+        def probe(url: str) -> bool | None:
+            try:
+                with fetcher.stream(url, allowed_domains=recipe.allowed_domains):
+                    return True
+            except BlockedError:
+                return None
+            except HTTPStatusError as exc:
+                return False if exc.status in (404, 410) else None
+            except FetchError:
+                return None
+
+        return probe
+
+    def _repair(
+        self,
+        site: str,
+        recipe: Recipe,
+        report: HealthReport,
+        fetcher: Fetcher,
+        years: Collection[int] | None,
+        run_id: str,
+        llm: StructuredLLM,
+        ledger: CostLedger | None,
+    ) -> RepairResult:
+        status = self.store.site_status(site)
+        used = self.store.llm_repairs_on(site, self.today)
+        discoverer = self._discoverer
+        if discoverer is None and self.settings.browser.enabled:
+            discoverer = BrowserDiscovery(self.settings.browser, fetcher)
+        ctx = RepairContext(
+            site=site,
+            today=self.today,
+            years=years,
+            version=self.store.next_version(recipe.recipe),
+            start_url=status[1] if status else None,
+            decisions=self.store.decisions(recipe.recipe),
+            llm=llm,
+            llm_attempts_left=max(0, MAX_LLM_REPAIRS_PER_DAY - used),
+            ledger=ledger,
+            discoverer=discoverer,
+            probe=self._probe(fetcher, recipe),
+        )
+        result = Repairer(recipe, report, self.store.known_documents(site), fetcher, ctx).repair()
+        for attempt in result.attempts:
+            self.store.record_repair(
+                site,
+                run_id,
+                self.today,
+                rung=attempt.rung,
+                outcome="passed" if attempt.passed else "failed",
+                recipe_key=attempt.recipe,
+                cost_usd=attempt.cost_usd,
+                detail=attempt.detail[:1000],
+            )
+            if not attempt.passed and attempt.recipe is not None:
+                self._emit("recipe_rejected", site, attempt.detail, rung=attempt.rung)
+        if result.status == "repaired" and result.recipe is not None:
+            path = self.store.save_recipe(result.recipe)
+            self.store.activate(site, result.recipe, path)
+            self.store.save_decisions(result.recipe.recipe, result.decisions)
+            self.store.set_site(site, status="ok", detail=result.reason)
+            self._emit(
+                "recipe_repaired",
+                site,
+                f"{recipe.key} -> {result.recipe.key} ({result.reason})",
+                previous=recipe.key,
+                recipe=result.recipe.key,
+            )
+        else:
+            self.store.set_site(site, status="degraded", detail=result.reason)
+            self._emit("site_degraded", site, f"{recipe.key} stays active: {result.reason}")
+        return result
 
     def _recipe(self, site: str) -> Recipe | None:
         if site.endswith((".yaml", ".yml")) and Path(site).exists():

@@ -1,0 +1,25 @@
+{
+ "cache_format": 1,
+ "output": {
+  "reasoning": "The selected year-filtered page contains only header and footer documents, not the results listing. Inspect the current financial-publications and document-base pages to locate the live listing.",
+  "action": "open_pages",
+  "open_links": [
+   "P1.N21",
+   "P1.N34"
+  ],
+  "document_groups": [],
+  "sources": [],
+  "default_language": null
+ },
+ "usage": {
+  "input_tokens": 4759,
+  "output_tokens": 267,
+  "cost_usd": 0.0007283
+ },
+ "strategy": "json_schema",
+ "attempts": 1,
+ "latency_s": 3.219,
+ "model": "openai/gpt-6-luna",
+ "schema": "StructureReply",
+ "step": "repair:structure"
+}

@@ -7,14 +7,15 @@ new site only has the others.
 
 from __future__ import annotations
 
-from collections.abc import Collection
+from collections.abc import Callable, Collection, Mapping
 from dataclasses import dataclass, field
 
-from retrievr.recipe import Recipe, RunResult
+from retrievr.recipe import FoundDocument, Recipe, RunResult
 from retrievr.urls import is_allowed
 
 KNOWN_DOCUMENTS_RATIO = 0.95
 MAX_VOLUME_RATIO = 1.5
+METADATA_AGREEMENT = 0.9
 
 
 @dataclass(frozen=True)
@@ -34,6 +35,10 @@ class History:
     """Normalized URLs of previously found documents that are still online."""
     volume: int
     """Documents the previous recipe returned on its last healthy run."""
+    scope: Callable[[FoundDocument], bool] | None = None
+    """Documents counted for the volume (those of the years the history covers)."""
+    metadata: Mapping[str, tuple[str | None, str | None]] | None = None
+    """(type, period) of known documents, which a repaired recipe must keep."""
 
 
 @dataclass
@@ -90,8 +95,23 @@ def validate_runs(
                 f"{ratio:.0%} of {len(known)} still found",
             )
         )
+        counted = count
+        if history.scope is not None:
+            counted = sum(1 for d in first.documents if history.scope(d))
         limit = MAX_VOLUME_RATIO * max(history.volume, 1)
-        add(Check("volume", count <= limit, f"{count} vs at most {limit:.0f}"))
+        add(Check("volume", counted <= limit, f"{counted} vs at most {limit:.0f}"))
+        if history.metadata:
+            by_url = {d.normalized_url: d for d in first.documents}
+            pairs = [(m, by_url[u]) for u, m in history.metadata.items() if u in by_url]
+            kept = sum(1 for m, d in pairs if m == (d.type, d.period))
+            agreement = kept / len(pairs) if pairs else 1.0
+            add(
+                Check(
+                    "metadata",
+                    agreement >= METADATA_AGREEMENT,
+                    f"{agreement:.0%} of {len(pairs)} known documents keep type and period",
+                )
+            )
     return report
 
 

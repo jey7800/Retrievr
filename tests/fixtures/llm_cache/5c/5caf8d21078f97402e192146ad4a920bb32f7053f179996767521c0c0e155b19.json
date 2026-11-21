@@ -1,0 +1,318 @@
+{
+ "cache_format": 1,
+ "output": {
+  "labels": [
+   {
+    "id": "D1",
+    "type": "quarterly_report",
+    "period": "2021-Q3",
+    "language": null
+   },
+   {
+    "id": "D2",
+    "type": "results_presentation",
+    "period": "2021-Q3",
+    "language": null
+   },
+   {
+    "id": "D3",
+    "type": "analyst_call_transcript",
+    "period": "2021-Q3",
+    "language": null
+   },
+   {
+    "id": "D4",
+    "type": "fixed_income_presentation",
+    "period": "2021-Q3",
+    "language": null
+   },
+   {
+    "id": "D5",
+    "type": "fixed_income_call_transcript",
+    "period": "2021-Q3",
+    "language": null
+   },
+   {
+    "id": "D6",
+    "type": "press_release",
+    "period": "2021-Q2",
+    "language": null
+   },
+   {
+    "id": "D7",
+    "type": "financial_data_supplement",
+    "period": "2021-Q2",
+    "language": null
+   },
+   {
+    "id": "D8",
+    "type": "financial_data_supplement",
+    "period": "2021-Q2",
+    "language": null
+   },
+   {
+    "id": "D9",
+    "type": "half_year_report",
+    "period": "2021-H1",
+    "language": null
+   },
+   {
+    "id": "D10",
+    "type": "results_presentation",
+    "period": "2021-Q2",
+    "language": null
+   },
+   {
+    "id": "D11",
+    "type": "analyst_call_transcript",
+    "period": "2021-Q2",
+    "language": null
+   },
+   {
+    "id": "D12",
+    "type": "fixed_income_presentation",
+    "period": "2021-Q2",
+    "language": null
+   },
+   {
+    "id": "D13",
+    "type": "fixed_income_call_transcript",
+    "period": "2021-Q2",
+    "language": null
+   },
+   {
+    "id": "D14",
+    "type": "press_release",
+    "period": "2021-Q1",
+    "language": null
+   },
+   {
+    "id": "D15",
+    "type": "financial_data_supplement",
+    "period": "2021-Q1",
+    "language": null
+   },
+   {
+    "id": "D16",
+    "type": "financial_data_supplement",
+    "period": "2021-Q1",
+    "language": null
+   },
+   {
+    "id": "D17",
+    "type": "quarterly_report",
+    "period": "2021-Q1",
+    "language": null
+   },
+   {
+    "id": "D18",
+    "type": "results_presentation",
+    "period": "2021-Q1",
+    "language": null
+   },
+   {
+    "id": "D19",
+    "type": "analyst_call_transcript",
+    "period": "2021-Q1",
+    "language": null
+   },
+   {
+    "id": "D20",
+    "type": "fixed_income_presentation",
+    "period": "2021-Q1",
+    "language": null
+   },
+   {
+    "id": "D21",
+    "type": "fixed_income_call_transcript",
+    "period": "2021-Q1",
+    "language": null
+   },
+   {
+    "id": "D22",
+    "type": "press_release",
+    "period": "2020-Q4",
+    "language": null
+   },
+   {
+    "id": "D23",
+    "type": "financial_data_supplement",
+    "period": "2020-Q4",
+    "language": null
+   },
+   {
+    "id": "D24",
+    "type": "financial_data_supplement",
+    "period": "2020-Q4",
+    "language": null
+   },
+   {
+    "id": "D25",
+    "type": "results_presentation",
+    "period": "2020-Q4",
+    "language": null
+   },
+   {
+    "id": "D26",
+    "type": "analyst_call_transcript",
+    "period": "2020-Q4",
+    "language": null
+   },
+   {
+    "id": "D27",
+    "type": "fixed_income_presentation",
+    "period": "2020-Q4",
+    "language": null
+   },
+   {
+    "id": "D28",
+    "type": "fixed_income_call_transcript",
+    "period": "2020-Q4",
+    "language": null
+   },
+   {
+    "id": "D29",
+    "type": "press_release",
+    "period": "2020-Q3",
+    "language": null
+   },
+   {
+    "id": "D30",
+    "type": "financial_data_supplement",
+    "period": "2020-Q3",
+    "language": null
+   },
+   {
+    "id": "D31",
+    "type": "financial_data_supplement",
+    "period": "2020-Q3",
+    "language": null
+   },
+   {
+    "id": "D32",
+    "type": "quarterly_report",
+    "period": "2020-Q3",
+    "language": null
+   },
+   {
+    "id": "D33",
+    "type": "results_presentation",
+    "period": "2020-Q3",
+    "language": null
+   },
+   {
+    "id": "D34",
+    "type": "analyst_call_transcript",
+    "period": "2020-Q3",
+    "language": null
+   },
+   {
+    "id": "D35",
+    "type": "fixed_income_presentation",
+    "period": "2020-Q3",
+    "language": null
+   },
+   {
+    "id": "D36",
+    "type": "fixed_income_call_transcript",
+    "period": "2020-Q3",
+    "language": null
+   },
+   {
+    "id": "D37",
+    "type": "press_release",
+    "period": "2020-Q2",
+    "language": null
+   },
+   {
+    "id": "D38",
+    "type": "press_release",
+    "period": "2020-Q2",
+    "language": null
+   },
+   {
+    "id": "D39",
+    "type": "financial_data_supplement",
+    "period": "2020-Q2",
+    "language": null
+   },
+   {
+    "id": "D40",
+    "type": "financial_data_supplement",
+    "period": "2020-Q2",
+    "language": null
+   },
+   {
+    "id": "D41",
+    "type": "half_year_report",
+    "period": "2020-H1",
+    "language": null
+   },
+   {
+    "id": "D42",
+    "type": "results_presentation",
+    "period": "2020-Q2",
+    "language": null
+   },
+   {
+    "id": "D43",
+    "type": "analyst_call_transcript",
+    "period": "2020-Q2",
+    "language": null
+   },
+   {
+    "id": "D44",
+    "type": "fixed_income_presentation",
+    "period": "2020-Q2",
+    "language": null
+   },
+   {
+    "id": "D45",
+    "type": "fixed_income_call_transcript",
+    "period": "2020-Q2",
+    "language": null
+   },
+   {
+    "id": "D46",
+    "type": "press_release",
+    "period": "2020-Q1",
+    "language": null
+   },
+   {
+    "id": "D47",
+    "type": "press_release",
+    "period": "2020-Q1",
+    "language": null
+   },
+   {
+    "id": "D48",
+    "type": "financial_data_supplement",
+    "period": "2020-Q1",
+    "language": null
+   },
+   {
+    "id": "D49",
+    "type": "financial_data_supplement",
+    "period": "2020-Q1",
+    "language": null
+   },
+   {
+    "id": "D50",
+    "type": "quarterly_report",
+    "period": "2020-Q1",
+    "language": null
+   }
+  ]
+ },
+ "usage": {
+  "input_tokens": 4327,
+  "output_tokens": 1471,
+  "cost_usd": 0.0012763
+ },
+ "strategy": "json_schema",
+ "attempts": 1,
+ "latency_s": 9.922,
+ "model": "openai/gpt-6-luna",
+ "schema": "LabelBatch",
+ "step": "classify"
+}

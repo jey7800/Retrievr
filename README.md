@@ -3,7 +3,8 @@
 Find and download documents (PDF, XLSX…) from websites, such as the investor-relations
 pages of listed companies, with an LLM used **only when needed**.
 
-> Status: early development (deterministic core, benchmark, LLM learning).
+> Status: early development (deterministic core, benchmark, LLM learning, health checks
+> and repair).
 
 ## How it works
 
@@ -23,6 +24,25 @@ r = Retrievr("retrievr.toml", on_event=print)  # or Retrievr() for defaults
 result = r.learn("https://example-issuer.com/investors", "annual reports since 2024")
 print(result.status, len(result.documents))
 outcome = r.run("example-issuer")  # replays the active recipe, downloads new files
+```
+
+## Health checks and repair
+
+Every `run` compares the replay with what earlier runs established (the documents listed,
+their type and period, the recipe's anchors and expected volume) and gives a verdict:
+`ok`, `stale`, `suspect`, `broken` or `blocked`. No LLM is involved.
+
+When the recipe is `broken`, `run` repairs it before returning documents: it first
+rebuilds the selectors, URL or pagination that stopped matching around the documents it
+knew (no LLM), then asks the LLM (at most 2 attempts per site per day). A repaired recipe
+is activated only if it finds the known documents again with the same metadata;
+otherwise the old recipe stays active, the site is marked `degraded` and the host gets a
+`site_degraded` event.
+
+```python
+report = r.check("example-issuer")      # health check only: no LLM, no download
+print(report.verdict, report.summary())
+r.install("recipes/example-issuer-ir@1.yaml")  # activate a hand-written recipe
 ```
 
 ## LLM configuration

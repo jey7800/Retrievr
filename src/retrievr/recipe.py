@@ -363,7 +363,7 @@ class Cadence(_Model):
 
 
 class HealthSpec(_Model):
-    """Stored with the recipe; evaluated by health checks (later milestone)."""
+    """Stored with the recipe; evaluated by the health checks (``retrievr.health``)."""
 
     anchors: list[str] = []
     items_per_year: tuple[int, int] | None = None
@@ -574,7 +574,9 @@ def _run_listing(
         page = fetcher.get(url, allowed_domains=recipe.allowed_domains)
         root = parse_html(page.content)
         candidates = _html_candidates(root, page.final_url, source.items)
-        result.pages.append(PageVisit(source.id, url, page.final_url, page.status, len(candidates)))
+        result.pages.append(
+            PageVisit(source.id, url, page.final_url, page.status, len(candidates), values=params)
+        )
         _add(recipe, source.id, source.items, params, page.final_url, candidates, result, seen)
         url = _next_url(root, source, page.final_url, recipe)
 

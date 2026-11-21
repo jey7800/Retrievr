@@ -11,17 +11,18 @@ from __future__ import annotations
 import json
 import sqlite3
 import uuid
-from collections.abc import Iterator, Mapping
+from collections.abc import Iterable, Iterator, Mapping
 from contextlib import closing, contextmanager
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from pathlib import Path
 from typing import Any
 
 import yaml
 
 from retrievr.classify import Decision
+from retrievr.health import HealthReport, KnownDocument
 from retrievr.llm import CallRecord
-from retrievr.recipe import Recipe, load_recipe
+from retrievr.recipe import FoundDocument, Recipe, load_recipe
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS active (
@@ -45,6 +46,21 @@ CREATE TABLE IF NOT EXISTS filters (
     at TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS site_requests (
     site TEXT PRIMARY KEY, request TEXT NOT NULL, at TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS sites (
+    site TEXT PRIMARY KEY, start_url TEXT, status TEXT NOT NULL, detail TEXT,
+    at TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS documents (
+    site TEXT NOT NULL, normalized_url TEXT NOT NULL, url TEXT NOT NULL, title TEXT,
+    source_id TEXT, params TEXT NOT NULL, type TEXT, period TEXT, fiscal_year INTEGER,
+    language TEXT, recipe_key TEXT NOT NULL, first_seen TEXT NOT NULL,
+    last_seen TEXT NOT NULL, removed_at TEXT, PRIMARY KEY (site, normalized_url));
+CREATE TABLE IF NOT EXISTS health (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, site TEXT NOT NULL, run_id TEXT,
+    recipe_key TEXT NOT NULL, verdict TEXT NOT NULL, checks TEXT NOT NULL, at TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS repairs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, site TEXT NOT NULL, run_id TEXT, day TEXT NOT NULL,
+    rung TEXT NOT NULL, outcome TEXT NOT NULL, recipe_key TEXT, cost_usd REAL,
+    detail TEXT, at TEXT NOT NULL);
 """
 
 
@@ -210,3 +226,140 @@ class StateStore:
         with self._db() as db:
             row = db.execute("SELECT request FROM site_requests WHERE site = ?", (site,)).fetchone()
         return str(row[0]) if row else None
+
+    # -- sites, history, health, repairs -------------------------------------------
+
+    def set_site(
+        self,
+        site: str,
+        *,
+        start_url: str | None = None,
+        status: str = "ok",
+        detail: str | None = None,
+    ) -> None:
+        """Record the site's status (``ok`` or ``degraded``); keeps a known start URL."""
+        with self._db() as db:
+            row = db.execute("SELECT start_url FROM sites WHERE site = ?", (site,)).fetchone()
+            url = start_url or (row[0] if row else None)
+            db.execute(
+                "INSERT OR REPLACE INTO sites VALUES (?, ?, ?, ?, ?)",
+                (site, url, status, detail, _now()),
+            )
+
+    def site_status(self, site: str) -> tuple[str, str | None, str | None] | None:
+        """(status, start_url, detail) of a site, if recorded."""
+        with self._db() as db:
+            row = db.execute(
+                "SELECT status, start_url, detail FROM sites WHERE site = ?", (site,)
+            ).fetchone()
+        return (str(row[0]), row[1], row[2]) if row else None
+
+    def record_documents(self, site: str, recipe_key: str, docs: Iterable[FoundDocument]) -> None:
+        """Remember the documents a healthy run listed (with their metadata)."""
+        now = _now()
+        rows = [
+            (
+                site,
+                d.normalized_url,
+                d.url,
+                d.title,
+                d.source_id,
+                json.dumps(dict(d.params), sort_keys=True),
+                d.type,
+                d.period,
+                d.fiscal_year,
+                d.language,
+                recipe_key,
+                now,
+                now,
+            )
+            for d in docs
+        ]
+        with self._db() as db:
+            db.executemany(
+                "INSERT INTO documents VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL) "
+                "ON CONFLICT (site, normalized_url) DO UPDATE SET url = excluded.url, "
+                "title = excluded.title, source_id = excluded.source_id, "
+                "params = excluded.params, type = excluded.type, period = excluded.period, "
+                "fiscal_year = excluded.fiscal_year, language = excluded.language, "
+                "recipe_key = excluded.recipe_key, last_seen = excluded.last_seen, "
+                "removed_at = NULL",
+                rows,
+            )
+
+    def mark_removed(self, site: str, normalized_urls: Iterable[str]) -> None:
+        """Documents gone from the site: no longer expected in listings."""
+        with self._db() as db:
+            db.executemany(
+                "UPDATE documents SET removed_at = ? WHERE site = ? AND normalized_url = ?",
+                [(_now(), site, u) for u in normalized_urls],
+            )
+
+    def known_documents(self, site: str) -> list[KnownDocument]:
+        with self._db() as db:
+            rows = db.execute(
+                "SELECT normalized_url, url, title, source_id, params, type, period, "
+                "fiscal_year, language FROM documents WHERE site = ? AND removed_at IS NULL "
+                "ORDER BY normalized_url",
+                (site,),
+            ).fetchall()
+        return [
+            KnownDocument(r[0], r[1], r[2] or "", r[3] or "", json.loads(r[4]), *r[5:9])
+            for r in rows
+        ]
+
+    def record_health(self, run_id: str | None, report: HealthReport) -> None:
+        checks = [{"name": c.name, "verdict": c.verdict, "detail": c.detail} for c in report.checks]
+        with self._db() as db:
+            db.execute(
+                "INSERT INTO health (site, run_id, recipe_key, verdict, checks, at) "
+                "VALUES (?, ?, ?, ?, ?, ?)",
+                (report.site, run_id, report.recipe, report.verdict, json.dumps(checks), _now()),
+            )
+
+    def health_history(self, site: str, limit: int = 10) -> list[tuple[str, str]]:
+        """(verdict, recipe key) of the latest health checks, newest first."""
+        with self._db() as db:
+            rows = db.execute(
+                "SELECT verdict, recipe_key FROM health WHERE site = ? ORDER BY id DESC LIMIT ?",
+                (site, limit),
+            ).fetchall()
+        return [(str(r[0]), str(r[1])) for r in rows]
+
+    def record_repair(
+        self,
+        site: str,
+        run_id: str | None,
+        day: date,
+        *,
+        rung: str,
+        outcome: str,
+        recipe_key: str | None,
+        cost_usd: float,
+        detail: str,
+    ) -> None:
+        with self._db() as db:
+            db.execute(
+                "INSERT INTO repairs (site, run_id, day, rung, outcome, recipe_key, cost_usd, "
+                "detail, at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                (
+                    site,
+                    run_id,
+                    day.isoformat(),
+                    rung,
+                    outcome,
+                    recipe_key,
+                    cost_usd,
+                    detail,
+                    _now(),
+                ),
+            )
+
+    def llm_repairs_on(self, site: str, day: date) -> int:
+        """LLM repair attempts of a site on a day (deterministic relocation is free)."""
+        with self._db() as db:
+            row = db.execute(
+                "SELECT COUNT(*) FROM repairs WHERE site = ? AND day = ? AND rung LIKE 'llm%'",
+                (site, day.isoformat()),
+            ).fetchone()
+        return int(row[0])

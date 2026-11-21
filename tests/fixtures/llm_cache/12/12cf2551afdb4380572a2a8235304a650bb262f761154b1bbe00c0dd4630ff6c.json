@@ -1,0 +1,56 @@
+{
+ "cache_format": 1,
+ "output": {
+  "reasoning": "The document list is returned by the API, not the static page groups. The year variation comes from the year selector’s option elements; page numbers start at 0. Keep both variations on the captured request.",
+  "action": "recipe",
+  "open_links": [],
+  "document_groups": [],
+  "sources": [],
+  "default_language": "fr",
+  "request_sources": [
+   {
+    "exchange": "X1",
+    "vary": [
+     {
+      "field": "page",
+      "value": "page"
+     },
+     {
+      "field": "year",
+      "value": "options"
+     }
+    ],
+    "options_selector": "#year option",
+    "options_year": "fiscal",
+    "year_from": null,
+    "page_start": 0,
+    "has_more_path": null,
+    "html_path": null,
+    "items_path": "data.documents",
+    "url_paths": [
+     "file.url"
+    ],
+    "title_path": "title",
+    "file_name_path": null,
+    "date_path": "publishedAt",
+    "context_paths": [
+     "section"
+    ],
+    "container": null,
+    "item": null,
+    "title": null
+   }
+  ]
+ },
+ "usage": {
+  "input_tokens": 6310,
+  "output_tokens": 1382,
+  "cost_usd": 0.00082406
+ },
+ "strategy": "json_schema",
+ "attempts": 1,
+ "latency_s": 13.25,
+ "model": "openai/gpt-6-luna",
+ "schema": "StructureReplyWithRequests",
+ "step": "repair:structure"
+}

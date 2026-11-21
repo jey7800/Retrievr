@@ -1,0 +1,24 @@
+{
+ "cache_format": 1,
+ "output": {
+  "reasoning": "The French start page contains only navigation and footer documents, not the results listing. Open the corresponding English publications/documents page to discover the current listing route and selectors.",
+  "action": "open_pages",
+  "open_links": [
+   "P1.N1"
+  ],
+  "document_groups": [],
+  "sources": [],
+  "default_language": null
+ },
+ "usage": {
+  "input_tokens": 4876,
+  "output_tokens": 123,
+  "cost_usd": 0.000670925
+ },
+ "strategy": "json_schema",
+ "attempts": 1,
+ "latency_s": 1.546,
+ "model": "openai/gpt-6-luna",
+ "schema": "StructureReply",
+ "step": "repair:structure"
+}

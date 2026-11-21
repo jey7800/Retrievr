@@ -1,0 +1,318 @@
+{
+ "cache_format": 1,
+ "output": {
+  "labels": [
+   {
+    "id": "D1",
+    "type": "analyst_call_transcript",
+    "period": "2018-Q3",
+    "language": "en"
+   },
+   {
+    "id": "D2",
+    "type": "fixed_income_presentation",
+    "period": "2018-Q3",
+    "language": "en"
+   },
+   {
+    "id": "D3",
+    "type": "fixed_income_call_transcript",
+    "period": "2018-Q3",
+    "language": "en"
+   },
+   {
+    "id": "D4",
+    "type": "press_release",
+    "period": "2018-Q2",
+    "language": "en"
+   },
+   {
+    "id": "D5",
+    "type": "press_release",
+    "period": "2018",
+    "language": null
+   },
+   {
+    "id": "D6",
+    "type": "financial_data_supplement",
+    "period": "2018-Q2",
+    "language": "en"
+   },
+   {
+    "id": "D7",
+    "type": "financial_data_supplement",
+    "period": "2018-Q2",
+    "language": "en"
+   },
+   {
+    "id": "D8",
+    "type": "half_year_report",
+    "period": "2018-H1",
+    "language": "en"
+   },
+   {
+    "id": "D9",
+    "type": "results_presentation",
+    "period": "2018-Q2",
+    "language": "en"
+   },
+   {
+    "id": "D10",
+    "type": "analyst_call_transcript",
+    "period": "2018-Q2",
+    "language": "en"
+   },
+   {
+    "id": "D11",
+    "type": "fixed_income_presentation",
+    "period": "2018-Q2",
+    "language": "en"
+   },
+   {
+    "id": "D12",
+    "type": "fixed_income_call_transcript",
+    "period": "2018-Q2",
+    "language": "en"
+   },
+   {
+    "id": "D13",
+    "type": "press_release",
+    "period": "2018-Q1",
+    "language": "en"
+   },
+   {
+    "id": "D14",
+    "type": "press_release",
+    "period": "2018",
+    "language": null
+   },
+   {
+    "id": "D15",
+    "type": "press_release",
+    "period": "2018",
+    "language": "en"
+   },
+   {
+    "id": "D16",
+    "type": "financial_data_supplement",
+    "period": "2018-Q1",
+    "language": "en"
+   },
+   {
+    "id": "D17",
+    "type": "financial_data_supplement",
+    "period": "2018-Q1",
+    "language": "en"
+   },
+   {
+    "id": "D18",
+    "type": "financial_data_supplement",
+    "period": "2018-Q1",
+    "language": "en"
+   },
+   {
+    "id": "D19",
+    "type": "financial_data_supplement",
+    "period": "2018-Q1",
+    "language": "en"
+   },
+   {
+    "id": "D20",
+    "type": "quarterly_report",
+    "period": "2018-Q1",
+    "language": "en"
+   },
+   {
+    "id": "D21",
+    "type": "results_presentation",
+    "period": "2018-Q1",
+    "language": "en"
+   },
+   {
+    "id": "D22",
+    "type": "analyst_call_transcript",
+    "period": "2018-Q1",
+    "language": "en"
+   },
+   {
+    "id": "D23",
+    "type": "fixed_income_presentation",
+    "period": "2018-Q1",
+    "language": "en"
+   },
+   {
+    "id": "D24",
+    "type": "fixed_income_call_transcript",
+    "period": "2018-Q1",
+    "language": "en"
+   },
+   {
+    "id": "D25",
+    "type": "press_release",
+    "period": "2017-Q4",
+    "language": "en"
+   },
+   {
+    "id": "D26",
+    "type": "press_release",
+    "period": "2018",
+    "language": null
+   },
+   {
+    "id": "D27",
+    "type": "financial_data_supplement",
+    "period": "2017-Q4",
+    "language": "en"
+   },
+   {
+    "id": "D28",
+    "type": "financial_data_supplement",
+    "period": "2017-Q4",
+    "language": "en"
+   },
+   {
+    "id": "D29",
+    "type": "financial_data_supplement",
+    "period": "2017-Q4",
+    "language": "en"
+   },
+   {
+    "id": "D30",
+    "type": "financial_data_supplement",
+    "period": "2017-Q4",
+    "language": "en"
+   },
+   {
+    "id": "D31",
+    "type": "results_presentation",
+    "period": "2017-Q4",
+    "language": "en"
+   },
+   {
+    "id": "D32",
+    "type": "fixed_income_presentation",
+    "period": "2017-Q4",
+    "language": "en"
+   },
+   {
+    "id": "D33",
+    "type": "press_release",
+    "period": "2017-Q3",
+    "language": "en"
+   },
+   {
+    "id": "D34",
+    "type": "financial_data_supplement",
+    "period": "2017-Q3",
+    "language": "en"
+   },
+   {
+    "id": "D35",
+    "type": "quarterly_report",
+    "period": "2017-Q3",
+    "language": "en"
+   },
+   {
+    "id": "D36",
+    "type": "results_presentation",
+    "period": "2017-Q3",
+    "language": "en"
+   },
+   {
+    "id": "D37",
+    "type": "fixed_income_presentation",
+    "period": "2017-Q3",
+    "language": "en"
+   },
+   {
+    "id": "D38",
+    "type": "press_release",
+    "period": "2017-Q2",
+    "language": "en"
+   },
+   {
+    "id": "D39",
+    "type": "financial_data_supplement",
+    "period": "2017-Q2",
+    "language": "en"
+   },
+   {
+    "id": "D40",
+    "type": "half_year_report",
+    "period": "2017-H1",
+    "language": "en"
+   },
+   {
+    "id": "D41",
+    "type": "results_presentation",
+    "period": "2017-Q2",
+    "language": "en"
+   },
+   {
+    "id": "D42",
+    "type": "fixed_income_presentation",
+    "period": "2017-Q2",
+    "language": "en"
+   },
+   {
+    "id": "D43",
+    "type": "press_release",
+    "period": "2017-Q1",
+    "language": "en"
+   },
+   {
+    "id": "D44",
+    "type": "financial_data_supplement",
+    "period": "2017-Q1",
+    "language": "en"
+   },
+   {
+    "id": "D45",
+    "type": "financial_data_supplement",
+    "period": "2017-Q1",
+    "language": "en"
+   },
+   {
+    "id": "D46",
+    "type": "quarterly_report",
+    "period": "2017-Q1",
+    "language": "en"
+   },
+   {
+    "id": "D47",
+    "type": "results_presentation",
+    "period": "2017-Q1",
+    "language": "en"
+   },
+   {
+    "id": "D48",
+    "type": "fixed_income_presentation",
+    "period": "2017-Q1",
+    "language": "en"
+   },
+   {
+    "id": "D49",
+    "type": "press_release",
+    "period": "2016-Q4",
+    "language": "en"
+   },
+   {
+    "id": "D50",
+    "type": "financial_data_supplement",
+    "period": "2016-Q4",
+    "language": "en"
+   }
+  ]
+ },
+ "usage": {
+  "input_tokens": 4330,
+  "output_tokens": 2347,
+  "cost_usd": 0.001714675
+ },
+ "strategy": "json_schema",
+ "attempts": 1,
+ "latency_s": 16.109,
+ "model": "openai/gpt-6-luna",
+ "schema": "LabelBatch",
+ "step": "classify"
+}

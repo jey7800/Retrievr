@@ -1,0 +1,318 @@
+{
+ "cache_format": 1,
+ "output": {
+  "labels": [
+   {
+    "id": "D1",
+    "type": "financial_data_supplement",
+    "period": "2023-Q1",
+    "language": "en"
+   },
+   {
+    "id": "D2",
+    "type": "financial_data_supplement",
+    "period": "2023-Q1",
+    "language": "en"
+   },
+   {
+    "id": "D3",
+    "type": "quarterly_report",
+    "period": "2023-Q1",
+    "language": "en"
+   },
+   {
+    "id": "D4",
+    "type": "results_presentation",
+    "period": "2023-Q1",
+    "language": "en"
+   },
+   {
+    "id": "D5",
+    "type": "analyst_call_transcript",
+    "period": "2023-Q1",
+    "language": "en"
+   },
+   {
+    "id": "D6",
+    "type": "fixed_income_presentation",
+    "period": "2023-Q1",
+    "language": "en"
+   },
+   {
+    "id": "D7",
+    "type": "fixed_income_call_transcript",
+    "period": "2023-Q1",
+    "language": "en"
+   },
+   {
+    "id": "D8",
+    "type": "press_release",
+    "period": "2022-Q4",
+    "language": "en"
+   },
+   {
+    "id": "D9",
+    "type": "financial_data_supplement",
+    "period": "2022-Q4",
+    "language": "en"
+   },
+   {
+    "id": "D10",
+    "type": "financial_data_supplement",
+    "period": "2022-Q4",
+    "language": "en"
+   },
+   {
+    "id": "D11",
+    "type": "quarterly_series_restated",
+    "period": "2022",
+    "language": "en"
+   },
+   {
+    "id": "D12",
+    "type": "quarterly_series_restated",
+    "period": "2022",
+    "language": "en"
+   },
+   {
+    "id": "D13",
+    "type": "results_presentation",
+    "period": "2022-FY",
+    "language": "en"
+   },
+   {
+    "id": "D14",
+    "type": "analyst_call_transcript",
+    "period": "2022-FY",
+    "language": "en"
+   },
+   {
+    "id": "D15",
+    "type": "fixed_income_presentation",
+    "period": "2022-FY",
+    "language": "en"
+   },
+   {
+    "id": "D16",
+    "type": "fixed_income_call_transcript",
+    "period": "2022-FY",
+    "language": "en"
+   },
+   {
+    "id": "D17",
+    "type": "press_release",
+    "period": "2022-Q3",
+    "language": "en"
+   },
+   {
+    "id": "D18",
+    "type": "financial_data_supplement",
+    "period": "2022-Q3",
+    "language": "en"
+   },
+   {
+    "id": "D19",
+    "type": "financial_data_supplement",
+    "period": "2022-Q3",
+    "language": "en"
+   },
+   {
+    "id": "D20",
+    "type": "quarterly_report",
+    "period": "2022-Q3",
+    "language": "en"
+   },
+   {
+    "id": "D21",
+    "type": "results_presentation",
+    "period": "2022-Q3",
+    "language": "en"
+   },
+   {
+    "id": "D22",
+    "type": "analyst_call_transcript",
+    "period": "2022-Q3",
+    "language": "en"
+   },
+   {
+    "id": "D23",
+    "type": "fixed_income_presentation",
+    "period": "2022-Q3",
+    "language": "en"
+   },
+   {
+    "id": "D24",
+    "type": "fixed_income_call_transcript",
+    "period": "2022-Q3",
+    "language": "en"
+   },
+   {
+    "id": "D25",
+    "type": "press_release",
+    "period": "2022-Q2",
+    "language": "en"
+   },
+   {
+    "id": "D26",
+    "type": "financial_data_supplement",
+    "period": "2022-Q2",
+    "language": "en"
+   },
+   {
+    "id": "D27",
+    "type": "financial_data_supplement",
+    "period": "2022-Q2",
+    "language": "en"
+   },
+   {
+    "id": "D28",
+    "type": "half_year_report",
+    "period": "2022-H1",
+    "language": "en"
+   },
+   {
+    "id": "D29",
+    "type": "results_presentation",
+    "period": "2022-Q2",
+    "language": "en"
+   },
+   {
+    "id": "D30",
+    "type": "analyst_call_transcript",
+    "period": "2022-Q2",
+    "language": "en"
+   },
+   {
+    "id": "D31",
+    "type": "fixed_income_presentation",
+    "period": "2022-Q2",
+    "language": "en"
+   },
+   {
+    "id": "D32",
+    "type": "fixed_income_call_transcript",
+    "period": "2022-Q2",
+    "language": "en"
+   },
+   {
+    "id": "D33",
+    "type": "press_release",
+    "period": "2022-Q1",
+    "language": "en"
+   },
+   {
+    "id": "D34",
+    "type": "financial_data_supplement",
+    "period": "2022-Q1",
+    "language": "en"
+   },
+   {
+    "id": "D35",
+    "type": "financial_data_supplement",
+    "period": "2022-Q1",
+    "language": "en"
+   },
+   {
+    "id": "D36",
+    "type": "quarterly_report",
+    "period": "2022-Q1",
+    "language": "en"
+   },
+   {
+    "id": "D37",
+    "type": "results_presentation",
+    "period": "2022-Q1",
+    "language": "en"
+   },
+   {
+    "id": "D38",
+    "type": "analyst_call_transcript",
+    "period": "2022-Q1",
+    "language": "en"
+   },
+   {
+    "id": "D39",
+    "type": "fixed_income_presentation",
+    "period": "2022-Q1",
+    "language": "en"
+   },
+   {
+    "id": "D40",
+    "type": "fixed_income_call_transcript",
+    "period": "2022-Q1",
+    "language": "en"
+   },
+   {
+    "id": "D41",
+    "type": "press_release",
+    "period": "2021-Q4",
+    "language": "en"
+   },
+   {
+    "id": "D42",
+    "type": "financial_data_supplement",
+    "period": "2021-Q4",
+    "language": "en"
+   },
+   {
+    "id": "D43",
+    "type": "financial_data_supplement",
+    "period": "2021-Q4",
+    "language": "en"
+   },
+   {
+    "id": "D44",
+    "type": "results_presentation",
+    "period": "2021-FY",
+    "language": "en"
+   },
+   {
+    "id": "D45",
+    "type": "analyst_call_transcript",
+    "period": "2021-FY",
+    "language": "en"
+   },
+   {
+    "id": "D46",
+    "type": "fixed_income_presentation",
+    "period": "2021-FY",
+    "language": "en"
+   },
+   {
+    "id": "D47",
+    "type": "fixed_income_call_transcript",
+    "period": "2021-FY",
+    "language": "en"
+   },
+   {
+    "id": "D48",
+    "type": "press_release",
+    "period": "2021-Q3",
+    "language": "en"
+   },
+   {
+    "id": "D49",
+    "type": "financial_data_supplement",
+    "period": "2021-Q3",
+    "language": "en"
+   },
+   {
+    "id": "D50",
+    "type": "financial_data_supplement",
+    "period": "2021-Q3",
+    "language": "en"
+   }
+  ]
+ },
+ "usage": {
+  "input_tokens": 4590,
+  "output_tokens": 1613,
+  "cost_usd": 0.001380175
+ },
+ "strategy": "json_schema",
+ "attempts": 1,
+ "latency_s": 10.625,
+ "model": "openai/gpt-6-luna",
+ "schema": "LabelBatch",
+ "step": "classify"
+}

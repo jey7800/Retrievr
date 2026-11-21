@@ -242,6 +242,43 @@ name, exactly as captured; fields equal to today's date are templated by the eng
   fragment. For an HTML response give item/title/container only.
 The sources list (static pages) may stay empty when request_sources cover the listing."""
 
+REPAIR_ADDENDUM = """
+
+This site was configured before, but its pages changed and the previous configuration no
+longer finds its documents (the health check below says what failed). Describe the
+listing as the pages are NOW: selectors, URLs, pagination or endpoints may all have
+changed. The documents listed before are still on the site and must all be found again;
+the engine checks your proposal against them."""
+
+MAX_HINT_DOCUMENTS = 15
+
+
+@dataclass(frozen=True)
+class RepairHint:
+    """What a repair knows: the recipe that broke, why, and the documents it listed."""
+
+    previous: Recipe
+    failures: list[str]
+    known: list[tuple[str, str]]
+    """(normalized URL, title) of the documents to find again."""
+
+    def text(self) -> str:
+        sources = [
+            s.model_dump(mode="json", by_alias=True, exclude_none=True)
+            for s in self.previous.sources
+        ]
+        lines = [
+            "Previous configuration (no longer works): "
+            + json.dumps(sources, ensure_ascii=False)[:3000],
+            "Health check: " + "; ".join(self.failures[:6]),
+            f"{len(self.known)} documents listed before, e.g.:",
+        ]
+        step = max(1, len(self.known) // MAX_HINT_DOCUMENTS)
+        lines += [f'- "{title[:70]}" -> {url}' for url, title in self.known[::step]][
+            :MAX_HINT_DOCUMENTS
+        ]
+        return "\n".join(lines)
+
 
 @dataclass
 class VisitedPage:
@@ -339,9 +376,11 @@ class Learner:
         max_rule_repairs: int = 1,
         sample_size: int = 80,
         discoverer: Discoverer | None = None,
+        hint: RepairHint | None = None,
     ) -> None:
         self.fetcher = fetcher
         self.discoverer = discoverer
+        self.hint = hint
         self.endpoints: list[Endpoint] = []
         self.llm = llm
         self.ctx = context
@@ -409,6 +448,9 @@ class Learner:
             f"{notes}\n\n{untrusted('pages', digests)}"
         )
         system = STRUCTURE_SYSTEM
+        if self.hint is not None:
+            system += REPAIR_ADDENDUM
+            user = untrusted("previous", self.hint.text()) + "\n\n" + user
         if self.endpoints:
             system += ENDPOINTS_ADDENDUM
             user += "\n\n" + untrusted(
@@ -699,6 +741,10 @@ class Learner:
                         )
                 for url in found_docs.documents:
                     origins.setdefault(url, f"call {draft.exchange}")
+        if self.hint is not None:
+            for url, _title in self.hint.known:
+                expected.add(url)
+                origins.setdefault(url, "listed by the previous configuration")
         others -= expected
         found = {d.normalized_url for d in run.documents}
         result = StructureResult(

@@ -5,6 +5,7 @@ Never calls an LLM.
 
 from __future__ import annotations
 
+import contextlib
 import dataclasses
 import hashlib
 import json
@@ -47,6 +48,10 @@ MAGIC: dict[str, tuple[bytes, ...]] = {
     "ppt": _OLE,
 }
 _HTML_TYPES = ("text/html", "application/xhtml+xml")
+_MARKUP_EXTENSIONS = ("xhtml", "html", "htm")
+"""Documents that are markup themselves (ESEF annual reports are inline XBRL in XHTML)."""
+_MARKUP_STARTS = (b"<?xml", b"<html", b"<!doctype html")
+_BOM_AND_SPACE = b"\xef\xbb\xbf \t\r\n"
 _OOXML_MAIN_PART = {
     "xlsx": "xl/",
     "xlsm": "xl/",
@@ -145,10 +150,13 @@ class Downloader:
         output_dir: Path | str,
         *,
         now: Callable[[], datetime] = lambda: datetime.now(UTC),
+        on_outcome: Callable[[DownloadOutcome, int, int], None] | None = None,
     ) -> None:
+        """``on_outcome(outcome, index, total)`` is called after each document (progress)."""
         self.fetcher = fetcher
         self.output_dir = Path(output_dir)
         self._now = now
+        self._on_outcome = on_outcome
 
     def download_all(
         self, recipe: Recipe, documents: Iterable[FoundDocument]
@@ -156,16 +164,33 @@ class Downloader:
         """Download every document not already known; the manifest is saved at the end
         (also when a block or an unexpected error interrupts the loop)."""
         manifest = Manifest.load(self.output_dir)
+        self._forget_missing_files(manifest)
         outcomes: list[DownloadOutcome] = []
+        todo = list(documents)
         try:
-            for doc in documents:
+            for index, doc in enumerate(todo, start=1):
                 outcome = self.download(recipe, doc, manifest)
                 outcomes.append(outcome)
+                if self._on_outcome is not None:
+                    self._on_outcome(outcome, index, len(todo))
                 if outcome.status == "blocked":
                     break
         finally:
             manifest.save()
+            with contextlib.suppress(OSError):  # left only while a download runs
+                (self.output_dir / TMP_DIR).rmdir()
         return outcomes
+
+    def _forget_missing_files(self, manifest: Manifest) -> None:
+        """A file deleted from the output directory is downloaded again: its manifest
+        entry would otherwise keep it out as already known."""
+        kept = []
+        for entry in manifest.entries:
+            if (self.output_dir / Path(*PurePosixPath(entry.path).parts)).is_file():
+                kept.append(entry)
+            else:
+                log.info("%s is no longer on disk: it will be downloaded again", entry.path)
+        manifest.entries = kept
 
     def download(self, recipe: Recipe, doc: FoundDocument, manifest: Manifest) -> DownloadOutcome:
         known = manifest.by_url(doc.normalized_url)
@@ -235,7 +260,8 @@ class Downloader:
         head = b""
         with self.fetcher.stream(doc.url, allowed_domains=recipe.allowed_domains) as resp:
             content_type = resp.headers.get("content-type")
-            if content_type and content_type.split(";")[0].strip().lower() in _HTML_TYPES:
+            media = (content_type or "").split(";")[0].strip().lower()
+            if media in _HTML_TYPES and doc.extension not in _MARKUP_EXTENSIONS:
                 raise _RejectedError(f"HTML page instead of a .{doc.extension or '?'} file")
             with tmp.open("wb") as fh:
                 for chunk in resp.iter_bytes():
@@ -294,7 +320,11 @@ def sniff_extension(head: bytes) -> str | None:
 
 def check_magic(extension: str, head: bytes) -> str | None:
     """Reason to reject the file from its first bytes, or None."""
-    stripped = head.lstrip()[:15].lower()
+    stripped = head.lstrip(_BOM_AND_SPACE)[:15].lower()
+    if extension in _MARKUP_EXTENSIONS:
+        if len(stripped) >= 5 and not stripped.startswith(_MARKUP_STARTS):
+            return f"not a .{extension} document: {head[:8]!r}"
+        return None
     expected = MAGIC.get(extension)
     if stripped.startswith((b"<!doctype", b"<html", b"<?xml", b"<head", b"<body")) and (
         expected is not None

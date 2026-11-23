@@ -1,0 +1,25 @@
+{
+ "cache_format": 1,
+ "output": {
+  "reasoning": "The old archive page has no document groups. Inspect the current quarterly reporting page and its archive before selecting a listing recipe.",
+  "action": "open_pages",
+  "open_links": [
+   "P1.N5",
+   "P1.N6"
+  ],
+  "document_groups": [],
+  "sources": [],
+  "default_language": null
+ },
+ "usage": {
+  "input_tokens": 6287,
+  "output_tokens": 160,
+  "cost_usd": 0.0008658
+ },
+ "strategy": "json_schema",
+ "attempts": 1,
+ "latency_s": 1.907,
+ "model": "openai/gpt-6-luna",
+ "schema": "StructureReply",
+ "step": "repair:structure"
+}

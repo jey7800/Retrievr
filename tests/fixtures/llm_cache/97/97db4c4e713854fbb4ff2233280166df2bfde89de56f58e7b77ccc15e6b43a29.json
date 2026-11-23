@@ -1,0 +1,25 @@
+{
+ "cache_format": 1,
+ "output": {
+  "reasoning": "The current view is filtered to 2025 results and has a pagination link. Open the broader financial-publications listing and the indicated last page to determine the full listing and its year coverage.",
+  "action": "open_pages",
+  "open_links": [
+   "P1.N24",
+   "P1.N3"
+  ],
+  "document_groups": [],
+  "sources": [],
+  "default_language": null
+ },
+ "usage": {
+  "input_tokens": 4085,
+  "output_tokens": 465,
+  "cost_usd": 0.00074305
+ },
+ "strategy": "json_schema",
+ "attempts": 1,
+ "latency_s": 4.641,
+ "model": "openai/gpt-6-luna",
+ "schema": "StructureReply",
+ "step": "structure"
+}

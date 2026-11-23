@@ -30,9 +30,8 @@ CACHE = FIXTURES / "llm_cache"
 MODEL = "openai/gpt-6-luna"
 RECORD = os.environ.get("RETRIEVR_LLM_RECORD") == "1"
 SITES = ["societegenerale", "deutschebank", "ubs"]
-# Minimum recall and precision per site (the ground truth of Crédit Agricole leaves out a
-# few documents of the same sections).
-THRESHOLDS = {"creditagricole": (1.0, 0.8)}
+# Minimum recall and precision per site (default: all documents, precision 95 %).
+THRESHOLDS: dict[str, tuple[float, float]] = {}
 
 
 def _site(site_id: str) -> Site:

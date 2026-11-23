@@ -1,0 +1,60 @@
+{
+ "cache_format": 1,
+ "output": {
+  "labels": [
+   {
+    "id": "D1",
+    "type": "pillar3",
+    "period": "2025-FY",
+    "language": "fr"
+   },
+   {
+    "id": "D2",
+    "type": "pillar3",
+    "period": "2025-FY",
+    "language": "fr"
+   },
+   {
+    "id": "D3",
+    "type": "pillar3",
+    "period": "2025-H1",
+    "language": "fr"
+   },
+   {
+    "id": "D4",
+    "type": "pillar3",
+    "period": "2025-H1",
+    "language": "fr"
+   },
+   {
+    "id": "D5",
+    "type": "other",
+    "period": "2024-FY",
+    "language": "fr"
+   },
+   {
+    "id": "D6",
+    "type": "pillar3",
+    "period": "2024-H1",
+    "language": "fr"
+   },
+   {
+    "id": "D7",
+    "type": "financial_statements",
+    "period": "2024-H1",
+    "language": "fr"
+   }
+  ]
+ },
+ "usage": {
+  "input_tokens": 1641,
+  "output_tokens": 1173,
+  "cost_usd": 0.00079155
+ },
+ "strategy": "json_schema",
+ "attempts": 1,
+ "latency_s": 10.516,
+ "model": "openai/gpt-6-luna",
+ "schema": "LabelBatch",
+ "step": "classify"
+}

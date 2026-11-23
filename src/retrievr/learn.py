@@ -31,7 +31,7 @@ from typing import Literal, TypeVar
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator
 
-from retrievr.browser import BrowserBlockedError, BrowserUnavailableError, Discoverer
+from retrievr.browser import BrowserBlockedError, BrowserUnavailableError, Discoverer, Exchange
 from retrievr.candidates import (
     DOCUMENT_EXTENSIONS,
     LinkGroup,
@@ -39,11 +39,14 @@ from retrievr.candidates import (
     entry_element,
     group_document_links,
     in_site,
+    json_path,
     navigation_links,
+    opaque_patterns,
     page_controls,
     page_title,
     parse_html,
     pruned_html,
+    select,
     site_domain,
 )
 from retrievr.classify import (
@@ -61,14 +64,18 @@ from retrievr.classify import (
 )
 from retrievr.endpoints import (
     Endpoint,
+    ResponseDocuments,
     digest_endpoints,
     document_extensions,
     document_hosts,
     endpoints,
     field_value,
+    request_fields,
     templated_body,
+    templated_url,
 )
 from retrievr.fetch import BlockedError, Fetcher, FetchError
+from retrievr.health import period_end
 from retrievr.llm import (
     UNTRUSTED_NOTICE,
     Message,
@@ -80,6 +87,7 @@ from retrievr.recipe import (
     SCHEMA_VERSION,
     Cadence,
     Defaults,
+    DetailPages,
     FoundDocument,
     HealthSpec,
     ItemsSpec,
@@ -111,6 +119,7 @@ RULES_AGREEMENT = 0.9
 MIN_RULES_SAMPLE = 30
 DISCOVERY_MAX_DOCUMENTS = 5
 _YEAR_PLACEHOLDER = "{year}"
+_YEAR_IN_VALUE = re.compile(r"(?<!\d)(?:19|20)\d{2}(?!\d)")
 
 
 class _Reply(BaseModel):
@@ -145,7 +154,8 @@ class StructureReply(_Reply):
 
 class FieldChange(_Reply):
     field: str
-    """Form field name, or dotted path in the JSON body (``queries.0.params.page``)."""
+    """Form field name, dotted path in the JSON body (``queries.0.params.page``), or
+    ``?name`` for a parameter of the URL query string."""
     value: Literal["page", "options", "year"]
 
 
@@ -175,6 +185,16 @@ class StructureReplyWithRequests(StructureReply):
     request_sources: list[RequestDraft]
 
 
+class SourceDraftWithDetail(SourceDraft):
+    detail_links: str | None
+    """CSS selector of the links (on the listing page) to detail pages that hold the
+    documents, one page per event or period; null when the listing holds them."""
+
+
+class StructureReplyWithDetails(StructureReply):
+    sources: list[SourceDraftWithDetail]  # type: ignore[assignment]
+
+
 STRUCTURE_SYSTEM = f"""You configure retrievr, a deterministic engine that lists the
 financial documents of investor-relations web pages. You never write code: you fill a
 JSON object that the engine interprets and checks.
@@ -194,8 +214,9 @@ Choose an action:
    to 5 navigation link ids in open_links. Do not open pages you do not need.
 2. "recipe": describe the listing.
    - document_groups: ids of the groups that are the document listing in scope. Leave out
-     navigation menus, banners, footers, legal or cookie documents, and documents repeated
-     on every page.
+     navigation menus, banners, footers, legal or cookie documents, documents repeated
+     on every page, and separate sections for debt investors (credit updates, ratings,
+     debt programmes and prospectuses).
    - sources: one per listing page. When the listing exists per year and the page URLs
      differ only by the year, use ONE source whose url contains the placeholder {{year}}
      and set year_from to the earliest year offered. A page that already holds every year
@@ -225,22 +246,37 @@ the endpoints those actions called (E ids) with each call (X ids). Prefer them w
 static groups only show part of the listing (e.g. the default year).
 To use one, add a request_sources entry (the engine copies the request of the call you
 name, exactly as captured; fields equal to today's date are templated by the engine):
-- exchange: the X id of a call of that listing; vary: the body fields that change:
+- exchange: the X id of a call of that listing; vary: the fields that change (body
+  fields by name or JSON path, URL query parameters as "?name", e.g. "?page"):
   "page" (page number: give page_start, the first page number, and has_more_path, a JSON
   path to a boolean telling whether another page exists, if there is one), "options" (the
   value of a year-selector option: give options_selector, the CSS selector of its <option>
   elements on the start page, and options_year: "fiscal" when the option year is the
   fiscal year of the documents, "publication" when it is their publication year, e.g. a
-  2025 bucket holding the 2024 annual report), "year" (a plain year: give year_from).
+  2025 bucket holding the 2024 annual report or the amendments published in 2025). Decide
+  per section from the calls you see: registration documents, their amendments and annual
+  reports are usually listed by publication year. "year" (a plain year: give year_from).
   Several sections of one endpoint (a body field telling the section) are several
   request_sources, one per section in scope. Leave out sections that are not financial
-  reporting (thematic or marketing presentations, product news).
+  reporting (thematic or marketing presentations, product news) and sections for debt
+  investors (credit updates, ratings, debt programmes and prospectuses).
 - response: for a JSON list of documents give items_path (the list), url_paths (paths of
   the document URL inside one item; several if items differ), title_path, file_name_path,
   date_path and context_paths (texts such as category or tags). For a JSON response that
   holds an HTML fragment give html_path, and item/title/container CSS selectors for the
   fragment. For an HTML response give item/title/container only.
 The sources list (static pages) may stay empty when request_sources cover the listing."""
+
+DETAILS_ADDENDUM = """
+
+The start page lists no document. On many sites the listing links to one detail page per
+event or period ("H1 2025 results", "View details"), and the documents are on those
+pages. Then open one or two detail pages (open_pages) to see their documents, and give
+the LISTING page as the source (with {year} when it exists per year) with detail_links:
+the CSS selector of the links to the detail pages on the listing page (for example
+a[href*='/event/']). container, item and title then describe the documents on a detail
+page, and document_groups are the groups of the detail pages you opened. Leave
+detail_links null when the listing page itself holds the documents."""
 
 REPAIR_ADDENDUM = """
 
@@ -289,12 +325,29 @@ class VisitedPage:
     groups: list[LinkGroup]
     nav: list[NavLink]
     year_selects: list[str] = field(default_factory=list)
+    load_more: list[str] = field(default_factory=list)
 
     def group_ids(self) -> list[str]:
         return [f"{self.id}.G{i + 1}" for i in range(len(self.groups))]
 
     def nav_ids(self) -> list[str]:
         return [f"{self.id}.N{i + 1}" for i in range(len(self.nav))]
+
+
+_ERROR_TITLE = re.compile(
+    r"\b(error|erreur|fehler|not found|page not found|access denied|forbidden|unavailable)\b",
+    re.I,
+)
+
+
+def is_error_page(page: VisitedPage) -> bool:
+    """An error page served with HTTP 200: an error title, no document link and at most
+    a couple of links. Nothing to learn from it (and no LLM call to spend on it)."""
+    return (
+        bool(_ERROR_TITLE.search(page.title))
+        and not any(g.candidates for g in page.groups)
+        and len(page.nav) <= 3
+    )
 
 
 def digest_page(page: VisitedPage, base_url: str) -> str:
@@ -382,6 +435,9 @@ class Learner:
         self.discoverer = discoverer
         self.hint = hint
         self.endpoints: list[Endpoint] = []
+        self.discovered: set[str] = set()
+        self.details = False
+        """Detail-page mode: the start page lists no document (see DETAILS_ADDENDUM)."""
         self.llm = llm
         self.ctx = context
         self.max_open_rounds = max_open_rounds
@@ -408,6 +464,7 @@ class Learner:
             return None
         root = parse_html(page.content)
         page_id = f"P{len(self.pages) + 1}"
+        controls = page_controls(root)
         visited = VisitedPage(
             id=page_id,
             url=url,
@@ -415,7 +472,8 @@ class Learner:
             title=page_title(root),
             groups=group_document_links(root, page.final_url),
             nav=navigation_links(root, page.final_url, self.ctx.domain, limit=MAX_NAV_PER_PAGE),
-            year_selects=page_controls(root).year_selects,
+            year_selects=controls.year_selects,
+            load_more=controls.load_more,
         )
         self.pages[page_id] = visited
         return visited
@@ -451,6 +509,8 @@ class Learner:
         if self.hint is not None:
             system += REPAIR_ADDENDUM
             user = untrusted("previous", self.hint.text()) + "\n\n" + user
+        if self.details:
+            system += DETAILS_ADDENDUM
         if self.endpoints:
             system += ENDPOINTS_ADDENDUM
             user += "\n\n" + untrusted(
@@ -462,34 +522,93 @@ class Learner:
             *history,
         ]
 
-    def _discover(self, start: VisitedPage) -> None:
-        """Open the page in a browser when its listing looks loaded by JavaScript."""
-        documents = sum(len(g.candidates) for g in start.groups)
-        if self.discoverer is None or (
-            documents >= DISCOVERY_MAX_DOCUMENTS and not start.year_selects
-        ):
+    def _discover(self, page: VisitedPage, *, archive: bool = False) -> None:
+        """Open the page in a browser when its listing looks loaded by JavaScript: few
+        documents, few of the requested years (the page shows the current period only),
+        a year selector, or (``archive``, a page the LLM opened) a "load more" button."""
+        documents = sum(len(g.candidates) for g in page.groups)
+        if self.discoverer is None or page.url in self.discovered:
             return
+        looks_dynamic = (
+            documents < DISCOVERY_MAX_DOCUMENTS
+            or bool(page.year_selects)
+            or self._few_requested_years(page)
+        )
+        if archive:
+            if not (looks_dynamic or page.load_more) or len(self.discovered) >= 2:
+                return
+        elif not looks_dynamic:
+            return
+        self.discovered.add(page.url)
         try:
-            found = self.discoverer.discover(self.ctx.start_url, self.ctx.years)
+            found = self.discoverer.discover(page.url, self.ctx.years)
         except BrowserBlockedError as exc:
-            raise BlockedError(self.ctx.start_url, str(exc)) from exc
+            raise BlockedError(page.url, str(exc)) from exc
         except BrowserUnavailableError as exc:
             self.notes.append(f"browser discovery skipped: {exc}")
             return
-        self.endpoints = endpoints(found.exchanges)
+        new = [ep for ep in endpoints(found.exchanges, found.links) if self._own_listing(ep)]
+        for ep in new:  # ids stay unique across discoveries
+            ep.id = f"E{len(self.endpoints) + 1}"
+            self.endpoints.append(ep)
+        where = f" of {page.id}" if archive else ""
         self.notes.append(
-            f"browser discovery: {len(found.actions)} actions, "
-            f"{len(found.exchanges)} calls, {len(self.endpoints)} endpoints with documents"
+            f"browser discovery{where}: {len(found.actions)} actions, "
+            f"{len(found.exchanges)} calls, {len(new)} endpoints with documents"
         )
+        # Say why a listing may be missing: calls the site's robots.txt disallows.
+        self.notes.extend(n for n in found.notes if n.startswith("calls of the page refused"))
+
+    def _few_requested_years(self, page: VisitedPage) -> bool:
+        """Whether the page's documents hardly name the requested fiscal years: its
+        static listing then shows another period (often the current one only) and the
+        requested years load some other way."""
+        if not self.ctx.years:
+            return False
+        wanted = {str(y) for y in self.ctx.years}
+        texts = [f"{c.url} {c.title} {c.context_text}" for g in page.groups for c in g.candidates]
+        named = sum(1 for t in texts if any(y in t for y in wanted))
+        return named < DISCOVERY_MAX_DOCUMENTS
+
+    def _has_options(self, selector: str | None) -> bool:
+        """Whether ``selector`` matches ``<option>`` elements in the start page as the
+        engine fetches it (a selector rendered by JavaScript does not)."""
+        if not selector:
+            return False
+        try:
+            page = self.fetcher.get(
+                self.ctx.start_url, allowed_domains=[host_of(self.ctx.start_url)]
+            )
+            return bool(select(parse_html(page.content), selector))
+        except (FetchError, ValueError):
+            return False
+
+    def _own_listing(self, endpoint: Endpoint) -> bool:
+        """A call to the site, or to another host (a content provider's API) whose
+        response lists documents of the site."""
+        if in_site(host_of(endpoint.url), self.ctx.domain):
+            return True
+        hosts = document_hosts(endpoint.documents.values())
+        return bool(hosts) and all(in_site(h, self.ctx.domain) for h in hosts)
 
     def learn_structure(self) -> StructureResult:
         start = self.visit(self.ctx.start_url)
         if start is None:
             raise LearnError(f"start page unavailable: {'; '.join(self.notes)}")
+        if is_error_page(start):
+            raise LearnError(
+                f"the start page is an error page ({start.title!r}, no document and almost "
+                "no link): the site may be down, or refuse this client"
+            )
         self._discover(start)
-        schema: type[StructureReply] = (
-            StructureReplyWithRequests if self.endpoints else StructureReply
-        )
+        # No document on the start page and none listed by a call of the page: the
+        # documents may be on detail pages the listing links to.
+        self.details = not self.endpoints and not any(g.candidates for g in start.groups)
+        schema: type[StructureReply] = StructureReply
+        if self.endpoints:
+            schema = StructureReplyWithRequests
+        elif self.details:
+            schema = StructureReplyWithDetails
         history: list[Message] = []
         best: StructureResult | None = None
         opened = repairs = 0
@@ -501,7 +620,12 @@ class Learner:
                     history.append(_user("No more pages can be opened: return action recipe."))
                     continue
                 opened += 1
+                before = set(self.pages)
                 new = self._open(reply.open_links)
+                for page_id in [p for p in self.pages if p not in before]:
+                    self._discover(self.pages[page_id], archive=True)
+                if self.endpoints and schema is not StructureReplyWithRequests:
+                    schema, self.details = StructureReplyWithRequests, False
                 text = f"Opened {new} new page(s); the digest above now includes them."
                 history.clear()  # the digest is rebuilt with the new pages
                 self.notes.append(text)
@@ -546,26 +670,28 @@ class Learner:
         version: int = 1,
     ) -> Recipe:
         drafts = reply.request_sources if isinstance(reply, StructureReplyWithRequests) else []
+        drafts = self._merge_drafts(drafts)
         if not reply.sources and not drafts:
             raise ValueError("no source given")
         chosen = [g for gid in reply.document_groups if (g := self._group(gid)) is not None]
         doc_hosts = {h for g in chosen for h in g.hosts}
         exts = {e for g in chosen for e in g.extensions if e in DOCUMENT_EXTENSIONS}
         exts |= {"pdf", "xlsx", "xls", "xlsb"}
+        opaque = opaque_patterns([c for g in chosen for c in g.candidates]) or None
         site = host_of(self.ctx.start_url)
         sources: list[Source] = []
         source_hosts = set()
         for i, draft in enumerate(reply.sources):
-            url = draft.url.strip()
+            url = self._year_form(draft.url.strip())
             placeholders = set(re.findall(r"\{([^}]*)\}", url))
-            if placeholders - {"year"}:
+            if placeholders - {"year", "yy"}:
                 raise ValueError(f"source {url}: only the {{year}} placeholder is allowed")
-            host = host_of(url.replace(_YEAR_PLACEHOLDER, "2000"))
+            host = host_of(url.replace(_YEAR_PLACEHOLDER, "2000").replace("{yy}", "00"))
             if not in_site(host, self.ctx.domain):
                 raise ValueError(f"source {url} is not on the site {self.ctx.domain}")
             source_hosts.add(host)
             params = {}
-            if _YEAR_PLACEHOLDER in url:
+            if placeholders & {"year", "yy"}:
                 first = draft.year_from or min(self.ctx.years or [self.ctx.today.year - 5])
                 params["year"] = YearRange.model_validate({"from": first, "to": "current"})
             pagination = (
@@ -573,19 +699,24 @@ class Learner:
                 if draft.pagination_next_selector
                 else None
             )
+            items = ItemsSpec(
+                container=draft.container or None,
+                item=draft.item or None,
+                title=draft.title or None,
+                extensions=sorted(exts),
+                table_context=draft.table_context,
+                document_urls=opaque,
+            )
+            detail_links = getattr(draft, "detail_links", None)
+            detail = DetailPages(link=detail_links, items=items) if detail_links else None
             sources.append(
                 UrlTemplateSource(
                     id=f"listing-{i + 1}",
                     url=url,
                     params=params,
                     pagination=pagination,
-                    items=ItemsSpec(
-                        container=draft.container or None,
-                        item=draft.item or None,
-                        title=draft.title or None,
-                        extensions=sorted(exts),
-                        table_context=draft.table_context,
-                    ),
+                    items=ItemsSpec() if detail else items,
+                    detail=detail,
                 )
             )
         for i, request in enumerate(drafts):
@@ -612,6 +743,51 @@ class Learner:
             ),
         )
 
+    def _year_form(self, url: str) -> str:
+        """``{year}`` as ``{yy}`` when the pages seen hold the year in two digits
+        (``/ar25/``) and none matches the four-digit form."""
+        if _YEAR_PLACEHOLDER not in url:
+            return url
+        seen = [p.final_url for p in self.pages.values()] + [p.url for p in self.pages.values()]
+
+        def matches(digits: int) -> bool:
+            pattern = re.escape(url).replace(re.escape(_YEAR_PLACEHOLDER), rf"\d{{{digits}}}")
+            return any(re.fullmatch(pattern, u) for u in seen)
+
+        if not matches(4) and matches(2):
+            self.notes.append("listing URLs hold two-digit years: {yy}")
+            return url.replace(_YEAR_PLACEHOLDER, "{yy}")
+        return url
+
+    def _merge_drafts(self, drafts: Sequence[RequestDraft]) -> list[RequestDraft]:
+        """One source per listing: drafts of the same endpoint, items and varying fields
+        that differ only by the URL path of the items are one source with both paths
+        (otherwise every document would be listed twice, under two URLs)."""
+        merged: dict[tuple[object, ...], RequestDraft] = {}
+        for draft in drafts:
+            try:
+                endpoint = self._exchange(draft.exchange)[0].id
+            except ValueError:
+                endpoint = draft.exchange
+            key = (
+                endpoint,
+                draft.items_path,
+                draft.html_path,
+                tuple(sorted((v.field, v.value) for v in draft.vary)),
+                draft.options_selector,
+            )
+            if key in merged:
+                first = merged[key]
+                paths = [
+                    *first.url_paths,
+                    *(u for u in draft.url_paths if u not in first.url_paths),
+                ]
+                merged[key] = first.model_copy(update={"url_paths": paths})
+                self.notes.append(f"merged request sources of {draft.exchange} (same listing)")
+            else:
+                merged[key] = draft
+        return list(merged.values())
+
     def _exchange(self, exchange_id: str) -> tuple[Endpoint, int]:
         for ep in self.endpoints:
             for index, ex in enumerate(ep.exchanges):
@@ -625,35 +801,54 @@ class Learner:
         endpoint, position = self._exchange(draft.exchange)
         exchange = endpoint.exchanges[position]
         found = endpoint.documents[exchange.id]
-        if not in_site(host_of(exchange.url), self.ctx.domain):
-            raise ValueError(f"{exchange.id} is not on the site {self.ctx.domain}")
+        if not self._own_listing(endpoint):
+            raise ValueError(f"{exchange.id} does not list documents of {self.ctx.domain}")
         vary: dict[str, str] = {}
         params: dict[str, YearRange | OptionsParam] = {}
         pagination = None
         for change in draft.vary:
-            if change.value == "page":
-                vary[change.field] = "{page}"
+            name = _field_name(exchange, change.field)
+            kind = change.value
+            if kind == "options" and not self._has_options(draft.options_selector):
+                values = endpoint.varying_fields().get(name) or [field_value(exchange, name) or ""]
+                if not any(_YEAR_IN_VALUE.search(v) for v in values):
+                    raise ValueError(
+                        f"options_selector {draft.options_selector!r} matches no <option> in "
+                        "the start page as served (rendered by JavaScript?)"
+                    )
+                # The selector only exists in the browser, but its values are years.
+                kind = "year"
+                self.notes.append(f"{name}: options not in the served page, varied by year")
+            if kind == "page":
+                vary[name] = "{page}"
                 start = draft.page_start
                 if start is None:
-                    current = field_value(exchange, change.field) or "1"
+                    current = field_value(exchange, name) or "1"
                     start = int(current) if current.strip().isdigit() else 1
                 pagination = PageNumberPagination(
-                    start=start, max_pages=60, has_more=draft.has_more_path or None
+                    start=start, max_pages=60, has_more=_has_more(exchange, draft.has_more_path)
                 )
-            elif change.value == "options":
-                if not draft.options_selector:
-                    raise ValueError(f"{change.field}: options need options_selector")
-                vary[change.field] = "{option}"
+            elif kind == "options":
+                assert draft.options_selector is not None  # noqa: S101 - checked above
+                vary[name] = "{option}"
                 params["option"] = OptionsParam(
                     page=self.ctx.start_url,
                     selector=draft.options_selector,
                     year=draft.options_year or "fiscal",
                 )
             else:
-                vary[change.field] = "{year}"
+                current = field_value(exchange, name) or ""
+                # A date or a label holding the year keeps its format: 2026-05-01 ->
+                # {year}-05-01.
+                vary[name] = (
+                    _YEAR_IN_VALUE.sub("{year}", current, count=1)
+                    if _YEAR_IN_VALUE.search(current) and not current.strip().isdigit()
+                    else "{year}"
+                )
                 first = draft.year_from or min(self.ctx.years or [self.ctx.today.year - 5])
                 params["year"] = YearRange.model_validate({"from": first, "to": "current"})
         form, json_body = templated_body(exchange, vary, self.ctx.today)
+        url = templated_url(exchange, vary)
         if draft.items_path:
             if not draft.url_paths:
                 raise ValueError(f"source from {exchange.id}: items_path needs url_paths")
@@ -666,6 +861,7 @@ class Learner:
                     file_name=draft.file_name_path or None,
                     date=draft.date_path or None,
                     context=draft.context_paths,
+                    url_template=_url_template(found, draft.items_path, draft.url_paths),
                 ),
             )
         elif draft.html_path:
@@ -677,7 +873,7 @@ class Learner:
         source = RequestSource(
             id=f"request-{index + 1}",
             method="POST" if exchange.method.upper() == "POST" else "GET",
-            url=exchange.url,
+            url=url,
             form=form,
             json_body=json_body,
             headers={"X-Requested-With": exchange.requested_with}
@@ -855,7 +1051,7 @@ class Learner:
                 continue
             rules, errors = rules_from_reply(reply)
             evaluation = evaluate_rules(
-                rules, reply.labels, by_id, structure.recipe.defaults.language
+                rules, reply.labels, by_id, structure.recipe.defaults.language, self.ctx.today
             )
             result = RulesResult(rules, reply, evaluation, errors, attempt)
             if best is None or result.score > best.score:
@@ -882,6 +1078,48 @@ class Learner:
             if label.id in by_id
         }
         return best
+
+
+def _url_template(
+    found: ResponseDocuments, items_path: str, url_paths: Sequence[str]
+) -> str | None:
+    """The template that turns the file names at ``url_paths`` into URLs, when the
+    analysis of the response found one (from the links of the rendered page)."""
+    for lst in found.lists:
+        if lst.path.strip(".") != items_path.strip("."):
+            continue
+        for path in url_paths:
+            if template := lst.url_templates.get(path):
+                return template
+    return None
+
+
+def _field_name(exchange: Exchange, name: str) -> str:
+    """The field as the engine names it: a URL parameter named without its ``?``, a body
+    field named with one, or the last part of a JSON path (``page`` for
+    ``queries.0.params.page``) when exactly one field ends so, are matched leniently."""
+    fields = request_fields(exchange)
+    if name in fields:
+        return name
+    if not name.startswith("?") and f"?{name}" in fields:
+        return f"?{name}"
+    if name.startswith("?") and name[1:] in fields:
+        return name[1:]
+    short = name.lstrip("?")
+    ending = [f for f in fields if f.lstrip("?").rsplit(".", 1)[-1] == short]
+    return ending[0] if len(ending) == 1 else name
+
+
+def _has_more(exchange: Exchange, path: str | None) -> str | None:
+    """``path`` if the captured response holds a value there: pagination would otherwise
+    stop after the first page."""
+    if not path:
+        return None
+    try:
+        data = json.loads(exchange.body)
+    except ValueError:
+        return None
+    return path if json_path(data, path) is not None else None
 
 
 def _user(text: str) -> Message:
@@ -951,9 +1189,15 @@ link), row_header and column_header (table cells), link_title (title attribute),
   (e.g. "fixed income ... transcript" before "transcript"). Each gives one type id. Cover
   every kind of document you see; a document that no rule matches stays undecided.
 - period_rules: ordered, the first match wins. Named groups: year (4 or 2 digits,
-  required) and optionally q (the quarter: "Q3", "3Q" or "T3" all work, it must contain
-  the digit), h (the half: "H1", "S1", "1H") or fy (any text meaning full year). Without
-  q, h or fy the period is the year only. Example: (?P<q>Q[1-4])[ _-]?(?P<year>20\\d{{2}}).
+  required) and optionally q (the quarter: "Q3", "3Q", "T3" or a word such as "third"
+  or "troisième" all work), h (the half: "H1", "S1", "1H") or fy (any text meaning full
+  year). Without q, h or fy the period is the year only. Example:
+  (?P<q>Q[1-4])[ _-]?(?P<year>20\\d{{2}}). The period is the one the document reports on:
+  take it from titles and file names, never from upload folders of the URL
+  (/files/2026-01/ is when the file was published, e.g. the fourth quarter of 2025). A
+  document giving figures as at a date ("au 30 juin 2026", "as at 30 September 2026")
+  reports on the period ending that day (2026-H1, 2026-Q3), even when its title also
+  names an older document (an amendment to the 2025 registration document).
 - language_rules: either a named group lang (2-letter code) or a fixed language value.
   Leave empty when the site default language is right for every document.
 Then label every document id with its type, period and language: your own judgement,
@@ -968,6 +1212,8 @@ class RulesEvaluation:
     type_agreement: float
     period_agreement: float
     disagreements: list[str]
+    future: list[str] = field(default_factory=list)
+    """Documents the rules give a period that has not ended yet (impossible)."""
 
 
 @dataclass
@@ -985,6 +1231,7 @@ class RulesResult:
             self.evaluation.type_agreement
             + self.evaluation.period_agreement
             - 0.01 * len(self.errors)
+            - 0.5 * bool(self.evaluation.future)
         )
 
     @property
@@ -994,6 +1241,7 @@ class RulesResult:
             not self.errors
             and ev.type_agreement >= RULES_AGREEMENT
             and ev.period_agreement >= RULES_AGREEMENT
+            and not ev.future
         )
 
 
@@ -1028,10 +1276,12 @@ def evaluate_rules(
     labels: Sequence[DocumentLabel],
     docs: Mapping[str, FoundDocument],
     default_language: str | None,
+    today: date | None = None,
 ) -> RulesEvaluation:
     type_ok = period_ok = period_total = 0
     labelled = 0
     disagreements: list[str] = []
+    future: list[str] = []
     for label in labels:
         doc = docs.get(label.id)
         if doc is None:
@@ -1045,6 +1295,10 @@ def evaluate_rules(
             period_total += 1
             good_period = cls.period == label.period
             period_ok += good_period
+        end = period_end(cls.period, None) if cls.period else None
+        if today is not None and end is not None and end > today:
+            # A published document cannot report on a period that has not ended.
+            future.append(f'{label.id}: {cls.period} for "{doc.title[:60]}" ({doc.url[-60:]})')
         if not (good_type and good_period):
             disagreements.append(
                 f"{label.id}: rules give type={cls.type} period={cls.period}, your label "
@@ -1054,6 +1308,7 @@ def evaluate_rules(
         type_agreement=type_ok / labelled if labelled else 0.0,
         period_agreement=period_ok / period_total if period_total else 1.0,
         disagreements=disagreements,
+        future=future,
     )
 
 
@@ -1066,6 +1321,13 @@ def rules_diagnostic(result: RulesResult) -> str:
     if result.errors:
         lines.append("Invalid rules (dropped):")
         lines += [f"- {e}" for e in result.errors[:10]]
+    if ev.future:
+        lines.append(
+            f"{len(ev.future)} documents get a period that has not ended yet, which is "
+            "impossible for a published document: the year is wrong (it often comes from a "
+            "publication date or an upload folder of the URL), e.g.:"
+        )
+        lines += [f"- {f}" for f in ev.future[:10]]
     if ev.disagreements:
         lines.append(f"Disagreements ({len(ev.disagreements)}), e.g.:")
         lines += [f"- {d}" for d in ev.disagreements[:30]]
@@ -1081,7 +1343,10 @@ def health_for(docs: Sequence[FoundDocument]) -> HealthSpec:
     per_year = Counter(d.fiscal_year for d in docs if d.fiscal_year is not None)
     items = None
     if per_year:
-        recent = [n for y, n in sorted(per_year.items())[-3:]]
+        # The last three years before the latest one, which may still be in progress.
+        years = sorted(per_year)
+        past = years[:-1] if len(years) > 1 else years
+        recent = [per_year[y] for y in past[-3:]]
         low = max(1, math.floor(min(recent) * 0.5))
         items = (low, max(low + 1, math.ceil(max(recent) * 2)))
     periods = {d.period or "" for d in docs}
@@ -1172,9 +1437,19 @@ applied by code to documents already typed with the ids below.
 - types: every type id the request asks for (null when it asks for all documents or names
   no kind of document). Map words to ids generously but precisely: "results documents",
   "all documents" or "all the annual documents of 2025" is null (the year is the only
-  constraint); "annual financial reports" (rapports financiers annuels) is annual_report
-  and urd, since a registration document contains the annual financial report; "annual
-  reports" alone is annual_report; "registration documents" is
+  constraint). "Results", "earnings", "quarterly results", "annual results" or "results
+  publications" name the periods of a results release, not a kind of document: they are
+  null too, unless a kind is also named ("quarterly results presentations" is
+  results_presentation). When results are asked for as an item of their own next to
+  other kinds ("annual reports and quarterly results"), list the named kinds and the
+  documents of a results release: RESULTS_TYPES_TEXT. When "results" only qualifies a
+  kind ("results press releases", "communiqués de résultats", "results presentations"),
+  that kind alone is meant. Sales or revenue publications are results releases too:
+  "sales presentations" is results_presentation.
+  "annual financial reports" (rapports financiers annuels) is annual_report and urd,
+  since a registration document contains the annual financial report; "annual reports"
+  alone is annual_report; "interim reports" (rapports intermédiaires,
+  Zwischenberichte) is quarterly_report and half_year_report; "registration documents" is
   urd; "Form 20-F" or "10-K" is annual_report; "10-Q" is quarterly_report; "data packs" or
   "financial supplements" is financial_data_supplement; "transcripts" without more detail
   is analyst_call_transcript (add fixed_income_call_transcript when fixed income calls
@@ -1186,6 +1461,20 @@ applied by code to documents already typed with the ids below.
 - languages: only when the request restricts the language ("English only" is ["en"]).
 - File formats (PDF, Excel, XBRL) and issuer or entity names are not part of the filter.
 """
+RESULTS_TYPES: tuple[DocumentType, ...] = (
+    "quarterly_report",
+    "results_presentation",
+    "press_release",
+    "financial_statements",
+    "financial_data_supplement",
+    "quarterly_series",
+    "analyst_call_transcript",
+)
+"""The documents of a results release (what "results" asks for)."""
+FILTER_SYSTEM = FILTER_SYSTEM.replace("RESULTS_TYPES_TEXT", ", ".join(RESULTS_TYPES))
+_RESULTS_WORDS = re.compile(
+    r"\b(results?|earnings|r[ée]sultats?|risultati|resultados?|ergebnis(?:se)?)\b", re.I
+)
 
 
 def compile_request(llm: StructuredLLM, request: str, *, today: date) -> Filter:
@@ -1193,7 +1482,65 @@ def compile_request(llm: StructuredLLM, request: str, *, today: date) -> Filter:
         {"role": "system", "content": FILTER_SYSTEM + taxonomy_text()},
         {"role": "user", "content": f"Today: {today.isoformat()}\nRequest: {request}"},
     ]
-    return llm.structured(messages, Filter, step="filter")
+    compiled = llm.structured(messages, Filter, step="filter")
+    return with_named_types(request, with_results_types(request, compiled))
+
+
+_FIXED_INCOME = r"(?:fixed[- ]income|debt investors?|obligataires?)"
+_NAMED_PHRASES: tuple[tuple[str, DocumentType], ...] = (
+    (r"\bpil(?:lar|ier)\s*(?:3|iii)\b", "pillar3"),
+    (
+        r"\buniversal registration documents?|documents? d.enregistrement universel"
+        r"|\b(?:urd|deu)s?\b",
+        "urd",
+    ),
+    (
+        r"\bexcel\b|spreadsheets?|tableaux financiers|financial tables"
+        r"|data ?packs?|financial (?:data )?supplements?",
+        "financial_data_supplement",
+    ),
+    (_FIXED_INCOME + r"[^,;.]*\btranscripts?\b", "fixed_income_call_transcript"),
+    (r"\btranscripts?\b[^,;.]*" + _FIXED_INCOME, "fixed_income_call_transcript"),
+    (_FIXED_INCOME + r"[^,;.]*\bpresentations?\b", "fixed_income_presentation"),
+    (r"\bpress releases?\b|\bcommuniqu[ée]s?\b", "press_release"),
+)
+_NAMED_TYPES = tuple((re.compile(p, re.I), t) for p, t in _NAMED_PHRASES)
+"""Phrases that always name one kind of document: checked after the LLM compiles a
+request, so that a kind the request clearly names is never dropped."""
+_NEGATION = re.compile(
+    r"\b(?:no|not|without|except|excluding|sans|hors|pas de|aucun)\W+\S*\W*$", re.I
+)
+
+
+def with_named_types(request: str, compiled: Filter) -> Filter:
+    """Add the kinds that a phrase of the request names without ambiguity ("Pillar 3",
+    "Excel", "press releases") when the compiled filter lists kinds but missed them. A
+    phrase preceded by a negation ("no press releases") adds nothing."""
+    if compiled.types is None:
+        return compiled
+    added: list[DocumentType] = []
+    for pattern, type_ in _NAMED_TYPES:
+        if type_ in compiled.types or type_ in compiled.exclude_types or type_ in added:
+            continue
+        for m in pattern.finditer(request):
+            if not _NEGATION.search(request[max(0, m.start() - 25) : m.start()]):
+                added.append(type_)
+                break
+    if not added:
+        return compiled
+    return compiled.model_copy(update={"types": [*compiled.types, *added]})
+
+
+def with_results_types(request: str, compiled: Filter) -> Filter:
+    """A request naming kinds of documents and results ("annual reports and quarterly
+    results") also wants the documents of a results release: added when the compiled
+    filter kept only the named kinds."""
+    if compiled.types is None or not _RESULTS_WORDS.search(request):
+        return compiled
+    if any(t in RESULTS_TYPES for t in compiled.types):
+        return compiled
+    added = [t for t in RESULTS_TYPES if t not in compiled.exclude_types]
+    return compiled.model_copy(update={"types": [*compiled.types, *added]})
 
 
 def filter_json(f: Filter) -> str:

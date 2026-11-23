@@ -1,0 +1,618 @@
+{
+ "cache_format": 1,
+ "output": {
+  "reasoning": "Classify from stable French/English titles and file labels. Treat earnings-call transcripts, quarterly spreadsheets, Pillar 3 annexes, URD amendments, and standalone consolidated accounts separately. Use the reporting date or named reporting period, not the publication date. Listings identify the documents as French; D12’s English title and filename indicate English.",
+  "type_rules": [
+   {
+    "pattern": "transcript|prepared remarks|q\\s*&\\s*a",
+    "target": "any",
+    "type": "analyst_call_transcript"
+   },
+   {
+    "pattern": "série[s]? trimestrielle[s]?|quarterly series",
+    "target": "any",
+    "type": "quarterly_series_restated"
+   },
+   {
+    "pattern": "pilier\\s*3|pillar\\s*3|composition du capital|composition[- ]du[- ]capital|instruments? de fonds propres|instruments? of own funds",
+    "target": "any",
+    "type": "pillar3"
+   },
+   {
+    "pattern": "document d.?enregistrement universel|universal registration document|\\bdeu\\b",
+    "target": "any",
+    "type": "urd"
+   },
+   {
+    "pattern": "présentation de la conférence de presse|résultats du .* trimestre|results.*(?:slides|presentation)|slides",
+    "target": "any",
+    "type": "results_presentation"
+   },
+   {
+    "pattern": "communiqué de presse|press release",
+    "target": "any",
+    "type": "press_release"
+   },
+   {
+    "pattern": "comptes consolidés|états? financiers|financial statements",
+    "target": "any",
+    "type": "financial_statements"
+   },
+   {
+    "pattern": "rapport annuel relatif à la politique|rapport .* politique et aux pratiques de rémunération|global systemically important banks|entités non intégrées|titres de participation",
+    "target": "any",
+    "type": "other"
+   },
+   {
+    "pattern": "rapport annuel|annual report|rapport financier annuel",
+    "target": "any",
+    "type": "annual_report"
+   },
+   {
+    "pattern": "rapport sur les risques",
+    "target": "any",
+    "type": "pillar3"
+   },
+   {
+    "pattern": "résultats|resultats",
+    "target": "any",
+    "type": "quarterly_report"
+   }
+  ],
+  "period_rules": [
+   {
+    "pattern": "(?:full[ _-]?year|année|year|rapport annuel|annual|décembre|december|31[ /_-]?12)[^\\n]{0,50}?(?P<year>20\\d{2})",
+    "target": "any"
+   },
+   {
+    "pattern": "(?P<year>20\\d{2})[^\\n]{0,50}?(?:full[ _-]?year|année|annual|rapport annuel|décembre|december|31[ /_-]?12)",
+    "target": "any"
+   },
+   {
+    "pattern": "(?P<q>Q[1-4]|T[1-4]|[1-4]Q)[ _.-]?(?P<year>20\\d{2}|\\d{2})",
+    "target": "any"
+   },
+   {
+    "pattern": "(?P<q>Q[1-4]|T[1-4]|[1-4]Q)[ _.-]?(?:20)?(?P<year>\\d{2})",
+    "target": "any"
+   },
+   {
+    "pattern": "(?P<q>premier|deuxième|troisième|quatrième) trimestre[^\\n]{0,30}?(?P<year>20\\d{2})",
+    "target": "any"
+   },
+   {
+    "pattern": "(?P<year>20\\d{2})[^\\n]{0,30}?(?P<q>premier|deuxième|troisième|quatrième) trimestre",
+    "target": "any"
+   },
+   {
+    "pattern": "(?P<year>20\\d{2})[^\\n]{0,50}?(?P<h>H1|S1|1H|premier semestre|1er semestre)",
+    "target": "any"
+   },
+   {
+    "pattern": "(?P<h>H1|S1|1H|premier semestre|1er semestre)[^\\n]{0,50}?(?P<year>20\\d{2})",
+    "target": "any"
+   },
+   {
+    "pattern": "(?P<year>20\\d{2})[^\\n]{0,35}?(?P<q>mars|March|31 mars|31 March)",
+    "target": "any"
+   },
+   {
+    "pattern": "(?P<year>20\\d{2})[^\\n]{0,35}?(?P<q>septembre|September|30 septembre|30 September)",
+    "target": "any"
+   },
+   {
+    "pattern": "(?P<year>20\\d{2})[^\\n]{0,35}?(?P<h>juin|June|30 juin|30 June)",
+    "target": "any"
+   },
+   {
+    "pattern": "(?P<year>20\\d{2})",
+    "target": "any"
+   }
+  ],
+  "language_rules": [
+   {
+    "pattern": "Transcript Q3 2025 Results",
+    "target": "title",
+    "language": "en"
+   },
+   {
+    "pattern": "Français",
+    "target": "context",
+    "language": "fr"
+   }
+  ],
+  "labels": [
+   {
+    "id": "D1",
+    "type": "press_release",
+    "period": "2026-Q1",
+    "language": "fr"
+   },
+   {
+    "id": "D2",
+    "type": "press_release",
+    "period": "2025-Q4",
+    "language": "fr"
+   },
+   {
+    "id": "D3",
+    "type": "quarterly_series",
+    "period": "2025-Q4",
+    "language": "fr"
+   },
+   {
+    "id": "D4",
+    "type": "results_presentation",
+    "period": "2025-FY",
+    "language": "fr"
+   },
+   {
+    "id": "D5",
+    "type": "financial_statements",
+    "period": "2025-FY",
+    "language": "fr"
+   },
+   {
+    "id": "D6",
+    "type": "analyst_call_transcript",
+    "period": "2025-FY",
+    "language": "fr"
+   },
+   {
+    "id": "D7",
+    "type": "results_presentation",
+    "period": "2025-FY",
+    "language": "fr"
+   },
+   {
+    "id": "D8",
+    "type": "results_presentation",
+    "period": "2025-Q3",
+    "language": "fr"
+   },
+   {
+    "id": "D9",
+    "type": "press_release",
+    "period": "2025-Q3",
+    "language": "fr"
+   },
+   {
+    "id": "D10",
+    "type": "quarterly_series",
+    "period": "2025-Q3",
+    "language": "fr"
+   },
+   {
+    "id": "D11",
+    "type": "results_presentation",
+    "period": "2025-Q3",
+    "language": "fr"
+   },
+   {
+    "id": "D12",
+    "type": "analyst_call_transcript",
+    "period": "2025-Q3",
+    "language": "en"
+   },
+   {
+    "id": "D13",
+    "type": "results_presentation",
+    "period": "2025-H1",
+    "language": "fr"
+   },
+   {
+    "id": "D14",
+    "type": "press_release",
+    "period": "2025-H1",
+    "language": "fr"
+   },
+   {
+    "id": "D15",
+    "type": "quarterly_series",
+    "period": "2025-Q2",
+    "language": "fr"
+   },
+   {
+    "id": "D16",
+    "type": "results_presentation",
+    "period": "2025-H1",
+    "language": "fr"
+   },
+   {
+    "id": "D17",
+    "type": "analyst_call_transcript",
+    "period": "2025-H1",
+    "language": "fr"
+   },
+   {
+    "id": "D18",
+    "type": "results_presentation",
+    "period": "2025-Q1",
+    "language": "fr"
+   },
+   {
+    "id": "D19",
+    "type": "analyst_call_transcript",
+    "period": "2025-Q1",
+    "language": "fr"
+   },
+   {
+    "id": "D20",
+    "type": "press_release",
+    "period": "2025-Q1",
+    "language": "fr"
+   },
+   {
+    "id": "D21",
+    "type": "quarterly_series",
+    "period": "2025-Q1",
+    "language": "fr"
+   },
+   {
+    "id": "D22",
+    "type": "results_presentation",
+    "period": "2025-Q1",
+    "language": "fr"
+   },
+   {
+    "id": "D23",
+    "type": "results_presentation",
+    "period": "2024-FY",
+    "language": "fr"
+   },
+   {
+    "id": "D24",
+    "type": "press_release",
+    "period": "2024-FY",
+    "language": "fr"
+   },
+   {
+    "id": "D25",
+    "type": "quarterly_series",
+    "period": "2024-Q4",
+    "language": "fr"
+   },
+   {
+    "id": "D26",
+    "type": "analyst_call_transcript",
+    "period": "2024-FY",
+    "language": "fr"
+   },
+   {
+    "id": "D27",
+    "type": "results_presentation",
+    "period": "2024-FY",
+    "language": "fr"
+   },
+   {
+    "id": "D28",
+    "type": "analyst_call_transcript",
+    "period": "2024-Q3",
+    "language": "fr"
+   },
+   {
+    "id": "D29",
+    "type": "results_presentation",
+    "period": "2024-Q3",
+    "language": "fr"
+   },
+   {
+    "id": "D30",
+    "type": "press_release",
+    "period": "2024-Q3",
+    "language": "fr"
+   },
+   {
+    "id": "D31",
+    "type": "quarterly_series",
+    "period": "2024-Q3",
+    "language": "fr"
+   },
+   {
+    "id": "D32",
+    "type": "results_presentation",
+    "period": "2024-Q3",
+    "language": "fr"
+   },
+   {
+    "id": "D33",
+    "type": "results_presentation",
+    "period": "2024-H1",
+    "language": "fr"
+   },
+   {
+    "id": "D34",
+    "type": "press_release",
+    "period": "2024-H1",
+    "language": "fr"
+   },
+   {
+    "id": "D35",
+    "type": "quarterly_series",
+    "period": "2024-Q2",
+    "language": "fr"
+   },
+   {
+    "id": "D36",
+    "type": "urd",
+    "period": "2024-H1",
+    "language": "fr"
+   },
+   {
+    "id": "D37",
+    "type": "analyst_call_transcript",
+    "period": "2024-H1",
+    "language": "fr"
+   },
+   {
+    "id": "D38",
+    "type": "results_presentation",
+    "period": "2024-H1",
+    "language": "fr"
+   },
+   {
+    "id": "D39",
+    "type": "analyst_call_transcript",
+    "period": "2024-Q1",
+    "language": "fr"
+   },
+   {
+    "id": "D40",
+    "type": "results_presentation",
+    "period": "2024-Q1",
+    "language": "fr"
+   },
+   {
+    "id": "D41",
+    "type": "press_release",
+    "period": "2024-Q1",
+    "language": "fr"
+   },
+   {
+    "id": "D42",
+    "type": "quarterly_series",
+    "period": "2024-Q1",
+    "language": "fr"
+   },
+   {
+    "id": "D43",
+    "type": "results_presentation",
+    "period": "2024-Q1",
+    "language": "fr"
+   },
+   {
+    "id": "D44",
+    "type": "urd",
+    "period": "2026-Q3",
+    "language": "fr"
+   },
+   {
+    "id": "D45",
+    "type": "urd",
+    "period": "2026-H1",
+    "language": "fr"
+   },
+   {
+    "id": "D46",
+    "type": "urd",
+    "period": "2025",
+    "language": "fr"
+   },
+   {
+    "id": "D47",
+    "type": "other",
+    "period": "2025-FY",
+    "language": "fr"
+   },
+   {
+    "id": "D48",
+    "type": "pillar3",
+    "period": "2025-FY",
+    "language": "fr"
+   },
+   {
+    "id": "D49",
+    "type": "urd",
+    "period": "2025-FY",
+    "language": "fr"
+   },
+   {
+    "id": "D50",
+    "type": "urd",
+    "period": "2025-FY",
+    "language": "fr"
+   },
+   {
+    "id": "D51",
+    "type": "urd",
+    "period": "2025-FY",
+    "language": "fr"
+   },
+   {
+    "id": "D52",
+    "type": "other",
+    "period": "2025",
+    "language": "fr"
+   },
+   {
+    "id": "D53",
+    "type": "pillar3",
+    "period": "2025-FY",
+    "language": "fr"
+   },
+   {
+    "id": "D54",
+    "type": "pillar3",
+    "period": "2025-H1",
+    "language": "fr"
+   },
+   {
+    "id": "D55",
+    "type": "pillar3",
+    "period": "2025-H1",
+    "language": "fr"
+   },
+   {
+    "id": "D56",
+    "type": "urd",
+    "period": "2025-Q3",
+    "language": "fr"
+   },
+   {
+    "id": "D57",
+    "type": "urd",
+    "period": "2025-H1",
+    "language": "fr"
+   },
+   {
+    "id": "D58",
+    "type": "pillar3",
+    "period": "2025-Q3",
+    "language": "fr"
+   },
+   {
+    "id": "D59",
+    "type": "urd",
+    "period": "2025-Q1",
+    "language": "fr"
+   },
+   {
+    "id": "D60",
+    "type": "pillar3",
+    "period": "2025-H1",
+    "language": "fr"
+   },
+   {
+    "id": "D61",
+    "type": "pillar3",
+    "period": "2025-Q1",
+    "language": "fr"
+   },
+   {
+    "id": "D62",
+    "type": "other",
+    "period": "2024-FY",
+    "language": "fr"
+   },
+   {
+    "id": "D63",
+    "type": "pillar3",
+    "period": "2024-FY",
+    "language": "fr"
+   },
+   {
+    "id": "D64",
+    "type": "urd",
+    "period": "2024-FY",
+    "language": "fr"
+   },
+   {
+    "id": "D65",
+    "type": "pillar3",
+    "period": "2024-FY",
+    "language": "fr"
+   },
+   {
+    "id": "D66",
+    "type": "pillar3",
+    "period": "2024-FY",
+    "language": "fr"
+   },
+   {
+    "id": "D67",
+    "type": "urd",
+    "period": "2024-FY",
+    "language": "fr"
+   },
+   {
+    "id": "D68",
+    "type": "other",
+    "period": "2024-FY",
+    "language": "fr"
+   },
+   {
+    "id": "D69",
+    "type": "urd",
+    "period": "2024-FY",
+    "language": "fr"
+   },
+   {
+    "id": "D70",
+    "type": "urd",
+    "period": "2024-Q3",
+    "language": "fr"
+   },
+   {
+    "id": "D71",
+    "type": "pillar3",
+    "period": "2024-H1",
+    "language": "fr"
+   },
+   {
+    "id": "D72",
+    "type": "pillar3",
+    "period": "2024-H1",
+    "language": "fr"
+   },
+   {
+    "id": "D73",
+    "type": "pillar3",
+    "period": "2024-H1",
+    "language": "fr"
+   },
+   {
+    "id": "D74",
+    "type": "urd",
+    "period": "2024-Q1",
+    "language": "fr"
+   },
+   {
+    "id": "D75",
+    "type": "other",
+    "period": "2025-FY",
+    "language": "fr"
+   },
+   {
+    "id": "D76",
+    "type": "other",
+    "period": "2025-FY",
+    "language": "fr"
+   },
+   {
+    "id": "D77",
+    "type": "pillar3",
+    "period": "2025-FY",
+    "language": "fr"
+   },
+   {
+    "id": "D78",
+    "type": "pillar3",
+    "period": "2025-FY",
+    "language": "fr"
+   },
+   {
+    "id": "D79",
+    "type": "pillar3",
+    "period": "2025-FY",
+    "language": "fr"
+   },
+   {
+    "id": "D80",
+    "type": "financial_statements",
+    "period": "2025-FY",
+    "language": "fr"
+   }
+  ]
+ },
+ "usage": {
+  "input_tokens": 10930,
+  "output_tokens": 6895,
+  "cost_usd": 0.004637955
+ },
+ "strategy": "json_schema",
+ "attempts": 1,
+ "latency_s": 55.593,
+ "model": "openai/gpt-6-luna",
+ "schema": "RulesReply",
+ "step": "rules"
+}

@@ -436,7 +436,8 @@ class LLMClient:
             value = os.environ.get(self.settings.api_key_env, "").strip()
             if not value:
                 raise LLMNotConfiguredError(
-                    f"environment variable {self.settings.api_key_env} is not set"
+                    f"environment variable {self.settings.api_key_env} is not set (with uv, "
+                    "keep the key in a .env file and run 'uv run --env-file .env ...')"
                 )
             self._api_key = value
         return self._api_key

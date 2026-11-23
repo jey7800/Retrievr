@@ -1,0 +1,132 @@
+{
+ "cache_format": 1,
+ "output": {
+  "labels": [
+   {
+    "id": "D1",
+    "type": "analyst_call_transcript",
+    "period": "2025-H1",
+    "language": null
+   },
+   {
+    "id": "D2",
+    "type": "analyst_call_transcript",
+    "period": "2024-FY",
+    "language": null
+   },
+   {
+    "id": "D3",
+    "type": "other",
+    "period": "2025",
+    "language": null
+   },
+   {
+    "id": "D4",
+    "type": "pillar3",
+    "period": "2025-FY",
+    "language": null
+   },
+   {
+    "id": "D5",
+    "type": "pillar3",
+    "period": "2025-H1",
+    "language": null
+   },
+   {
+    "id": "D6",
+    "type": "pillar3",
+    "period": "2025-Q1",
+    "language": null
+   },
+   {
+    "id": "D7",
+    "type": "pillar3",
+    "period": "2024-H1",
+    "language": null
+   },
+   {
+    "id": "D8",
+    "type": "other",
+    "period": "2025",
+    "language": null
+   },
+   {
+    "id": "D9",
+    "type": "pillar3",
+    "period": "2025-Q3",
+    "language": null
+   },
+   {
+    "id": "D10",
+    "type": "pillar3",
+    "period": "2025-H1",
+    "language": null
+   },
+   {
+    "id": "D11",
+    "type": "pillar3",
+    "period": "2025-Q1",
+    "language": null
+   },
+   {
+    "id": "D12",
+    "type": "other",
+    "period": "2024",
+    "language": null
+   },
+   {
+    "id": "D13",
+    "type": "other",
+    "period": "2024",
+    "language": null
+   },
+   {
+    "id": "D14",
+    "type": "other",
+    "period": "2024",
+    "language": null
+   },
+   {
+    "id": "D15",
+    "type": "urd",
+    "period": "2024-FY",
+    "language": null
+   },
+   {
+    "id": "D16",
+    "type": "urd",
+    "period": "2024-FY",
+    "language": null
+   },
+   {
+    "id": "D17",
+    "type": "pillar3",
+    "period": "2024-H1",
+    "language": null
+   },
+   {
+    "id": "D18",
+    "type": "financial_statements",
+    "period": "2024-H1",
+    "language": null
+   },
+   {
+    "id": "D19",
+    "type": "pillar3",
+    "period": "2024-Q1",
+    "language": null
+   }
+  ]
+ },
+ "usage": {
+  "input_tokens": 3155,
+  "output_tokens": 1213,
+  "cost_usd": 0.0010008
+ },
+ "strategy": "json_schema",
+ "attempts": 1,
+ "latency_s": 9.781,
+ "model": "openai/gpt-6-luna",
+ "schema": "LabelBatch",
+ "step": "classify"
+}

@@ -1,0 +1,24 @@
+{
+ "cache_format": 1,
+ "output": {
+  "reasoning": "The former archive URL now has no document links. Its navigation exposes a replacement quarterly-reporting archive, so inspect that listing before defining selectors or year coverage.",
+  "action": "open_pages",
+  "open_links": [
+   "P1.N6"
+  ],
+  "document_groups": [],
+  "sources": [],
+  "default_language": null
+ },
+ "usage": {
+  "input_tokens": 6545,
+  "output_tokens": 98,
+  "cost_usd": 0.00086705
+ },
+ "strategy": "json_schema",
+ "attempts": 1,
+ "latency_s": 1.547,
+ "model": "openai/gpt-6-luna",
+ "schema": "StructureReply",
+ "step": "repair:structure"
+}

@@ -1,0 +1,24 @@
+{
+ "cache_format": 1,
+ "output": {
+  "types": [
+   "analyst_call_transcript",
+   "fixed_income_call_transcript"
+  ],
+  "exclude_types": [],
+  "year_from": 2024,
+  "year_to": null,
+  "languages": null
+ },
+ "usage": {
+  "input_tokens": 1343,
+  "output_tokens": 73,
+  "cost_usd": 5.3535e-05
+ },
+ "strategy": "json_schema",
+ "attempts": 1,
+ "latency_s": 2.828,
+ "model": "openai/gpt-6-luna",
+ "schema": "Filter",
+ "step": "filter"
+}

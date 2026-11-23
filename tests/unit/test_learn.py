@@ -32,6 +32,8 @@ from retrievr.learn import (
 )
 from retrievr.llm import Message
 from retrievr.recipe import FoundDocument, YearRange
+from retrievr.snapshots import synthetic_document
+from retrievr.urls import path_extension
 
 T = TypeVar("T", bound=BaseModel)
 SITE = "https://ir.example-issuer.com"
@@ -81,6 +83,8 @@ def site_transport() -> httpx.MockTransport:
             return httpx.Response(
                 200, text=PAGES[target], headers={"Content-Type": "text/html; charset=utf-8"}
             )
+        if document := synthetic_document(path_extension(str(request.url)), str(request.url)):
+            return httpx.Response(200, content=document)
         return httpx.Response(404, text="not found")
 
     return httpx.MockTransport(handler)

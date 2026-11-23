@@ -1,0 +1,23 @@
+{
+ "cache_format": 1,
+ "output": {
+  "types": [
+   "press_release"
+  ],
+  "exclude_types": [],
+  "year_from": 2025,
+  "year_to": 2025,
+  "languages": null
+ },
+ "usage": {
+  "input_tokens": 1225,
+  "output_tokens": 70,
+  "cost_usd": 0.00018805
+ },
+ "strategy": "json_schema",
+ "attempts": 1,
+ "latency_s": 2.609,
+ "model": "openai/gpt-6-luna",
+ "schema": "Filter",
+ "step": "filter"
+}

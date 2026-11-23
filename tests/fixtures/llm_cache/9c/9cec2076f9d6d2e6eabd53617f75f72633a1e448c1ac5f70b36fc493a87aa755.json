@@ -1,0 +1,25 @@
+{
+ "cache_format": 1,
+ "output": {
+  "reasoning": "The French results page and base-documentary routes now return 404. The English equivalent and the parent financial-publications page may expose the current listing, so inspect those before proposing a recipe.",
+  "action": "open_pages",
+  "open_links": [
+   "P1.N1",
+   "P1.N21"
+  ],
+  "document_groups": [],
+  "sources": [],
+  "default_language": null
+ },
+ "usage": {
+  "input_tokens": 4792,
+  "output_tokens": 239,
+  "cost_usd": 0.000718425
+ },
+ "strategy": "json_schema",
+ "attempts": 1,
+ "latency_s": 2.828,
+ "model": "openai/gpt-6-luna",
+ "schema": "StructureReply",
+ "step": "repair:structure"
+}

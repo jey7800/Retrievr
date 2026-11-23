@@ -1,0 +1,47 @@
+{
+ "cache_format": 1,
+ "output": {
+  "reasoning": "The run found four omitted quarterly fixed-income presentation documents, all part of this reporting archive. Include every document group; retain the verified archive URL and listing container. No verified URL pattern for future archive years is available.",
+  "action": "recipe",
+  "open_links": [],
+  "document_groups": [
+   "P1.G1",
+   "P1.G2",
+   "P1.G3",
+   "P1.G4",
+   "P1.G5",
+   "P1.G6",
+   "P1.G7",
+   "P1.G8",
+   "P1.G9",
+   "P1.G10",
+   "P1.G11",
+   "P1.G12",
+   "P1.G13",
+   "P1.G14"
+  ],
+  "sources": [
+   {
+    "url": "https://www.ubs.com/global/en/investor-relations/financial-information/quarterly-reporting/qr-archive/qr-archive21-25.html",
+    "year_from": null,
+    "container": "main#main .accordion__content",
+    "item": null,
+    "title": null,
+    "pagination_next_selector": null,
+    "table_context": false
+   }
+  ],
+  "default_language": "en"
+ },
+ "usage": {
+  "input_tokens": 13633,
+  "output_tokens": 723,
+  "cost_usd": 0.00060804
+ },
+ "strategy": "json_schema",
+ "attempts": 1,
+ "latency_s": 6.734,
+ "model": "openai/gpt-6-luna",
+ "schema": "StructureReply",
+ "step": "structure"
+}

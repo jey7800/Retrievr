@@ -16,7 +16,7 @@ from collections.abc import Collection, Iterator, Mapping, Sequence
 from dataclasses import dataclass, field
 from datetime import date
 from typing import Any, Literal
-from urllib.parse import parse_qsl
+from urllib.parse import parse_qsl, quote, unquote_plus
 
 from retrievr.browser import Exchange
 from retrievr.candidates import (
@@ -49,6 +49,9 @@ class JsonList:
     url_paths: dict[str, int]
     """Item paths holding a document URL, with how many items have one there."""
     sample: Any
+    url_templates: dict[str, str] = field(default_factory=dict)
+    """Item paths holding a bare file name, with the URL the page builds from it
+    (``{value}`` stands for the name)."""
 
 
 @dataclass
@@ -67,6 +70,28 @@ def _is_document_url(value: str) -> bool:
     if len(value) > 2000 or " " in value.strip() or "/" not in value:
         return False
     return path_extension(value) in DOCUMENT_EXTENSIONS
+
+
+def _is_file_name(value: str) -> bool:
+    """A bare file name (``Annual_report_2025.pdf``): the page builds its URL."""
+    return (
+        len(value) <= 300
+        and "/" not in value
+        and value.strip() == value
+        and " " not in value
+        and path_extension("/" + value) in DOCUMENT_EXTENSIONS
+    )
+
+
+def file_url_template(name: str, links: Sequence[str]) -> str | None:
+    """The URL template a page uses for a file name: the rendered link that holds the
+    name (as is or URL-encoded), with ``{value}`` in its place."""
+    for link in links:
+        for form in (quote(name, safe=""), quote(name), name):
+            at = link.find(form)
+            if at >= 0:
+                return link[:at] + "{value}" + link[at + len(form) :]
+    return None
 
 
 def _leaves(node: Any, prefix: str = "") -> Iterator[tuple[str, Any]]:
@@ -99,8 +124,9 @@ def _type_name(value: Any) -> str:
     )
 
 
-def analyse(exchange: Exchange) -> ResponseDocuments:
-    """Where the documents of a response are (if any)."""
+def analyse(exchange: Exchange, links: Sequence[str] = ()) -> ResponseDocuments:
+    """Where the documents of a response are (if any). ``links``: document links of the
+    rendered page, to resolve bare file names of a JSON listing."""
     if exchange.status != 200 or not exchange.body:
         return ResponseDocuments("none")
     content_type = (exchange.content_type or "").lower()
@@ -110,7 +136,7 @@ def analyse(exchange: Exchange) -> ResponseDocuments:
             data = json.loads(text)
         except ValueError:
             return ResponseDocuments("none")
-        return _analyse_json(data, exchange.url)
+        return _analyse_json(data, exchange.url, links)
     if "html" in content_type or _HTML_HINT.search(text[:20000]):
         groups = group_document_links(parse_html(exchange.body), exchange.url)
         docs = {c.normalized_url for g in groups for c in g.candidates}
@@ -118,25 +144,37 @@ def analyse(exchange: Exchange) -> ResponseDocuments:
     return ResponseDocuments("none")
 
 
-def _analyse_json(data: Any, base_url: str) -> ResponseDocuments:
+def _analyse_json(data: Any, base_url: str, links: Sequence[str] = ()) -> ResponseDocuments:
     keys = {str(k): _type_name(v) for k, v in data.items()} if isinstance(data, dict) else {}
     found = ResponseDocuments("none", keys=keys)
     holding: dict[str, int] = {}
     for path, items in _lists(data):
         counts: dict[str, int] = {}
+        templates: dict[str, str] = {}
         docs: set[str] = set()
         with_url = 0
         for item in items:
             had = False
             for leaf, value in _leaves(item):
-                if isinstance(value, str) and _is_document_url(value):
-                    counts[leaf] = counts.get(leaf, 0) + 1
-                    docs.add(normalize_url(resolve_url(value, base_url)))
-                    had = True
+                if not isinstance(value, str):
+                    continue
+                if _is_document_url(value):
+                    url = resolve_url(value, base_url)
+                elif links and _is_file_name(value):
+                    template = templates.get(leaf) or file_url_template(value, links)
+                    if template is None:
+                        continue
+                    templates[leaf] = template
+                    url = resolve_url(template.replace("{value}", quote(value, safe="")), base_url)
+                else:
+                    continue
+                counts[leaf] = counts.get(leaf, 0) + 1
+                docs.add(normalize_url(url))
+                had = True
             with_url += had
         if counts:
             sample = next((i for i in items if any(_path_value(i, p) for p in counts)), items[0])
-            found.lists.append(JsonList(path, len(items), counts, sample))
+            found.lists.append(JsonList(path, len(items), counts, sample, templates))
             holding[path] = with_url
             found.documents |= docs
     if found.lists:
@@ -187,6 +225,40 @@ def body_fields(exchange: Exchange) -> dict[str, str]:
     return dict(parse_qsl(body, keep_blank_values=True))
 
 
+QUERY_PREFIX = "?"
+"""Fields of the URL query string are named ``?name`` (body fields have no prefix)."""
+
+
+def query_fields(exchange: Exchange) -> dict[str, str]:
+    """The URL query string of a call, as ``?name`` fields."""
+    query = exchange.url.partition("?")[2]
+    return {QUERY_PREFIX + k: v for k, v in parse_qsl(query, keep_blank_values=True)}
+
+
+def request_fields(exchange: Exchange) -> dict[str, str]:
+    """Body fields, then URL query fields (``?name``)."""
+    return {**body_fields(exchange), **query_fields(exchange)}
+
+
+def templated_url(exchange: Exchange, vary: Mapping[str, str]) -> str:
+    """The call's URL with the ``?name`` fields of ``vary`` replaced by placeholders (the
+    other parameters are kept exactly as captured)."""
+    base, sep, query = exchange.url.partition("?")
+    wanted = {k[len(QUERY_PREFIX) :]: v for k, v in vary.items() if k.startswith(QUERY_PREFIX)}
+    if not wanted:
+        return exchange.url
+    segments = query.split("&") if sep else []
+    found: set[str] = set()
+    for i, segment in enumerate(segments):
+        key = unquote_plus(segment.partition("=")[0])
+        if key in wanted:
+            segments[i] = f"{segment.partition('=')[0]}={wanted[key]}"
+            found.add(key)
+    if missing := set(wanted) - found:
+        raise ValueError(f"fields {sorted(missing)} are not in the URL of {exchange.id}")
+    return f"{base}?{'&'.join(segments)}"
+
+
 def is_json_body(exchange: Exchange) -> bool:
     body = exchange.request_body or ""
     if not body.lstrip().startswith(("{", "[")):
@@ -218,22 +290,23 @@ class Endpoint:
     def varying_fields(self) -> dict[str, list[str]]:
         values: dict[str, list[str]] = {}
         for ex in self.exchanges:
-            for name, value in body_fields(ex).items():
+            for name, value in request_fields(ex).items():
                 values.setdefault(name, [])
                 if value not in values[name]:
                     values[name].append(value)
         return {k: v for k, v in values.items() if len(v) > 1}
 
 
-def endpoints(exchanges: Sequence[Exchange]) -> list[Endpoint]:
-    """Endpoints whose responses list documents, in order of first call."""
+def endpoints(exchanges: Sequence[Exchange], links: Sequence[str] = ()) -> list[Endpoint]:
+    """Endpoints whose responses list documents, in order of first call. ``links``:
+    document links of the rendered page (see ``analyse``)."""
     grouped: dict[tuple[str, str], list[Exchange]] = {}
     for ex in exchanges:
         base = normalize_url(ex.url).split("?", 1)[0]
         grouped.setdefault((ex.method, base), []).append(ex)
     out: list[Endpoint] = []
     for (method, _base), group in grouped.items():
-        analysed = {ex.id: a for ex in group if (a := analyse(ex)).kind != "none"}
+        analysed = {ex.id: a for ex in group if (a := analyse(ex, links)).kind != "none"}
         if not analysed:
             continue
         useful = [ex for ex in group if ex.id in analysed]
@@ -257,6 +330,13 @@ def digest_endpoints(found: Sequence[Endpoint], today: date) -> str:
                 note = " (today's date)" if today_formats(value, today) else ""
                 shown.append(f"{name}={value[:80]}{note}")
             lines.append(f"  Body of {first.id}: " + "; ".join(shown)[:MAX_SAMPLE_CHARS])
+        query = query_fields(first)
+        if query:
+            shown = [f"{name}={value[:80]}" for name, value in query.items()]
+            lines.append(
+                f"  URL query of {first.id} (fields named ?name): "
+                + "; ".join(shown)[:MAX_SAMPLE_CHARS]
+            )
         varying = ep.varying_fields()
         if varying:
             lines.append(
@@ -333,7 +413,10 @@ def templated_body(
     """(form, json) of a request source: the captured body with ``vary`` fields replaced
     by placeholders and today's date by ``{today:<format>}``."""
     body = exchange.request_body
+    vary = {k: v for k, v in vary.items() if not k.startswith(QUERY_PREFIX)}
     if not body:
+        if vary:
+            raise ValueError(f"{exchange.id} has no body: fields {sorted(vary)} are not in it")
         return None, None
     if is_json_body(exchange):
         data = json.loads(body)
@@ -382,7 +465,7 @@ def _today_in_json(node: Any, today: date) -> Any:
 
 
 def field_value(exchange: Exchange, name: str) -> str | None:
-    return body_fields(exchange).get(name)
+    return request_fields(exchange).get(name)
 
 
 def document_hosts(found: Collection[ResponseDocuments]) -> set[str]:

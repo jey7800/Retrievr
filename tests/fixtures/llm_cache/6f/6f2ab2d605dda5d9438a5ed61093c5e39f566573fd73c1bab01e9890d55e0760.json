@@ -1,0 +1,24 @@
+{
+ "cache_format": 1,
+ "output": {
+  "reasoning": "The archive page covers 2021–2025, but it does not establish where earlier years or future-year listings are published. The archive link returned 404, so inspect the parent quarterly-reporting page for the complete archive navigation.",
+  "action": "open_pages",
+  "open_links": [
+   "P1.N34"
+  ],
+  "document_groups": [],
+  "sources": [],
+  "default_language": null
+ },
+ "usage": {
+  "input_tokens": 12512,
+  "output_tokens": 337,
+  "cost_usd": 0.001732425
+ },
+ "strategy": "json_schema",
+ "attempts": 1,
+ "latency_s": 4.047,
+ "model": "openai/gpt-6-luna",
+ "schema": "StructureReply",
+ "step": "structure"
+}

@@ -219,11 +219,24 @@ def normalize_period(match: re.Match[str]) -> tuple[str, int]:
     return str(year), year
 
 
+_ORDINALS = (
+    ("1", r"first|1st|premi[eè]re?|primer|primero|erste[snr]?"),
+    ("2", r"second|2nd|deuxi[eè]me|seconde?|segundo|zweite[snr]?"),
+    ("3", r"third|3rd|troisi[eè]me|tercer|tercero|dritte[snr]?"),
+    ("4", r"fourth|4th|quatri[eè]me|cuarto|vierte[snr]?"),
+)
+
+
 def _digit(value: str) -> str:
+    """The number of a quarter or half: ``Q3``, ``3Q``, ``T3``, or a word (``third``,
+    ``troisième``, ``tercer``...)."""
     digits = re.sub(r"\D", "", value)
-    if not digits:
-        raise ValueError(f"no digit in period component {value!r}")
-    return digits
+    if digits:
+        return digits
+    for digit, words in _ORDINALS:
+        if re.search(rf"\b(?:{words})\b", value, re.IGNORECASE):
+            return digit
+    raise ValueError(f"no digit in period component {value!r}")
 
 
 # -- LLM fallback ----------------------------------------------------------------------

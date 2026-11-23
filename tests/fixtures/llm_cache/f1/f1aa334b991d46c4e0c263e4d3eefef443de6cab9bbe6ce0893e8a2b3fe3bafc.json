@@ -1,0 +1,32 @@
+{
+ "cache_format": 1,
+ "output": {
+  "reasoning": "The fetched French page contains no results links; its only document groups are a navigation-menu PDF and footer documents. The English publications-documents link is the only observed candidate for the migrated listing, but its contents and selectors could not be inspected.",
+  "action": "recipe",
+  "open_links": [],
+  "document_groups": [],
+  "sources": [
+   {
+    "url": "https://investors.societegenerale.com/en/publications-documents?category%5Bresultats-financiers%5D=&fiscal%5B{year}%5D=&theme=finance",
+    "year_from": 2019,
+    "container": "main",
+    "item": null,
+    "title": null,
+    "pagination_next_selector": null,
+    "table_context": false
+   }
+  ],
+  "default_language": null
+ },
+ "usage": {
+  "input_tokens": 4886,
+  "output_tokens": 1481,
+  "cost_usd": 0.00080044
+ },
+ "strategy": "json_schema",
+ "attempts": 1,
+ "latency_s": 13.719,
+ "model": "openai/gpt-6-luna",
+ "schema": "StructureReply",
+ "step": "repair:structure"
+}

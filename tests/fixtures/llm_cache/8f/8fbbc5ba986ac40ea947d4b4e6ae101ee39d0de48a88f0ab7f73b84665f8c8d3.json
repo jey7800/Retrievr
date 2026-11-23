@@ -1,0 +1,233 @@
+{
+ "cache_format": 1,
+ "output": {
+  "reasoning": "Les libellés « T1–T4 » déterminent les périodes trimestrielles. « États financiers » désigne les états financiers publiés séparément ; les séries retraitées sont classées comme séries trimestrielles retraitées. Tous les documents sont en français.",
+  "type_rules": [
+   {
+    "pattern": "séries.*trimestrielles.*retraitées",
+    "target": "title",
+    "type": "quarterly_series_restated"
+   },
+   {
+    "pattern": "états financiers",
+    "target": "title",
+    "type": "financial_statements"
+   },
+   {
+    "pattern": "communiqué de presse",
+    "target": "title",
+    "type": "press_release"
+   },
+   {
+    "pattern": "présentation",
+    "target": "title",
+    "type": "results_presentation"
+   },
+   {
+    "pattern": "séries.*trimestrielles",
+    "target": "title",
+    "type": "quarterly_series"
+   }
+  ],
+  "period_rules": [
+   {
+    "pattern": "(?P<q>T[1-4])[- _]?(?P<year>20\\d{2})",
+    "target": "title"
+   }
+  ],
+  "language_rules": [],
+  "labels": [
+   {
+    "id": "D1",
+    "type": "quarterly_series_restated",
+    "period": "2024-Q4",
+    "language": "fr"
+   },
+   {
+    "id": "D2",
+    "type": "quarterly_series_restated",
+    "period": "2024-Q4",
+    "language": "fr"
+   },
+   {
+    "id": "D3",
+    "type": "financial_statements",
+    "period": "2024-Q4",
+    "language": "fr"
+   },
+   {
+    "id": "D4",
+    "type": "quarterly_series",
+    "period": "2024-Q4",
+    "language": "fr"
+   },
+   {
+    "id": "D5",
+    "type": "press_release",
+    "period": "2024-Q4",
+    "language": "fr"
+   },
+   {
+    "id": "D6",
+    "type": "results_presentation",
+    "period": "2024-Q4",
+    "language": "fr"
+   },
+   {
+    "id": "D7",
+    "type": "results_presentation",
+    "period": "2024-Q3",
+    "language": "fr"
+   },
+   {
+    "id": "D8",
+    "type": "quarterly_series",
+    "period": "2024-Q3",
+    "language": "fr"
+   },
+   {
+    "id": "D9",
+    "type": "press_release",
+    "period": "2024-Q3",
+    "language": "fr"
+   },
+   {
+    "id": "D10",
+    "type": "press_release",
+    "period": "2024-Q2",
+    "language": "fr"
+   },
+   {
+    "id": "D11",
+    "type": "results_presentation",
+    "period": "2024-Q2",
+    "language": "fr"
+   },
+   {
+    "id": "D12",
+    "type": "financial_statements",
+    "period": "2024-Q2",
+    "language": "fr"
+   },
+   {
+    "id": "D13",
+    "type": "quarterly_series",
+    "period": "2024-Q2",
+    "language": "fr"
+   },
+   {
+    "id": "D14",
+    "type": "results_presentation",
+    "period": "2024-Q1",
+    "language": "fr"
+   },
+   {
+    "id": "D15",
+    "type": "quarterly_series",
+    "period": "2024-Q1",
+    "language": "fr"
+   },
+   {
+    "id": "D16",
+    "type": "press_release",
+    "period": "2024-Q1",
+    "language": "fr"
+   },
+   {
+    "id": "D17",
+    "type": "press_release",
+    "period": "2025-Q4",
+    "language": "fr"
+   },
+   {
+    "id": "D18",
+    "type": "results_presentation",
+    "period": "2025-Q4",
+    "language": "fr"
+   },
+   {
+    "id": "D19",
+    "type": "quarterly_series",
+    "period": "2025-Q4",
+    "language": "fr"
+   },
+   {
+    "id": "D20",
+    "type": "financial_statements",
+    "period": "2025-Q4",
+    "language": "fr"
+   },
+   {
+    "id": "D21",
+    "type": "quarterly_series",
+    "period": "2025-Q3",
+    "language": "fr"
+   },
+   {
+    "id": "D22",
+    "type": "press_release",
+    "period": "2025-Q3",
+    "language": "fr"
+   },
+   {
+    "id": "D23",
+    "type": "results_presentation",
+    "period": "2025-Q3",
+    "language": "fr"
+   },
+   {
+    "id": "D24",
+    "type": "quarterly_series",
+    "period": "2025-Q2",
+    "language": "fr"
+   },
+   {
+    "id": "D25",
+    "type": "press_release",
+    "period": "2025-Q2",
+    "language": "fr"
+   },
+   {
+    "id": "D26",
+    "type": "results_presentation",
+    "period": "2025-Q2",
+    "language": "fr"
+   },
+   {
+    "id": "D27",
+    "type": "financial_statements",
+    "period": "2025-Q2",
+    "language": "fr"
+   },
+   {
+    "id": "D28",
+    "type": "results_presentation",
+    "period": "2025-Q1",
+    "language": "fr"
+   },
+   {
+    "id": "D29",
+    "type": "quarterly_series",
+    "period": "2025-Q1",
+    "language": "fr"
+   },
+   {
+    "id": "D30",
+    "type": "press_release",
+    "period": "2025-Q1",
+    "language": "fr"
+   }
+  ]
+ },
+ "usage": {
+  "input_tokens": 5288,
+  "output_tokens": 2645,
+  "cost_usd": 0.001983425
+ },
+ "strategy": "json_schema",
+ "attempts": 1,
+ "latency_s": 22.532,
+ "model": "openai/gpt-6-luna",
+ "schema": "RulesReply",
+ "step": "rules"
+}

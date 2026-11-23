@@ -72,6 +72,22 @@ def test_magic_bytes() -> None:
     )
     assert check_magic("xlsx", b"%PDF-1.7 ") is not None
     assert check_magic("csv", b"a,b,c\n1,2,3") is None
+    # ESEF annual reports are inline XBRL in XHTML: markup is the document itself.
+    assert check_magic("xhtml", b'\xef\xbb\xbf<?xml version="1.0"?>') is None
+    assert check_magic("xhtml", b"%PDF-1.7 ") is not None
+
+
+def test_an_xhtml_report_served_as_xhtml_is_downloaded(
+    site: respx.MockRouter, make_fetcher: Any, recipe: Recipe, tmp_path: Path
+) -> None:
+    body = b'<?xml version="1.0" encoding="utf-8"?><html xmlns:ix="http://www.xbrl.org/2013/inlineXBRL">'
+    site.get(SITE + "/files/report.xhtml").respond(
+        200, content=body, headers={"content-type": "application/xhtml+xml"}
+    )
+    doc = _doc("report.xhtml", extension="xhtml")
+    [outcome] = Downloader(make_fetcher(), tmp_path).download_all(recipe, [doc])
+    assert outcome.status == "downloaded", outcome.reason
+    assert outcome.entry is not None and outcome.entry.path.endswith(".xhtml")
 
 
 def test_download_writes_file_and_manifest(
@@ -84,7 +100,7 @@ def test_download_writes_file_and_manifest(
     assert (tmp_path / outcome.entry.path).read_bytes() == pdf_bytes("a")
     entry = Manifest.load(tmp_path).entries[0]
     assert entry.recipe_version == 2 and entry.sha256 == outcome.entry.sha256
-    assert not list((tmp_path / ".retrievr-tmp").iterdir())
+    assert not (tmp_path / ".retrievr-tmp").exists()  # removed once downloads end
 
 
 @pytest.mark.parametrize(

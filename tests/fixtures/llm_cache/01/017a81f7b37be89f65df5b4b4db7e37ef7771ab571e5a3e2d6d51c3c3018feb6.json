@@ -1,0 +1,95 @@
+{
+ "cache_format": 1,
+ "output": {
+  "reasoning": "The archive page has no document links, but the previously listed files identify quarterly report pages under `qr-shared/{year}/{quarter}`. Use those quarter pages as listing sources; the exact page routes and selectors could not be verified because no more pages can be opened.",
+  "action": "recipe",
+  "open_links": [],
+  "document_groups": [],
+  "sources": [
+   {
+    "url": "https://www.ubs.com/global/en/investor-relations/financial-information/quarterly-reporting/qr-shared/2024/1q24.html",
+    "year_from": null,
+    "container": "main",
+    "item": null,
+    "title": null,
+    "pagination_next_selector": null,
+    "table_context": false
+   },
+   {
+    "url": "https://www.ubs.com/global/en/investor-relations/financial-information/quarterly-reporting/qr-shared/2024/2q24.html",
+    "year_from": null,
+    "container": "main",
+    "item": null,
+    "title": null,
+    "pagination_next_selector": null,
+    "table_context": false
+   },
+   {
+    "url": "https://www.ubs.com/global/en/investor-relations/financial-information/quarterly-reporting/qr-shared/2024/3q24.html",
+    "year_from": null,
+    "container": "main",
+    "item": null,
+    "title": null,
+    "pagination_next_selector": null,
+    "table_context": false
+   },
+   {
+    "url": "https://www.ubs.com/global/en/investor-relations/financial-information/quarterly-reporting/qr-shared/2024/4q24.html",
+    "year_from": null,
+    "container": "main",
+    "item": null,
+    "title": null,
+    "pagination_next_selector": null,
+    "table_context": false
+   },
+   {
+    "url": "https://www.ubs.com/global/en/investor-relations/financial-information/quarterly-reporting/qr-shared/2025/1q25.html",
+    "year_from": null,
+    "container": "main",
+    "item": null,
+    "title": null,
+    "pagination_next_selector": null,
+    "table_context": false
+   },
+   {
+    "url": "https://www.ubs.com/global/en/investor-relations/financial-information/quarterly-reporting/qr-shared/2025/2q25.html",
+    "year_from": null,
+    "container": "main",
+    "item": null,
+    "title": null,
+    "pagination_next_selector": null,
+    "table_context": false
+   },
+   {
+    "url": "https://www.ubs.com/global/en/investor-relations/financial-information/quarterly-reporting/qr-shared/2025/3q25.html",
+    "year_from": null,
+    "container": "main",
+    "item": null,
+    "title": null,
+    "pagination_next_selector": null,
+    "table_context": false
+   },
+   {
+    "url": "https://www.ubs.com/global/en/investor-relations/financial-information/quarterly-reporting/qr-shared/2025/4q25.html",
+    "year_from": null,
+    "container": "main",
+    "item": null,
+    "title": null,
+    "pagination_next_selector": null,
+    "table_context": false
+   }
+  ],
+  "default_language": "en"
+ },
+ "usage": {
+  "input_tokens": 8263,
+  "output_tokens": 2623,
+  "cost_usd": 0.00158254
+ },
+ "strategy": "json_schema",
+ "attempts": 1,
+ "latency_s": 21.032,
+ "model": "openai/gpt-6-luna",
+ "schema": "StructureReply",
+ "step": "repair:structure"
+}

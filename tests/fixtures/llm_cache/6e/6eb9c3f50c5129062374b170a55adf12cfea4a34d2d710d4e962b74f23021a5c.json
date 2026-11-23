@@ -1,0 +1,43 @@
+{
+ "cache_format": 1,
+ "output": {
+  "reasoning": "The quarterly-results page already exposes document tables across all listed year tabs, from 2010 through 2026. The ten groups are result releases, reports, financial-data supplements, presentations, and related call materials; none requires another page.",
+  "action": "recipe",
+  "open_links": [],
+  "document_groups": [
+   "P1.G1",
+   "P1.G2",
+   "P1.G3",
+   "P1.G4",
+   "P1.G5",
+   "P1.G6",
+   "P1.G7",
+   "P1.G8",
+   "P1.G9",
+   "P1.G10"
+  ],
+  "sources": [
+   {
+    "url": "https://investor-relations.db.com/reports-and-events/quarterly-results",
+    "year_from": null,
+    "container": ".mod-tabs .itm-tab-content table",
+    "item": "tr",
+    "title": null,
+    "pagination_next_selector": null,
+    "table_context": true
+   }
+  ],
+  "default_language": "en"
+ },
+ "usage": {
+  "input_tokens": 6614,
+  "output_tokens": 703,
+  "cost_usd": 0.001178175
+ },
+ "strategy": "json_schema",
+ "attempts": 1,
+ "latency_s": 6.328,
+ "model": "openai/gpt-6-luna",
+ "schema": "StructureReply",
+ "step": "structure"
+}

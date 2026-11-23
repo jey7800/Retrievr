@@ -1,0 +1,24 @@
+{
+ "cache_format": 1,
+ "output": {
+  "reasoning": "The 2025 results listing spans two paginated views, and the older fiscal-year coverage is not yet established. Open the French base-documentary page without filters to inspect the full listing and its year/archive navigation.",
+  "action": "open_pages",
+  "open_links": [
+   "P1.N35"
+  ],
+  "document_groups": [],
+  "sources": [],
+  "default_language": null
+ },
+ "usage": {
+  "input_tokens": 7261,
+  "output_tokens": 802,
+  "cost_usd": 0.00130855
+ },
+ "strategy": "json_schema",
+ "attempts": 1,
+ "latency_s": 7.984,
+ "model": "openai/gpt-6-luna",
+ "schema": "StructureReply",
+ "step": "structure"
+}

@@ -12,6 +12,7 @@ document links; ADR 0008).
 
 from __future__ import annotations
 
+import dataclasses
 import itertools
 import json
 import logging
@@ -40,6 +41,7 @@ from retrievr.candidates import (
     extract_candidates,
     json_candidates,
     json_path,
+    label_year,
     parse_html,
     select,
     text_of,
@@ -50,7 +52,7 @@ from retrievr.urls import is_allowed, normalize_url, resolve_url
 
 log = logging.getLogger("retrievr.recipe")
 
-SCHEMA_VERSION = 3
+SCHEMA_VERSION = 4
 _SLUG = r"^[a-z0-9][a-z0-9-]*$"
 _PLACEHOLDER = re.compile(r"\{([a-z_][a-z0-9_]*)\}")
 _TODAY = re.compile(r"\{today:([^{}]+)\}")
@@ -190,6 +192,34 @@ class JsonItems(_Model):
     """Path to a date; its first ``YYYY-MM-DD`` is used."""
     context: list[str] = []
     """Paths of texts that describe the item (category, tags...), for the rules."""
+    url_template: str | None = None
+    """Schema v4: the item holds a file name, not a URL; the document URL is this
+    template with ``{value}`` replaced by the (URL-encoded) name."""
+
+    @field_validator("url_template")
+    @classmethod
+    def _one_value(cls, value: str | None) -> str | None:
+        if value is not None and value.count("{value}") != 1:
+            raise ValueError("url_template needs exactly one {value}")
+        return value
+
+
+def url_path_variants(recipe: Recipe) -> list[Recipe]:
+    """The recipe with each JSON items ``url`` list rotated (another path tried first),
+    for listings whose items carry several URLs (a storage path and a public link)."""
+    variants: list[Recipe] = []
+    for index, source in enumerate(recipe.sources):
+        items = getattr(getattr(source, "response", None), "items", None)
+        if not isinstance(items, JsonItems) or not isinstance(items.url, list):
+            continue
+        for shift in range(1, len(items.url)):
+            paths = items.url[shift:] + items.url[:shift]
+            new_items = items.model_copy(update={"url": paths})
+            response = source.response.model_copy(update={"items": new_items})  # type: ignore[union-attr]
+            sources = list(recipe.sources)
+            sources[index] = source.model_copy(update={"response": response})
+            variants.append(recipe.model_copy(update={"sources": sources}))
+    return variants
 
 
 class ResponseSpec(_Model):
@@ -207,6 +237,24 @@ class ResponseSpec(_Model):
         return self
 
 
+class DetailPages(_Model):
+    """Schema v4: the documents are on detail pages (one per event or period: "H1 2025
+    results") that each listing page links to. The engine opens every linked page."""
+
+    link: str
+    """CSS selector of the links to the detail pages, on the listing page."""
+    items: ItemsSpec = ItemsSpec()
+    """Where the documents are on a detail page."""
+    max_pages: int = Field(default=60, ge=1, le=300)
+    """Detail pages opened per listing page, at most."""
+
+    @field_validator("link")
+    @classmethod
+    def _valid_selector(cls, value: str) -> str:
+        compile_selector(value)
+        return value
+
+
 class UrlTemplateSource(_Model):
     id: str = Field(pattern=_SLUG)
     kind: Literal["url_template"] = "url_template"
@@ -214,10 +262,14 @@ class UrlTemplateSource(_Model):
     params: dict[str, YearRange] = {}
     pagination: NextLinkPagination | None = None
     items: ItemsSpec = ItemsSpec()
+    detail: DetailPages | None = None
+    """Schema v4: documents on pages linked from the listing; the listing page itself
+    then lists no document."""
 
     @model_validator(mode="after")
     def _placeholders_match_params(self) -> UrlTemplateSource:
-        used = set(_PLACEHOLDER.findall(self.url))
+        # {yy} is the two-digit form of the year param (schema v4: ar25, fy24).
+        used = {"year" if p == "yy" else p for p in _PLACEHOLDER.findall(self.url)}
         declared = set(self.params)
         if used != declared:
             raise ValueError(
@@ -322,7 +374,13 @@ def fill_template(text: str, values: Mapping[str, ParamValue], today: date) -> s
 
 
 def _fill(template: str, params: Mapping[str, int]) -> str:
-    return _PLACEHOLDER.sub(lambda m: str(params[m.group(1)]), template)
+    def value(m: re.Match[str]) -> str:
+        name = m.group(1)
+        if name == "yy" and "yy" not in params:
+            return f"{params['year'] % 100:02d}"
+        return str(params[name])
+
+    return _PLACEHOLDER.sub(value, template)
 
 
 def _fill_json(node: Any, values: Mapping[str, ParamValue], today: date) -> Any:
@@ -378,7 +436,7 @@ class Provenance(_Model):
 
 
 class Recipe(_Model):
-    schema_version: Literal[1, 2, 3]
+    schema_version: Literal[1, 2, 3, 4]
     recipe: str = Field(pattern=_SLUG)
     version: int = Field(ge=1)
     issuer: str = Field(pattern=_SLUG)
@@ -418,6 +476,20 @@ class Recipe(_Model):
                         param.page, self.allowed_domains
                     ):
                         raise ValueError(f"source {source.id!r}: options page outside domains")
+        if self.schema_version < 4 and any(
+            isinstance(s, UrlTemplateSource) and s.detail for s in self.sources
+        ):
+            raise ValueError("detail pages require schema_version 4")
+        if self.schema_version < 4 and any("{yy}" in s.url for s in self.sources):
+            raise ValueError("the {yy} placeholder requires schema_version 4")
+        if self.schema_version < 4 and any(
+            isinstance(s, RequestSource)
+            and s.response is not None
+            and s.response.items is not None
+            and s.response.items.url_template
+            for s in self.sources
+        ):
+            raise ValueError("items.url_template requires schema_version 4")
         if self.schema_version < 3:
             self._check_v2_subset()
         if self.schema_version == 1:
@@ -548,7 +620,18 @@ def run_recipe(
         except ValueError as exc:  # unreadable response (bad JSON...)
             result.status = "error"
             result.errors.append(f"{source.id}: {exc}")
+    result.documents = [_published_year(d, today) for d in result.documents]
     return result
+
+
+def _published_year(doc: FoundDocument, today: date) -> FoundDocument:
+    """A published document cannot be about a fiscal year that has not started: such a
+    year comes from another number of the title or URL (a bond maturity "due 2030", a
+    2030 target). The publication date gives the year then, else it stays unknown."""
+    if doc.fiscal_year is None or doc.fiscal_year <= today.year:
+        return doc
+    year = doc.date.year if doc.date and doc.date.year <= today.year else None
+    return dataclasses.replace(doc, fiscal_year=year, period=None)
 
 
 def _run_listing(
@@ -573,12 +656,87 @@ def _run_listing(
         visited.add(key)
         page = fetcher.get(url, allowed_domains=recipe.allowed_domains)
         root = parse_html(page.content)
-        candidates = _html_candidates(root, page.final_url, source.items)
+        if source.detail is not None:
+            result.pages.append(
+                PageVisit(source.id, url, page.final_url, page.status, 0, values=params)
+            )
+            listing = _Listing(page.final_url, params, root)
+            _run_details(recipe, source, source.detail, listing, fetcher, result, seen)
+        else:
+            candidates = _html_candidates(root, page.final_url, source.items)
+            result.pages.append(
+                PageVisit(
+                    source.id, url, page.final_url, page.status, len(candidates), values=params
+                )
+            )
+            _add(recipe, source.id, source.items, params, page.final_url, candidates, result, seen)
+        url = _next_url(root, source, page.final_url, recipe)
+
+
+@dataclass(frozen=True)
+class _Listing:
+    """A fetched listing page whose links lead to detail pages."""
+
+    url: str
+    params: dict[str, int]
+    root: Any
+
+
+def _run_details(
+    recipe: Recipe,
+    source: UrlTemplateSource,
+    detail: DetailPages,
+    listing: _Listing,
+    fetcher: Fetcher,
+    result: RunResult,
+    seen: set[str],
+) -> None:
+    """Open the detail pages a listing page links to and list their documents. The
+    page heading (the event: "H1 2025 results") is the heading of its documents."""
+    params = listing.params
+    links: list[str] = []
+    for el in select(listing.root, detail.link):
+        href = el.get("href")
+        if not href:
+            continue
+        url = resolve_url(href, listing.url)
+        if is_allowed(url, recipe.allowed_domains) and url not in links:
+            links.append(url)
+    if len(links) > detail.max_pages:
+        result.warnings.append(f"{source.id}: {len(links)} detail pages, opened {detail.max_pages}")
+    for url in links[: detail.max_pages]:
+        try:
+            page = fetcher.get(url, allowed_domains=recipe.allowed_domains)
+        except HTTPStatusError as exc:
+            if exc.status in (404, 410):
+                result.warnings.append(f"{source.id}: detail page gone: {url}")
+                continue
+            raise
+        page_root = parse_html(page.content)
+        heading = _page_heading(page_root)
+        items = detail.items
+        if items.container and not select(page_root, items.container):
+            # Detail pages of older periods often have another layout: read the main
+            # content of the page instead of nothing.
+            fallback = "main" if select(page_root, "main") else None
+            items = items.model_copy(update={"container": fallback, "item": None, "title": None})
+            result.warnings.append(f"{source.id}: {items.container or 'page'} read on {url}")
+        candidates = [
+            c if c.heading else dataclasses.replace(c, heading=heading)
+            for c in _html_candidates(page_root, page.final_url, items)
+        ]
         result.pages.append(
             PageVisit(source.id, url, page.final_url, page.status, len(candidates), values=params)
         )
-        _add(recipe, source.id, source.items, params, page.final_url, candidates, result, seen)
-        url = _next_url(root, source, page.final_url, recipe)
+        _add(recipe, source.id, detail.items, params, page.final_url, candidates, result, seen)
+
+
+def _page_heading(root: Any) -> str | None:
+    for path in ("//h1", "//title"):
+        found = root.xpath(path)
+        if found and (text := text_of(found[0])):
+            return text[:200]
+    return None
 
 
 def _html_candidates(root: Any, base_url: str, items: ItemsSpec) -> list[Candidate]:
@@ -669,8 +827,7 @@ def _options(recipe: Recipe, param: OptionsParam, fetcher: Fetcher) -> list[tupl
         value = el.get(param.value_attr)
         if not value:
             continue
-        m = _YEAR_IN_TEXT.search(text_of(el))
-        found.append((value, int(m.group(1)) if m else None))
+        found.append((value, label_year(text_of(el))))
     return found
 
 
@@ -762,6 +919,7 @@ def _response_candidates(
         context=context,
         extensions=source.items.extensions,
         document_urls=source.items.document_urls,
+        url_template=spec.items.url_template,
     )
     return found, data
 
@@ -798,6 +956,7 @@ def _to_document(
     fiscal_year = (
         cls.period_year
         or (param_year if isinstance(param_year, int) else None)
+        or _single_year(cand.heading)  # a per-year section ("2024" heading)
         or (doc_date.year if doc_date else None)
     )
     return FoundDocument(
@@ -827,3 +986,9 @@ def _iso_date(text: str) -> date | None:
         return date(int(m.group(1)), int(m.group(2)), int(m.group(3)))
     except ValueError:
         return None
+
+
+def _single_year(text: str | None) -> int | None:
+    """The year of a heading that names exactly one year, else None."""
+    years = {int(y) for y in _YEAR_IN_TEXT.findall(text or "")}
+    return years.pop() if len(years) == 1 else None

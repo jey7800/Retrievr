@@ -1,0 +1,23 @@
+{
+ "cache_format": 1,
+ "output": {
+  "types": [
+   "financial_data_supplement"
+  ],
+  "exclude_types": [],
+  "year_from": 2025,
+  "year_to": 2025,
+  "languages": null
+ },
+ "usage": {
+  "input_tokens": 1220,
+  "output_tokens": 37,
+  "cost_usd": 3.3615e-05
+ },
+ "strategy": "json_schema",
+ "attempts": 1,
+ "latency_s": 1.0,
+ "model": "openai/gpt-6-luna",
+ "schema": "Filter",
+ "step": "filter"
+}

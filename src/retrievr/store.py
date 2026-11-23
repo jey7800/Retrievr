@@ -102,16 +102,30 @@ class StateStore:
         return path
 
     def activate(self, site: str, recipe: Recipe, path: Path) -> None:
+        # A recipe of the store is kept by file name, so the state directory can be
+        # used from any working directory (or moved).
+        inside = path.resolve().parent == self.recipes_dir.resolve()
+        stored = path.name if inside else str(path.resolve())
         with self._db() as db:
             db.execute(
                 "INSERT OR REPLACE INTO active VALUES (?, ?, ?, ?)",
-                (site, recipe.key, str(path), _now()),
+                (site, recipe.key, stored, _now()),
             )
 
     def active_recipe(self, site: str) -> Recipe | None:
         with self._db() as db:
             row = db.execute("SELECT path FROM active WHERE site = ?", (site,)).fetchone()
-        return load_recipe(row[0]) if row else None
+        if row is None:
+            return None
+        stored = Path(row[0])
+        path = stored if stored.is_absolute() else self.recipes_dir / stored.name
+        return load_recipe(path)
+
+    def sites(self) -> list[str]:
+        """Sites that have an active recipe."""
+        with self._db() as db:
+            rows = db.execute("SELECT site FROM active ORDER BY site").fetchall()
+        return [r[0] for r in rows]
 
     # -- runs and ledger -----------------------------------------------------------
 

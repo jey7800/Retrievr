@@ -64,6 +64,8 @@ class SiteResult:
     request_details: list[dict[str, object]] = field(default_factory=list)
     validation: str | None = None
     errors: list[str] | None = None
+    warm: str | None = None
+    """Cold mode: the warm run after learning (status, health, LLM calls, same documents)."""
 
 
 def _snapshot_ready(site: Site) -> Path | None:
@@ -137,6 +139,17 @@ def evaluate_cold(site: Site, model: str, state_root: Path) -> SiteResult:
     result.validation = learned.validation.summary() if learned.validation else None
     if learned.recipe is not None:
         result.score = score_documents(learned.all_documents, truth)
+    if learned.status == "learned":
+        # Warm run: the recipe alone replays the site (no LLM call, same documents).
+        warm = retrievr.run(site.id, years=truth.fiscal_years, download=False)
+        same = {d.normalized_url for d in warm.all_documents} == {
+            d.normalized_url for d in learned.all_documents
+        }
+        verdict = warm.health.verdict if warm.health else "-"
+        result.warm = (
+            f"{warm.status}, health {verdict}, {warm.llm.calls} LLM calls, "
+            f"{'same documents' if same else 'DIFFERENT documents'}"
+        )
     calls, cached = learned.llm.calls, learned.llm.cached_calls
     tokens_in, tokens_out = learned.llm.input_tokens, learned.llm.output_tokens
     cost = learned.llm.cost_usd
@@ -185,8 +198,10 @@ def to_markdown(results: list[SiteResult], mode: Mode, when: datetime, model: st
         title,
         "",
         "| Site | Profile | Status | Recall | Precision | Type | Period | Lang | "
-        "Coverage | Requests | LLM calls | Cost $ | Time s |",
-        "| --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |",
+        "Coverage | Requests | LLM calls | Cost $ | Time s |"
+        + (" Warm run |" if mode == "cold" else ""),
+        "| --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |"
+        + (" --- |" if mode == "cold" else ""),
     ]
 
     def pct(value: float | None) -> str:
@@ -201,6 +216,7 @@ def to_markdown(results: list[SiteResult], mode: Mode, when: datetime, model: st
             f"{pct(s.precision if s else None)} | {pct(meta.get('type'))} | "
             f"{pct(meta.get('period'))} | {pct(meta.get('language'))} | {pct(r.coverage)} | "
             f"{pct(r.requests_exact)} | {calls} | {r.cost_usd:.4f} | {r.seconds:.1f} |"
+            + (f" {r.warm or '-'} |" if mode == "cold" else "")
         )
     scored = [r.score for r in results if r.score]
     if scored:

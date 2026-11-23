@@ -1,0 +1,24 @@
+{
+ "cache_format": 1,
+ "output": {
+  "reasoning": "The page lists quarterly reports for 2021–2025, but it may not include earlier archive years or the current/future archive. Open the archive index to locate the complete range of listing pages.",
+  "action": "open_pages",
+  "open_links": [
+   "P1.N35"
+  ],
+  "document_groups": [],
+  "sources": [],
+  "default_language": null
+ },
+ "usage": {
+  "input_tokens": 12433,
+  "output_tokens": 301,
+  "cost_usd": 0.00170455
+ },
+ "strategy": "json_schema",
+ "attempts": 1,
+ "latency_s": 6.015,
+ "model": "openai/gpt-6-luna",
+ "schema": "StructureReply",
+ "step": "structure"
+}

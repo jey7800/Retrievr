@@ -63,18 +63,44 @@ def signature(run: RunResult) -> list[tuple[str, str | None, str | None, str | N
     return sorted((d.normalized_url, d.type, d.period, d.language) for d in run.documents)
 
 
+@dataclass(frozen=True)
+class Reachability:
+    """A sample of the documents a recipe lists, fetched (streamed, body not read)."""
+
+    sampled: int
+    reachable: int
+    gone: int
+    """Answered HTTP 404 or 410."""
+    refused: int = 0
+    """Not fetched: robots.txt of their host disallows them."""
+
+    @property
+    def ok(self) -> bool:
+        """False when every conclusive answer says the documents cannot be downloaded
+        (they do not exist, or robots.txt disallows them)."""
+        return not ((self.gone or self.refused) and not self.reachable)
+
+
 def validate_runs(
     recipe: Recipe,
     first: RunResult,
     second: RunResult | None,
     *,
     history: History | None = None,
+    reachability: Reachability | None = None,
 ) -> ValidationReport:
     report = ValidationReport()
     add = report.checks.append
     add(Check("runs", first.status == "ok", first.status + _errors(first)))
     if second is not None:
         add(Check("second_run", second.status == "ok", second.status + _errors(second)))
+    if reachability is not None and reachability.sampled:
+        detail = (
+            f"{reachability.reachable} of {reachability.sampled} sampled documents "
+            f"reachable, {reachability.gone} answered 404/410"
+            + (f", {reachability.refused} disallowed by robots.txt" if reachability.refused else "")
+        )
+        add(Check("downloadable", reachability.ok, detail))
     count = len(first.documents)
     add(Check("documents", count > 0, f"{count} found"))
     outside = [d.url for d in first.documents if not is_allowed(d.url, recipe.allowed_domains)]

@@ -12,6 +12,7 @@ from collections.abc import Collection
 from dataclasses import dataclass, field
 from functools import lru_cache
 from typing import Any
+from urllib.parse import quote, urlsplit
 
 from cssselect import SelectorError
 from lxml import etree
@@ -26,6 +27,22 @@ DOCUMENT_EXTENSIONS = frozenset(
     {"pdf", "xlsx", "xls", "xlsb", "xlsm", "csv", "zip", "xbri", "doc", "docx", "ppt", "pptx"}
 )
 """File extensions treated as documents when a recipe declares none."""
+
+_WEB_PAGE = r"[^/?#]*\.(?:html?|aspx?|php|jsp)(?:[?#]|$)"
+"""A path segment that names a web page (``default.htm``), never a document."""
+
+OPAQUE_DOCUMENT = re.compile(
+    r"/pdfs?/[^/?#]+"  # /assets/pdf/release-q1-2026
+    r"|/pdf[a-z]+/[^/?#]+"  # /pdfPreview/123
+    r"|/(?:downloads?|files?|attachments?)/(?!" + _WEB_PAGE + r")[^/?#]+(?:\?[^#]*)?$"  # /file/9
+    r"|/downloads?/(?:[^/?#]+/)+[^/?#.]+(?:\?[^#]*)?$"  # /downloads/documents/us-en/15db52
+    r"|[?&](?:p_doc_ref|docref|doc_?id|document_?id|file_?id|attachment_?id|file_?name)="
+    r"|[?&]disposition=(?:inline|attachment)",
+    re.IGNORECASE,
+)
+"""Links without a file extension that are documents all the same (download services,
+asset paths). Used to show them to the learner; a recipe lists them through
+``items.document_urls`` patterns."""
 
 _HEADINGS_XPATH = (
     "preceding::*[self::h1 or self::h2 or self::h3 or self::h4 or self::h5 or self::h6][1]"
@@ -52,11 +69,16 @@ class Candidate:
     file_name: str | None = None
     """File name when the page gives one (``download`` or ``title`` attribute, JSON field):
     the only readable name of an opaque link such as ``/pdfPreview/123``."""
+    format_hint: str | None = None
+    """File format the link text announces ("Interim report (pdf)", "PDF 2.1 MB"): the
+    extension of an opaque link that gives no file name."""
 
     @property
     def extension(self) -> str:
-        """Extension of the URL path, else of ``file_name``."""
-        return path_extension(self.url) or file_extension(self.file_name)
+        """Extension of the URL path, else of ``file_name``, else the announced format."""
+        return (
+            path_extension(self.url) or file_extension(self.file_name) or (self.format_hint or "")
+        )
 
     def fields(self) -> dict[str, str | None]:
         """Named texts that classification rules can target."""
@@ -74,6 +96,30 @@ class Candidate:
 
 
 _FILE_NAME = re.compile(r"[^/\\]*\.([A-Za-z0-9]{2,5})$")
+_FORMAT_WORDS = r"(pdf|xlsx?|xlsb|excel|csv|zip|docx?|pptx?)"
+_TEXT_FORMAT = re.compile(
+    r"[(\[]\s*" + _FORMAT_WORDS + r"\s*[)\]]"  # (pdf), [PDF]
+    r"|\b" + _FORMAT_WORDS + r"\s*[(,]?\s*\d+(?:[.,]\d+)?\s*[kmg]i?b\b"  # pdf 289 KB, PDF (2.1 MB)
+    r"|^\s*" + _FORMAT_WORDS + r"\s*$",  # a link text that is only the format
+    re.I,
+)
+_LINK_XPATH = ".//a[@href] | .//*[contains(local-name(), '-') and @href]"
+"""Links: ``<a href>`` and custom elements (Web Components) that carry an ``href``."""
+
+
+def text_format(text: str | None) -> str:
+    """The file format a link text announces ('' when it names none)."""
+    m = _TEXT_FORMAT.search(text or "")
+    if not m:
+        return ""
+    word = next(g for g in m.groups() if g).lower()
+    return "xlsx" if word == "excel" else word
+
+
+def _link_elements(scope: HtmlElement, link: str) -> list[HtmlElement]:
+    if link == "a[href]":
+        return list(scope.xpath(_LINK_XPATH))
+    return select(scope, link)
 
 
 def file_extension(name: str | None) -> str:
@@ -113,10 +159,12 @@ def dom_path(el: HtmlElement) -> str:
     node: HtmlElement | None = el
     while node is not None and isinstance(node.tag, str):
         label = node.tag
-        if node.get("id"):
-            label += "#" + node.get("id")
-        elif node.get("class"):
-            label += "." + node.get("class").split()[0]
+        node_id = (node.get("id") or "").strip()
+        classes = (node.get("class") or "").split()  # may be blank: class=" "
+        if node_id:
+            label += "#" + node_id
+        elif classes:
+            label += "." + classes[0]
         parts.append(label)
         node = node.getparent()
     return ">".join(reversed(parts))
@@ -200,6 +248,7 @@ def _candidate(
         row_header=row_header,
         column_header=column_header,
         file_name=link_file_name(a),
+        format_hint=text_format(link_text) or None,
     )
 
 
@@ -220,7 +269,7 @@ def _links(
     patterns: Collection[re.Pattern[str]] = (),
 ) -> list[HtmlElement]:
     result = []
-    for a in select(scope, link):
+    for a in _link_elements(scope, link):
         href = a.get("href")
         if not href or href.strip().lower().startswith(("javascript:", "mailto:", "tel:", "#")):
             continue
@@ -228,6 +277,7 @@ def _links(
         if exts is not None and not (
             path_extension(url) in exts
             or file_extension(link_file_name(a)) in exts
+            or text_format(text_of(a)) in exts
             or any(p.search(url) for p in patterns)
         ):
             continue
@@ -241,7 +291,7 @@ def _row_element(a: HtmlElement, own_url: str, base_url: str) -> HtmlElement:
     for anc in a.iterancestors():
         if not isinstance(anc.tag, str) or anc.tag in ("body", "html"):
             break
-        for other in anc.iter("a"):
+        for other in anc.xpath(_LINK_XPATH):
             href = other.get("href")
             if not href or href.strip().lower().startswith(("javascript:", "mailto:", "#")):
                 continue
@@ -379,7 +429,8 @@ def group_document_links(
     """Every document link of the page, grouped by folded DOM path, in page order."""
     groups: dict[str, LinkGroup] = {}
     seen: set[str] = set()
-    for a in _links(root, "a[href]", base_url, {e.lower() for e in extensions}):
+    exts = {e.lower() for e in extensions}
+    for a in _links(root, "a[href]", base_url, exts, [OPAQUE_DOCUMENT]):
         cand = _candidate(
             a,
             base_url,
@@ -395,6 +446,39 @@ def group_document_links(
         group.candidates.append(cand)
         group.elements.append(a)
     return list(groups.values())
+
+
+def opaque_patterns(candidates: Collection[Candidate], limit: int = 6) -> list[str]:
+    """``items.document_urls`` patterns for the opaque links among ``candidates``: the
+    folder of a path (``/assets/pdf/``) or the URL and query key of a download service
+    (``/files?p_Doc_Ref=``)."""
+    out: list[str] = []
+    for cand in candidates:
+        if file_extension(cand.url.split("?", 1)[0]) or cand.file_name:
+            continue
+        m = OPAQUE_DOCUMENT.search(cand.url)
+        if m is None and not cand.format_hint:
+            continue
+        parts = urlsplit(cand.url)
+        origin = f"{parts.scheme}://{parts.netloc}"
+        if m is None:
+            # A download service known only from link texts ("Interim report (pdf)"):
+            # every link into the same folder is a document, announced or not.
+            folder = parts.path[: parts.path.rfind("/") + 1]
+            if folder.count("/") < 2:
+                continue  # the site root: too broad
+            pattern = "^" + re.escape(f"{origin}{folder}")
+        elif m.group(0)[0] in "?&":
+            key = m.group(0)[1:].split("=", 1)[0]
+            pattern = "^" + re.escape(f"{origin}{parts.path}?") + "(?:.*&)?" + re.escape(key) + "="
+        else:
+            folder = parts.path[: parts.path.rfind("/") + 1]
+            pattern = "^" + re.escape(f"{origin}{folder}")
+        if pattern not in out:
+            out.append(pattern)
+        if len(out) >= limit:
+            break
+    return out
 
 
 def site_domain(host: str) -> str:
@@ -522,10 +606,12 @@ def json_candidates(
     context: Collection[str] = (),
     extensions: Collection[str] | None = None,
     document_urls: Collection[str] | None = None,
+    url_template: str | None = None,
 ) -> list[Candidate]:
     """Documents listed in a JSON response: ``items`` is the path to the list, the other
     arguments are paths inside one item (``url`` may list several paths: the first one
-    present wins). Items without a URL are skipped."""
+    present wins). Items without a URL are skipped. With ``url_template`` the item holds
+    a file name, placed (URL-encoded) at ``{value}`` in the template."""
     entries = json_path(data, items)
     if not isinstance(entries, list):
         return []
@@ -537,8 +623,13 @@ def json_candidates(
         raw = next((t for p in url_paths if (t := _text(json_path(entry, p)))), "")
         if not raw:
             continue
-        absolute = resolve_url(raw, base_url)
+        if url_template:
+            absolute = resolve_url(url_template.replace("{value}", quote(raw, safe="")), base_url)
+        else:
+            absolute = resolve_url(raw, base_url)
         name = _text(json_path(entry, file_name)) if file_name else ""
+        if url_template and not name:
+            name = raw  # the file name is the only readable name of the link
         ext = path_extension(absolute) or file_extension(name)
         if exts is not None and ext not in exts and not any(p.search(absolute) for p in patterns):
             continue
@@ -562,8 +653,9 @@ def json_candidates(
 # -- interactive controls --------------------------------------------------------------
 
 _LOAD_MORE_TEXT = re.compile(
-    r"^\s*(load|show|view|see) more|^\s*more results|voir plus|afficher plus|plus de r[ée]sultats|"
-    r"charger plus|mehr (anzeigen|laden)",
+    r"^\s*(load|show|view|see|find) more|^\s*more (results|files|documents|reports)|"
+    r"voir plus|afficher plus|plus de (r[ée]sultats|documents)|charger plus|"
+    r"mehr (anzeigen|laden)",
     re.IGNORECASE,
 )
 
@@ -578,10 +670,25 @@ class PageControls:
     """Labels of "load more" buttons."""
 
 
+_SHORT_PERIOD = re.compile(
+    r"(?<![a-z0-9])(?:q[1-4]|[1-4]q|h[12]|[12]h|fy|9m)\s?'?(\d{2})(?!\d)", re.I
+)
+
+
+def label_year(text: str) -> int | None:
+    """The year an option or tab label names: ``2025``, or a short period such as
+    ``Q325``, ``Q3 25``, ``1H25`` or ``FY24`` (years 2000-2099)."""
+    if m := _YEAR.search(text):
+        return int(m.group(0))
+    if m := _SHORT_PERIOD.search(text):
+        return 2000 + int(m.group(1))
+    return None
+
+
 def page_controls(root: HtmlElement) -> PageControls:
     selects = []
     for s in select(root, "select"):
-        years = [o for o in select(s, "option") if _YEAR.search(text_of(o)) and o.get("value")]
+        years = [o for o in select(s, "option") if label_year(text_of(o)) and o.get("value")]
         if len(years) >= 2:
             selects.append(f"#{s.get('id')}" if s.get("id") else "select")
     buttons = [

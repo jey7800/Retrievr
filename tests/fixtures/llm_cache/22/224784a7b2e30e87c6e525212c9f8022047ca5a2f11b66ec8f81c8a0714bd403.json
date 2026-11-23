@@ -1,0 +1,110 @@
+{
+ "cache_format": 1,
+ "output": {
+  "reasoning": "The results listing is in scope and its static group was left unselected. Add P1.G1; keep the year-selector endpoint for full results history and the reference-document and counts endpoints. Exclude thematic presentations and debt-investor materials.",
+  "action": "recipe",
+  "open_links": [],
+  "document_groups": [
+   "P1.G1"
+  ],
+  "sources": [],
+  "default_language": null,
+  "request_sources": [
+   {
+    "exchange": "X2",
+    "vary": [
+     {
+      "field": "locationId",
+      "value": "options"
+     },
+     {
+      "field": "currentPage",
+      "value": "page"
+     }
+    ],
+    "options_selector": "#select-annual-report-results_source option",
+    "options_year": "fiscal",
+    "year_from": null,
+    "page_start": 1,
+    "has_more_path": "hasNextPage",
+    "html_path": "content",
+    "items_path": null,
+    "url_paths": [],
+    "title_path": null,
+    "file_name_path": null,
+    "date_path": null,
+    "context_paths": [],
+    "container": "ul.CA-finance-listItem-details-list",
+    "item": "li.CA-finance-item",
+    "title": ".CA-finance-item-content-title h3"
+   },
+   {
+    "exchange": "X7",
+    "vary": [
+     {
+      "field": "locationId",
+      "value": "options"
+     },
+     {
+      "field": "currentPage",
+      "value": "page"
+     }
+    ],
+    "options_selector": "#select-doc_ref_source option",
+    "options_year": "publication",
+    "year_from": null,
+    "page_start": 1,
+    "has_more_path": "hasNextPage",
+    "html_path": "content",
+    "items_path": null,
+    "url_paths": [],
+    "title_path": null,
+    "file_name_path": null,
+    "date_path": null,
+    "context_paths": [],
+    "container": "li.CA-finance-listItem-details-item",
+    "item": null,
+    "title": null
+   },
+   {
+    "exchange": "X9",
+    "vary": [
+     {
+      "field": "locationId",
+      "value": "options"
+     },
+     {
+      "field": "currentPage",
+      "value": "page"
+     }
+    ],
+    "options_selector": "#select-counts_source option",
+    "options_year": "fiscal",
+    "year_from": null,
+    "page_start": 1,
+    "has_more_path": "hasNextPage",
+    "html_path": "content",
+    "items_path": null,
+    "url_paths": [],
+    "title_path": null,
+    "file_name_path": null,
+    "date_path": null,
+    "context_paths": [],
+    "container": "li.CA-finance-listItem-details-item",
+    "item": null,
+    "title": null
+   }
+  ]
+ },
+ "usage": {
+  "input_tokens": 9731,
+  "output_tokens": 2284,
+  "cost_usd": 0.00136539
+ },
+ "strategy": "json_schema",
+ "attempts": 1,
+ "latency_s": 21.859,
+ "model": "openai/gpt-6-luna",
+ "schema": "StructureReplyWithRequests",
+ "step": "structure"
+}

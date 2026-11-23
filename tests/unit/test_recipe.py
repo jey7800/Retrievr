@@ -60,7 +60,7 @@ def test_minimal_recipe_validates() -> None:
     ("override", "message"),
     [
         ({"unknown_key": 1}, "Extra inputs"),
-        ({"schema_version": 4}, "schema_version"),
+        ({"schema_version": 5}, "schema_version"),
         ({"allowed_domains": ["other.example.com"]}, "allowed_domains"),
         (
             {"sources": [{"id": "s", "url": "https://evil.test/x"}]},

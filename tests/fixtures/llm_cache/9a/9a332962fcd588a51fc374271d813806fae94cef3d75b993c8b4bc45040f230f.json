@@ -1,0 +1,32 @@
+{
+ "cache_format": 1,
+ "output": {
+  "reasoning": "The only accessible listing page is the quarterly archive URL, but its digest exposes no document groups. With no further pages available, I cannot identify valid document-group IDs or verify selectors; this recipe uses the observed archive page and its main content area.",
+  "action": "recipe",
+  "open_links": [],
+  "document_groups": [],
+  "sources": [
+   {
+    "url": "https://www.ubs.com/global/en/investor-relations/financial-information/quarterly-reporting/qr-archive/qr-archive21-25.html",
+    "year_from": null,
+    "container": "main",
+    "item": null,
+    "title": null,
+    "pagination_next_selector": null,
+    "table_context": false
+   }
+  ],
+  "default_language": "en"
+ },
+ "usage": {
+  "input_tokens": 6627,
+  "output_tokens": 1182,
+  "cost_usd": 0.00066697
+ },
+ "strategy": "json_schema",
+ "attempts": 1,
+ "latency_s": 11.125,
+ "model": "openai/gpt-6-luna",
+ "schema": "StructureReply",
+ "step": "repair:structure"
+}

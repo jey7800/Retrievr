@@ -34,7 +34,8 @@ from retrievr.learn import (
 )
 from retrievr.llm import Message
 from retrievr.recipe import RequestSource, recipe_from_mapping, run_recipe
-from retrievr.snapshots import ReplayTransport, SnapshotRecorder, canonical_body
+from retrievr.snapshots import ReplayTransport, SnapshotRecorder, canonical_body, synthetic_document
+from retrievr.urls import path_extension
 
 T = TypeVar("T", bound=BaseModel)
 SITE = "https://ir.example-issuer.com"
@@ -91,6 +92,10 @@ def handler(request: httpx.Request) -> httpx.Response:
     if path == "/api/search" and request.method == "POST":
         body = json.loads(request.content)
         return httpx.Response(200, json={"results": [{"hits": _hits(body["page"])}]})
+    if path.startswith("/preview/"):  # opaque document links of the start page
+        return httpx.Response(200, content=synthetic_document("pdf", str(request.url)) or b"")
+    if document := synthetic_document(path_extension(str(request.url)), str(request.url)):
+        return httpx.Response(200, content=document)
     return httpx.Response(404)
 
 
@@ -308,7 +313,7 @@ def test_endpoint_analysis_and_digest() -> None:
 
 def test_target_options() -> None:
     options = [("9025", "2025"), ("9024", "2024"), ("9023", "2023"), ("", "Choose")]
-    assert _target_options(options, [2024]) == [("9025", "2025"), ("9024", "2024")]
+    assert _target_options(options, [2024]) == [("9024", "2024"), ("9025", "2025")]
     assert _target_options(options, None) == [("9025", "2025"), ("9024", "2024")]
     assert _target_options([("a", "All")], [2024]) == []
 
@@ -433,7 +438,7 @@ def test_learn_a_request_source_then_replay_without_browser(tmp_path: Path) -> N
     result = r.learn(f"{SITE}/publications", years=[2024, 2025])
     assert result.status == "learned", (result.errors, result.notes)
     assert discoverer.calls == 1  # no document link and a year selector: discovery ran
-    assert result.recipe is not None and result.recipe.schema_version == 3
+    assert result.recipe is not None and result.recipe.schema_version == 4
     source = result.recipe.sources[0]
     assert isinstance(source, RequestSource) and source.form is not None
     assert source.form["loc"] == "{option}"

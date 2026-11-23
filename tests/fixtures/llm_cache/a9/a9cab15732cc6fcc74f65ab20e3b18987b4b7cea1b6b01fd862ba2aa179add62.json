@@ -1,0 +1,25 @@
+{
+ "cache_format": 1,
+ "output": {
+  "reasoning": "The configured archive page now exposes no document links, and the former quarterly-reporting and archive URLs return 404. Inspect the current quarterly reporting and archive pages to find the replacement listing.",
+  "action": "open_pages",
+  "open_links": [
+   "P1.N5",
+   "P1.N6"
+  ],
+  "document_groups": [],
+  "sources": [],
+  "default_language": null
+ },
+ "usage": {
+  "input_tokens": 6416,
+  "output_tokens": 118,
+  "cost_usd": 0.000860925
+ },
+ "strategy": "json_schema",
+ "attempts": 1,
+ "latency_s": 2.219,
+ "model": "openai/gpt-6-luna",
+ "schema": "StructureReply",
+ "step": "repair:structure"
+}

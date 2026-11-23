@@ -20,6 +20,7 @@ EventKind = Literal[
     "health_alert",  # a health check gave suspect, stale or broken
     "recipe_repaired",  # a repaired recipe passed validation and replaced the broken one
     "site_degraded",  # the recipe is broken and no repair passed: the old one stays active
+    "document_downloaded",  # one document handled by the downloader (progress, with status)
 ]
 
 

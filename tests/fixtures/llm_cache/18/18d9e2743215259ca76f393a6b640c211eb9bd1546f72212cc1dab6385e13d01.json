@@ -1,0 +1,46 @@
+{
+ "cache_format": 1,
+ "output": {
+  "reasoning": "The available page is a consolidated quarterly archive, not a per-year URL pattern. Use its reporting groups and omit the fixed-income-only group; the failed archive links provide no verified source for years beyond this page.",
+  "action": "recipe",
+  "open_links": [],
+  "document_groups": [
+   "P1.G1",
+   "P1.G3",
+   "P1.G4",
+   "P1.G5",
+   "P1.G6",
+   "P1.G7",
+   "P1.G8",
+   "P1.G9",
+   "P1.G10",
+   "P1.G11",
+   "P1.G12",
+   "P1.G13",
+   "P1.G14"
+  ],
+  "sources": [
+   {
+    "url": "https://www.ubs.com/global/en/investor-relations/financial-information/quarterly-reporting/qr-archive/qr-archive21-25.html",
+    "year_from": null,
+    "container": "main#main .accordion__content",
+    "item": null,
+    "title": null,
+    "pagination_next_selector": null,
+    "table_context": false
+   }
+  ],
+  "default_language": "en"
+ },
+ "usage": {
+  "input_tokens": 12677,
+  "output_tokens": 1719,
+  "cost_usd": 0.000997695
+ },
+ "strategy": "json_schema",
+ "attempts": 1,
+ "latency_s": 15.313,
+ "model": "openai/gpt-6-luna",
+ "schema": "StructureReply",
+ "step": "structure"
+}

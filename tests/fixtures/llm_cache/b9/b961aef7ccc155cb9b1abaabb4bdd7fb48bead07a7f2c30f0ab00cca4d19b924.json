@@ -1,0 +1,23 @@
+{
+ "cache_format": 1,
+ "output": {
+  "types": [
+   "fixed_income_presentation"
+  ],
+  "exclude_types": [],
+  "year_from": 2025,
+  "year_to": 2025,
+  "languages": null
+ },
+ "usage": {
+  "input_tokens": 1319,
+  "output_tokens": 66,
+  "cost_usd": 4.9105e-05
+ },
+ "strategy": "json_schema",
+ "attempts": 1,
+ "latency_s": 2.312,
+ "model": "openai/gpt-6-luna",
+ "schema": "Filter",
+ "step": "filter"
+}

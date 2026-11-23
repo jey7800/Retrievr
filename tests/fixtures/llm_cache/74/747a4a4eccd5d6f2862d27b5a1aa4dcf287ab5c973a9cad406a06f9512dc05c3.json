@@ -1,0 +1,24 @@
+{
+ "cache_format": 1,
+ "output": {
+  "reasoning": "The visible archive covers only 2021–2025, so it cannot guarantee coverage of later fiscal years. The quarterly-reporting navigation targets returned 404; inspect the live financial-information page for an alternative current or archive listing.",
+  "action": "open_pages",
+  "open_links": [
+   "P1.N33"
+  ],
+  "document_groups": [],
+  "sources": [],
+  "default_language": null
+ },
+ "usage": {
+  "input_tokens": 12580,
+  "output_tokens": 462,
+  "cost_usd": 0.001803425
+ },
+ "strategy": "json_schema",
+ "attempts": 1,
+ "latency_s": 5.454,
+ "model": "openai/gpt-6-luna",
+ "schema": "StructureReply",
+ "step": "structure"
+}

@@ -1,0 +1,47 @@
+{
+ "cache_format": 1,
+ "output": {
+  "reasoning": "The archive page’s static digest has no document links, but its API response lists 99 documents in one all-years request (year=null). Use that request and its document URL, title, publication date, and section fields; no separate static source or pagination is evidenced.",
+  "action": "recipe",
+  "open_links": [],
+  "document_groups": [],
+  "sources": [],
+  "default_language": "en",
+  "request_sources": [
+   {
+    "exchange": "X1",
+    "vary": [],
+    "options_selector": null,
+    "options_year": null,
+    "year_from": null,
+    "page_start": null,
+    "has_more_path": null,
+    "html_path": null,
+    "items_path": "data.documents",
+    "url_paths": [
+     "file.url"
+    ],
+    "title_path": "title",
+    "file_name_path": null,
+    "date_path": "publishedAt",
+    "context_paths": [
+     "section"
+    ],
+    "container": null,
+    "item": null,
+    "title": null
+   }
+  ]
+ },
+ "usage": {
+  "input_tokens": 7331,
+  "output_tokens": 1393,
+  "cost_usd": 0.001400855
+ },
+ "strategy": "json_schema",
+ "attempts": 1,
+ "latency_s": 13.094,
+ "model": "openai/gpt-6-luna",
+ "schema": "StructureReplyWithRequests",
+ "step": "repair:structure"
+}

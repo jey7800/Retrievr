@@ -1,0 +1,26 @@
+{
+ "cache_format": 1,
+ "output": {
+  "types": [
+   "quarterly_report",
+   "results_presentation"
+  ],
+  "exclude_types": [
+   "press_release"
+  ],
+  "year_from": 2024,
+  "year_to": 2024,
+  "languages": null
+ },
+ "usage": {
+  "input_tokens": 1345,
+  "output_tokens": 192,
+  "cost_usd": 0.00011317
+ },
+ "strategy": "json_schema",
+ "attempts": 1,
+ "latency_s": 4.469,
+ "model": "openai/gpt-6-luna",
+ "schema": "Filter",
+ "step": "filter"
+}

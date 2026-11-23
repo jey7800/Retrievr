@@ -30,6 +30,7 @@ import httpx
 import yaml
 from pydantic import BaseModel, ConfigDict
 
+from retrievr.candidates import OPAQUE_DOCUMENT
 from retrievr.urls import normalize_url, path_extension
 
 SNAPSHOT_VERSION: Final = 2
@@ -290,7 +291,9 @@ class ReplayTransport(httpx.BaseTransport):
         entry = self.find(request.method, url, body)
         if entry is not None:
             return self._from_entry(entry, request)
-        synthetic = synthetic_document(path_extension(url), url)
+        # A document link without extension (download service) is served as a PDF.
+        extension = path_extension(url) or ("pdf" if OPAQUE_DOCUMENT.search(url) else "")
+        synthetic = synthetic_document(extension, url)
         if self.documents == "synthetic" and request.method == "GET" and synthetic:
             return httpx.Response(200, content=synthetic, request=request)
         self.misses.append(url if request.method == "GET" else f"{request.method} {url} {body}")

@@ -28,7 +28,7 @@ from typing import Any, Protocol
 
 import yaml
 
-from retrievr.candidates import in_site, site_domain
+from retrievr.candidates import in_site, label_year, site_domain
 from retrievr.config import BrowserSettings
 from retrievr.fetch import Fetcher, detect_block
 from retrievr.snapshots import ReplayTransport, SnapshotRecorder, canonical_body, is_text_type
@@ -40,8 +40,9 @@ DISCOVERY_DIR = "discovery"
 MAX_BODY_BYTES = 5 * 1024 * 1024
 _YEAR = re.compile(r"(?<!\d)((?:19|20)\d{2})(?!\d)")
 _LOAD_MORE = re.compile(
-    r"^\s*(load|show|view|see) more|^\s*more results|voir plus|afficher plus|plus de r[ée]sultats|"
-    r"charger plus|mehr (anzeigen|laden)",
+    r"^\s*(load|show|view|see|find) more|^\s*more (results|files|documents|reports)|"
+    r"voir plus|afficher plus|plus de (r[ée]sultats|documents)|charger plus|"
+    r"mehr (anzeigen|laden)",
     re.IGNORECASE,
 )
 _SKIPPED_TYPES = {"image", "media", "font"}
@@ -85,6 +86,9 @@ class Discovery:
     actions: list[str] = field(default_factory=list)
     exchanges: list[Exchange] = field(default_factory=list)
     notes: list[str] = field(default_factory=list)
+    links: list[str] = field(default_factory=list)
+    """Document links of the page as rendered (after the actions): they tell how the
+    page turns a file name of a JSON listing into a download URL."""
 
 
 class Discoverer(Protocol):
@@ -101,12 +105,13 @@ def _target_options(
 ) -> list[tuple[str, str]]:
     """Options to pick in a year selector: the requested years and the next one (a
     bucket of publication year N+1 can hold fiscal year N), else the first two."""
-    with_year = [(v, t, int(m.group(1))) for v, t in options if (m := _YEAR.search(t)) and v]
+    with_year = [(v, t, y) for v, t in options if (y := label_year(t)) and v]
     if len(with_year) < 2:
         return []
     if years:
-        wanted = set(years) | {max(years) + 1}
-        chosen = [(v, t) for v, t, y in with_year if y in wanted]
+        # The requested years first, then the next one.
+        chosen = [(v, t) for v, t, y in with_year if y in set(years)]
+        chosen += [(v, t) for v, t, y in with_year if y == max(years) + 1]
         if chosen:
             return chosen[:limit]
     return [(v, t) for v, t, _y in with_year[:2]]
@@ -167,7 +172,25 @@ class BrowserDiscovery:
         discovery: Discovery,
     ) -> None:
         state = {"action": "load"}
+        refused: list[str] = []
+        try:
+            self._drive(page, url, domain, years, discovery, state, refused)
+        finally:
+            if refused:
+                discovery.notes.append(
+                    "calls of the page refused by robots.txt: " + ", ".join(refused)
+                )
 
+    def _drive(
+        self,
+        page: Any,
+        url: str,
+        domain: str,
+        years: Collection[int] | None,
+        discovery: Discovery,
+        state: dict[str, str],
+        refused: list[str],
+    ) -> None:
         def route(route: Any) -> None:
             request = route.request
             kind = request.resource_type
@@ -175,9 +198,19 @@ class BrowserDiscovery:
             if kind in _SKIPPED_TYPES:
                 route.abort()
             elif in_site(host, domain):
-                route.continue_() if self.fetcher.allows(request.url) else route.abort()
+                if self.fetcher.allows(request.url):
+                    route.continue_()
+                else:
+                    route.abort()
+                    if kind in ("xhr", "fetch") and len(refused) < 3:
+                        refused.append(request.url.split("?", 1)[0])
             elif kind in _OTHER_SITE_TYPES:
                 route.continue_()
+            elif kind in ("xhr", "fetch") and request.method == "GET":
+                # A listing API of another host (an IR content provider): read-only
+                # calls, robots.txt checked. Other-site POSTs (beacons, telemetry)
+                # stay blocked.
+                route.continue_() if self.fetcher.allows(request.url) else route.abort()
             else:
                 route.abort()
 
@@ -185,7 +218,7 @@ class BrowserDiscovery:
             request = response.request
             if request.resource_type not in ("xhr", "fetch"):
                 return
-            if not in_site(host_of(request.url), domain):
+            if not in_site(host_of(request.url), domain) and request.method != "GET":
                 return
             try:
                 body = response.body()[:MAX_BODY_BYTES]
@@ -215,6 +248,12 @@ class BrowserDiscovery:
         if reason := detect_block(status, page.content()[:200_000]):
             raise BrowserBlockedError(f"{url}: {reason}")
         discovery.actions.append("load")
+        # Lists rendered lazily (when scrolled into view) need a scroll to exist at all.
+        state["action"] = "scroll"
+        for _ in range(2):
+            page.evaluate("() => window.scrollTo(0, document.body.scrollHeight)")
+            page.wait_for_timeout(self.settings.settle_ms)
+        discovery.actions.append("scroll")
 
         budget = self.settings.max_actions
         for select in self._year_selects(page):
@@ -235,6 +274,7 @@ class BrowserDiscovery:
             page.wait_for_timeout(self.settings.settle_ms)
             discovery.actions.append(state["action"])
         state["action"] = "done"
+        discovery.links = [str(h) for h in page.evaluate(_LINKS_JS)][:MAX_RENDERED_LINKS]
 
     def _year_selects(self, page: Any) -> list[dict[str, Any]]:
         found: list[dict[str, Any]] = page.evaluate(_SELECTS_JS)
@@ -253,7 +293,9 @@ class BrowserDiscovery:
         # telemetry about the capturing machine, quotes) are useless and must not be
         # written into a snapshot that may be shared.
         kept = [ex for ex in discovery.exchanges if analyse(ex).kind != "none"]
-        discovery = Discovery(discovery.start_url, discovery.actions, kept, discovery.notes)
+        discovery = Discovery(
+            discovery.start_url, discovery.actions, kept, discovery.notes, discovery.links
+        )
         for ex in discovery.exchanges:
             recorder.record(
                 method=ex.method,
@@ -284,6 +326,11 @@ _CHOOSE_JS = """([index, value]) => {
 _BUTTONS_JS = """() => Array.from(document.querySelectorAll('button, a[href="#"], a:not([href])'))
   .map((b, i) => [i, (b.innerText || b.textContent || '').trim().slice(0, 60)])"""
 
+MAX_RENDERED_LINKS = 500
+_LINKS_JS = """() => Array.from(document.querySelectorAll('a[href]'))
+  .map(a => a.href)
+  .filter(h => /\\.(pdf|xlsx?|xlsb|xlsm|docx?|pptx?|zip|xhtml|csv)\\b/i.test(h))"""
+
 _CLICK_JS = """(index) => {
   const b = document.querySelectorAll('button, a[href="#"], a:not([href])')[index];
   if (b) { b.click(); }
@@ -299,6 +346,7 @@ def save_discovery(directory: Path, discovery: Discovery, years: Collection[int]
         "years": sorted(years) if years else None,
         "captured_at": datetime.now(UTC).replace(microsecond=0).isoformat(),
         "actions": discovery.actions,
+        "links": discovery.links,
         "exchanges": [
             {
                 "id": ex.id,
@@ -335,7 +383,11 @@ class ReplayDiscovery:
         if not path.exists():
             return Discovery(start_url=url, notes=["no recorded discovery for this page"])
         data = yaml.safe_load(path.read_text(encoding="utf-8"))
-        discovery = Discovery(start_url=url, actions=list(data.get("actions") or []))
+        discovery = Discovery(
+            start_url=url,
+            actions=list(data.get("actions") or []),
+            links=[str(h) for h in data.get("links") or []],
+        )
         for raw in data.get("exchanges") or []:
             entry = self.transport.find(raw["method"], raw["url"], raw.get("request_body"))
             body = self.transport.body_of(entry) if entry is not None else b""

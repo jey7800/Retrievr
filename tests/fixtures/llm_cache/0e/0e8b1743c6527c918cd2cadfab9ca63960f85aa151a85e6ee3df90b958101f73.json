@@ -1,0 +1,56 @@
+{
+ "cache_format": 1,
+ "output": {
+  "reasoning": "The visible page groups are only navigation and footer documents. The financial-results listing is returned by the captured API; its calls vary by fiscal year and page. Use the JSON document list and include its section as context.",
+  "action": "recipe",
+  "open_links": [],
+  "document_groups": [],
+  "sources": [],
+  "default_language": "fr",
+  "request_sources": [
+   {
+    "exchange": "X1",
+    "vary": [
+     {
+      "field": "page",
+      "value": "page"
+     },
+     {
+      "field": "year",
+      "value": "year"
+     }
+    ],
+    "options_selector": null,
+    "options_year": null,
+    "year_from": 2019,
+    "page_start": 0,
+    "has_more_path": null,
+    "html_path": null,
+    "items_path": "data.documents",
+    "url_paths": [
+     "file.url"
+    ],
+    "title_path": "title",
+    "file_name_path": null,
+    "date_path": "publishedAt",
+    "context_paths": [
+     "section"
+    ],
+    "container": null,
+    "item": null,
+    "title": null
+   }
+  ]
+ },
+ "usage": {
+  "input_tokens": 5799,
+  "output_tokens": 1374,
+  "cost_usd": 0.0014118
+ },
+ "strategy": "json_schema",
+ "attempts": 1,
+ "latency_s": 12.406,
+ "model": "openai/gpt-6-luna",
+ "schema": "StructureReplyWithRequests",
+ "step": "repair:structure"
+}

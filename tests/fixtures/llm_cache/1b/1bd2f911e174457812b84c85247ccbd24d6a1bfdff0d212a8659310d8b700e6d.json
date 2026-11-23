@@ -1,0 +1,49 @@
+{
+ "cache_format": 1,
+ "output": {
+  "reasoning": "The page loads its complete document listing from the captured API endpoint. Use its all-years request and retain section, row, and column context to identify each document.",
+  "action": "recipe",
+  "open_links": [],
+  "document_groups": [],
+  "sources": [],
+  "default_language": "en",
+  "request_sources": [
+   {
+    "exchange": "X1",
+    "vary": [],
+    "options_selector": null,
+    "options_year": null,
+    "year_from": null,
+    "page_start": null,
+    "has_more_path": null,
+    "html_path": null,
+    "items_path": "data.documents",
+    "url_paths": [
+     "file.url"
+    ],
+    "title_path": "title",
+    "file_name_path": null,
+    "date_path": "publishedAt",
+    "context_paths": [
+     "section",
+     "row",
+     "column"
+    ],
+    "container": null,
+    "item": null,
+    "title": null
+   }
+  ]
+ },
+ "usage": {
+  "input_tokens": 4680,
+  "output_tokens": 948,
+  "cost_usd": 0.00084698
+ },
+ "strategy": "json_schema",
+ "attempts": 1,
+ "latency_s": 9.578,
+ "model": "openai/gpt-6-luna",
+ "schema": "StructureReplyWithRequests",
+ "step": "repair:structure"
+}

@@ -31,6 +31,8 @@ REQUEST_HEADERS = frozenset({"accept", "content-type", "x-requested-with"})
 """Headers a recipe may set on a request (nothing that carries identity or session)."""
 Method = Literal["GET", "POST"]
 ROBOTS_MAX_REDIRECTS = 5
+NETWORK_ATTEMPTS = 2
+NETWORK_RETRY_DELAY_S = 2.0
 _SMALL_PAGE_BYTES = 20_000
 
 # Strong markers only appear on challenge or block pages.
@@ -44,6 +46,10 @@ _STRONG_MARKERS: tuple[tuple[str, re.Pattern[str]], ...] = (
         ),
     ),
     ("block page (Imperva)", re.compile(r"Request unsuccessful\. Incapsula incident ID", re.I)),
+    (
+        "challenge page (bot protection)",
+        re.compile(r"using a security service\b[^.<]{0,60}online attacks", re.I),
+    ),
 )
 # Weak markers are also injected into normal pages by CDNs and bot managers (for
 # example every page behind Imperva loads "/_Incapsula_Resource"), so they only count
@@ -195,6 +201,7 @@ class Fetcher:
         )
         self._owns_client = client is None
         self._limiter = RateLimiter(self.settings.rate_limit_rps, clock=clock, sleep=sleep)
+        self._sleep = sleep
         self._robots = _RobotsCache()
         self._ua_token = self.settings.user_agent.split("/", 1)[0].strip() or "retrievr"
         if self.settings.robots == "ignore":
@@ -320,10 +327,7 @@ class Fetcher:
                 headers={"User-Agent": self.settings.user_agent, **headers},
                 content=content,
             )
-            try:
-                resp = self._client.send(request, stream=True)
-            except httpx.RequestError as exc:
-                raise NetworkError(current, exc) from exc
+            resp = self._send(request, current)
             try:
                 if resp.status_code in REDIRECT_STATUSES and "location" in resp.headers:
                     current = resolve_url(resp.headers["location"], current)
@@ -339,6 +343,20 @@ class Fetcher:
             finally:
                 resp.close()
         raise FetchError(f"too many redirects (>{self.settings.max_redirects})", url=url)
+
+    def _send(self, request: httpx.Request, url: str) -> httpx.Response:
+        """Send once, and once more after a pause when a GET fails on the network
+        (connection reset, timeout, proxy hiccup): a POST is never sent twice."""
+        attempts = NETWORK_ATTEMPTS if request.method == "GET" else 1
+        for attempt in range(1, attempts + 1):
+            try:
+                return self._client.send(request, stream=True)
+            except httpx.RequestError as exc:
+                if attempt == attempts:
+                    raise NetworkError(url, exc) from exc
+                log.info("network error on %s (%r), retrying", url, exc)
+                self._sleep(NETWORK_RETRY_DELAY_S)
+        raise AssertionError("unreachable")  # pragma: no cover
 
     def _check_url(self, url: str, allowed_domains: Collection[str] | None) -> None:
         if allowed_domains is not None and not is_allowed(url, set(allowed_domains)):

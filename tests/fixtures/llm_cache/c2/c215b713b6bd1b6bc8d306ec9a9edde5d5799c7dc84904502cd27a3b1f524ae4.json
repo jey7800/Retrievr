@@ -1,0 +1,34 @@
+{
+ "cache_format": 1,
+ "output": {
+  "reasoning": "The filtered results-financiers listing is in the results wrapper and spans multiple paginated views. Use the same fiscal-year filter pattern from the page seen, starting at the earliest checked year, and follow the next-page link.",
+  "action": "recipe",
+  "open_links": [],
+  "document_groups": [
+   "P1.G2"
+  ],
+  "sources": [
+   {
+    "url": "https://investors.societegenerale.com/fr/base-documentaire?theme=finance&category[resultats-financiers]&fiscal[{year}]",
+    "year_from": 2024,
+    "container": "#search-documentation-results-wrapper",
+    "item": "li.wrapper-doc",
+    "title": "h3",
+    "pagination_next_selector": "a[rel=next]",
+    "table_context": false
+   }
+  ],
+  "default_language": "fr"
+ },
+ "usage": {
+  "input_tokens": 7315,
+  "output_tokens": 801,
+  "cost_usd": 0.0013148
+ },
+ "strategy": "json_schema",
+ "attempts": 1,
+ "latency_s": 8.0,
+ "model": "openai/gpt-6-luna",
+ "schema": "StructureReply",
+ "step": "structure"
+}

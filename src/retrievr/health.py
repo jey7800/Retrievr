@@ -178,7 +178,7 @@ def assess(
     _known_documents(report, found, scoped, probe)
     _metadata(report, found, scoped)
     _volume(report, documents, scoped, known, scope)
-    _items_per_year(report, recipe, documents, scope, today)
+    _items_per_year(report, recipe, documents, scope, today, known)
     _cadence(report, recipe, documents, scope, today)
     return report
 
@@ -299,6 +299,7 @@ def _items_per_year(
     documents: Sequence[FoundDocument],
     scope: set[int] | None,
     today: date,
+    known: Sequence[KnownDocument] = (),
 ) -> None:
     bounds = recipe.health.items_per_year
     if bounds is None:
@@ -306,11 +307,14 @@ def _items_per_year(
     low, high = bounds
     counts = Counter(d.fiscal_year for d in documents if d.fiscal_year is not None)
     years = set(counts) if scope is None else set(scope)
+    # Too few documents is a regression only for a year the site listed before: a site
+    # that never listed a year (its page holds recent years only) has nothing to lose.
+    listed_before = {k.fiscal_year for k in known if k.fiscal_year is not None}
     out = []
     for year in sorted(years):
         n = counts.get(year, 0)
         complete = year <= today.year - 2  # every document of the year is published
-        if n > high or (complete and n < low):
+        if n > high or (complete and n < low and (not known or year in listed_before)):
             out.append(f"{year}: {n}")
     verdict: Verdict = "suspect" if out else "ok"
     detail = f"outside [{low}, {high}]: {', '.join(out)}" if out else f"within [{low}, {high}]"

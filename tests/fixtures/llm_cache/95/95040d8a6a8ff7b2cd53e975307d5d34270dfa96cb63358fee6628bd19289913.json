@@ -1,0 +1,537 @@
+{
+ "cache_format": 1,
+ "output": {
+  "reasoning": "The filenames consistently identify document type and reporting quarter; the “full report” files are quarterly reports, while media releases, presentations, fixed-income presentations, and earnings-call remarks have distinct types. I use the quarter and year in each filename, not misleading link text. All documents are English, matching the site default.",
+  "type_rules": [
+   {
+    "pattern": "fixed[- ]income[- ]presentation",
+    "target": "url",
+    "type": "fixed_income_presentation"
+   },
+   {
+    "pattern": "earnings[- ]call[- ]remarks|analyst[- ]q&a",
+    "target": "url",
+    "type": "analyst_call_transcript"
+   },
+   {
+    "pattern": "results[- ]presentation",
+    "target": "url",
+    "type": "results_presentation"
+   },
+   {
+    "pattern": "media[- ]release|mr[- ]results",
+    "target": "url",
+    "type": "press_release"
+   },
+   {
+    "pattern": "full[- ]report|quarterly[- ]full[- ]report",
+    "target": "url",
+    "type": "quarterly_report"
+   }
+  ],
+  "period_rules": [
+   {
+    "pattern": "(?P<q>[1-4]q)[_-]?(?P<year>\\d{2,4})",
+    "target": "url"
+   },
+   {
+    "pattern": "(?P<q>q[1-4])[_-]?(?P<year>\\d{2,4})",
+    "target": "url"
+   }
+  ],
+  "language_rules": [],
+  "labels": [
+   {
+    "id": "D1",
+    "type": "press_release",
+    "period": "2025-Q4",
+    "language": "en"
+   },
+   {
+    "id": "D2",
+    "type": "results_presentation",
+    "period": "2025-Q4",
+    "language": "en"
+   },
+   {
+    "id": "D3",
+    "type": "fixed_income_presentation",
+    "period": "2025-Q4",
+    "language": "en"
+   },
+   {
+    "id": "D4",
+    "type": "analyst_call_transcript",
+    "period": "2025-Q4",
+    "language": "en"
+   },
+   {
+    "id": "D5",
+    "type": "press_release",
+    "period": "2025-Q3",
+    "language": "en"
+   },
+   {
+    "id": "D6",
+    "type": "results_presentation",
+    "period": "2025-Q3",
+    "language": "en"
+   },
+   {
+    "id": "D7",
+    "type": "fixed_income_presentation",
+    "period": "2025-Q3",
+    "language": "en"
+   },
+   {
+    "id": "D8",
+    "type": "analyst_call_transcript",
+    "period": "2025-Q3",
+    "language": "en"
+   },
+   {
+    "id": "D9",
+    "type": "press_release",
+    "period": "2025-Q2",
+    "language": "en"
+   },
+   {
+    "id": "D10",
+    "type": "results_presentation",
+    "period": "2025-Q2",
+    "language": "en"
+   },
+   {
+    "id": "D11",
+    "type": "fixed_income_presentation",
+    "period": "2025-Q2",
+    "language": "en"
+   },
+   {
+    "id": "D12",
+    "type": "analyst_call_transcript",
+    "period": "2025-Q2",
+    "language": "en"
+   },
+   {
+    "id": "D13",
+    "type": "press_release",
+    "period": "2025-Q1",
+    "language": "en"
+   },
+   {
+    "id": "D14",
+    "type": "results_presentation",
+    "period": "2025-Q1",
+    "language": "en"
+   },
+   {
+    "id": "D15",
+    "type": "fixed_income_presentation",
+    "period": "2025-Q1",
+    "language": "en"
+   },
+   {
+    "id": "D16",
+    "type": "analyst_call_transcript",
+    "period": "2025-Q1",
+    "language": "en"
+   },
+   {
+    "id": "D17",
+    "type": "quarterly_report",
+    "period": "2024-Q4",
+    "language": "en"
+   },
+   {
+    "id": "D18",
+    "type": "press_release",
+    "period": "2024-Q4",
+    "language": "en"
+   },
+   {
+    "id": "D19",
+    "type": "results_presentation",
+    "period": "2024-Q4",
+    "language": "en"
+   },
+   {
+    "id": "D20",
+    "type": "fixed_income_presentation",
+    "period": "2024-Q4",
+    "language": "en"
+   },
+   {
+    "id": "D21",
+    "type": "analyst_call_transcript",
+    "period": "2024-Q4",
+    "language": "en"
+   },
+   {
+    "id": "D22",
+    "type": "quarterly_report",
+    "period": "2024-Q3",
+    "language": "en"
+   },
+   {
+    "id": "D23",
+    "type": "press_release",
+    "period": "2024-Q3",
+    "language": "en"
+   },
+   {
+    "id": "D24",
+    "type": "results_presentation",
+    "period": "2024-Q3",
+    "language": "en"
+   },
+   {
+    "id": "D25",
+    "type": "fixed_income_presentation",
+    "period": "2024-Q3",
+    "language": "en"
+   },
+   {
+    "id": "D26",
+    "type": "analyst_call_transcript",
+    "period": "2024-Q3",
+    "language": "en"
+   },
+   {
+    "id": "D27",
+    "type": "quarterly_report",
+    "period": "2024-Q3",
+    "language": "en"
+   },
+   {
+    "id": "D28",
+    "type": "quarterly_report",
+    "period": "2024-Q2",
+    "language": "en"
+   },
+   {
+    "id": "D29",
+    "type": "press_release",
+    "period": "2024-Q2",
+    "language": "en"
+   },
+   {
+    "id": "D30",
+    "type": "results_presentation",
+    "period": "2024-Q2",
+    "language": "en"
+   },
+   {
+    "id": "D31",
+    "type": "fixed_income_presentation",
+    "period": "2024-Q2",
+    "language": "en"
+   },
+   {
+    "id": "D32",
+    "type": "analyst_call_transcript",
+    "period": "2024-Q2",
+    "language": "en"
+   },
+   {
+    "id": "D33",
+    "type": "quarterly_report",
+    "period": "2024-Q2",
+    "language": "en"
+   },
+   {
+    "id": "D34",
+    "type": "quarterly_report",
+    "period": "2024-Q1",
+    "language": "en"
+   },
+   {
+    "id": "D35",
+    "type": "press_release",
+    "period": "2024-Q1",
+    "language": "en"
+   },
+   {
+    "id": "D36",
+    "type": "results_presentation",
+    "period": "2024-Q1",
+    "language": "en"
+   },
+   {
+    "id": "D37",
+    "type": "fixed_income_presentation",
+    "period": "2024-Q1",
+    "language": "en"
+   },
+   {
+    "id": "D38",
+    "type": "analyst_call_transcript",
+    "period": "2024-Q1",
+    "language": "en"
+   },
+   {
+    "id": "D39",
+    "type": "quarterly_report",
+    "period": "2024-Q1",
+    "language": "en"
+   },
+   {
+    "id": "D40",
+    "type": "quarterly_report",
+    "period": "2023-Q4",
+    "language": "en"
+   },
+   {
+    "id": "D41",
+    "type": "press_release",
+    "period": "2023-Q4",
+    "language": "en"
+   },
+   {
+    "id": "D42",
+    "type": "results_presentation",
+    "period": "2023-Q4",
+    "language": "en"
+   },
+   {
+    "id": "D43",
+    "type": "fixed_income_presentation",
+    "period": "2023-Q4",
+    "language": "en"
+   },
+   {
+    "id": "D44",
+    "type": "analyst_call_transcript",
+    "period": "2023-Q4",
+    "language": "en"
+   },
+   {
+    "id": "D45",
+    "type": "quarterly_report",
+    "period": "2023-Q3",
+    "language": "en"
+   },
+   {
+    "id": "D46",
+    "type": "press_release",
+    "period": "2023-Q3",
+    "language": "en"
+   },
+   {
+    "id": "D47",
+    "type": "results_presentation",
+    "period": "2023-Q3",
+    "language": "en"
+   },
+   {
+    "id": "D48",
+    "type": "fixed_income_presentation",
+    "period": "2023-Q3",
+    "language": "en"
+   },
+   {
+    "id": "D49",
+    "type": "analyst_call_transcript",
+    "period": "2023-Q3",
+    "language": "en"
+   },
+   {
+    "id": "D50",
+    "type": "quarterly_report",
+    "period": "2023-Q3",
+    "language": "en"
+   },
+   {
+    "id": "D51",
+    "type": "quarterly_report",
+    "period": "2023-Q2",
+    "language": "en"
+   },
+   {
+    "id": "D52",
+    "type": "press_release",
+    "period": "2023-Q2",
+    "language": "en"
+   },
+   {
+    "id": "D53",
+    "type": "results_presentation",
+    "period": "2023-Q2",
+    "language": "en"
+   },
+   {
+    "id": "D54",
+    "type": "fixed_income_presentation",
+    "period": "2023-Q2",
+    "language": "en"
+   },
+   {
+    "id": "D55",
+    "type": "analyst_call_transcript",
+    "period": "2023-Q2",
+    "language": "en"
+   },
+   {
+    "id": "D56",
+    "type": "quarterly_report",
+    "period": "2023-Q2",
+    "language": "en"
+   },
+   {
+    "id": "D57",
+    "type": "quarterly_report",
+    "period": "2023-Q1",
+    "language": "en"
+   },
+   {
+    "id": "D58",
+    "type": "press_release",
+    "period": "2023-Q1",
+    "language": "en"
+   },
+   {
+    "id": "D59",
+    "type": "results_presentation",
+    "period": "2023-Q1",
+    "language": "en"
+   },
+   {
+    "id": "D60",
+    "type": "analyst_call_transcript",
+    "period": "2023-Q1",
+    "language": "en"
+   },
+   {
+    "id": "D61",
+    "type": "quarterly_report",
+    "period": "2023-Q1",
+    "language": "en"
+   },
+   {
+    "id": "D62",
+    "type": "quarterly_report",
+    "period": "2022-Q4",
+    "language": "en"
+   },
+   {
+    "id": "D63",
+    "type": "press_release",
+    "period": "2022-Q4",
+    "language": "en"
+   },
+   {
+    "id": "D64",
+    "type": "results_presentation",
+    "period": "2022-Q4",
+    "language": "en"
+   },
+   {
+    "id": "D65",
+    "type": "analyst_call_transcript",
+    "period": "2022-Q4",
+    "language": "en"
+   },
+   {
+    "id": "D66",
+    "type": "quarterly_report",
+    "period": "2022-Q3",
+    "language": "en"
+   },
+   {
+    "id": "D67",
+    "type": "press_release",
+    "period": "2022-Q3",
+    "language": "en"
+   },
+   {
+    "id": "D68",
+    "type": "results_presentation",
+    "period": "2022-Q3",
+    "language": "en"
+   },
+   {
+    "id": "D69",
+    "type": "analyst_call_transcript",
+    "period": "2022-Q3",
+    "language": "en"
+   },
+   {
+    "id": "D70",
+    "type": "quarterly_report",
+    "period": "2022-Q3",
+    "language": "en"
+   },
+   {
+    "id": "D71",
+    "type": "quarterly_report",
+    "period": "2022-Q2",
+    "language": "en"
+   },
+   {
+    "id": "D72",
+    "type": "press_release",
+    "period": "2022-Q2",
+    "language": "en"
+   },
+   {
+    "id": "D73",
+    "type": "results_presentation",
+    "period": "2022-Q2",
+    "language": "en"
+   },
+   {
+    "id": "D74",
+    "type": "analyst_call_transcript",
+    "period": "2022-Q2",
+    "language": "en"
+   },
+   {
+    "id": "D75",
+    "type": "quarterly_report",
+    "period": "2022-Q2",
+    "language": "en"
+   },
+   {
+    "id": "D76",
+    "type": "quarterly_report",
+    "period": "2022-Q1",
+    "language": "en"
+   },
+   {
+    "id": "D77",
+    "type": "press_release",
+    "period": "2022-Q1",
+    "language": "en"
+   },
+   {
+    "id": "D78",
+    "type": "results_presentation",
+    "period": "2022-Q1",
+    "language": "en"
+   },
+   {
+    "id": "D79",
+    "type": "analyst_call_transcript",
+    "period": "2022-Q1",
+    "language": "en"
+   },
+   {
+    "id": "D80",
+    "type": "quarterly_report",
+    "period": "2022-Q1",
+    "language": "en"
+   }
+  ]
+ },
+ "usage": {
+  "input_tokens": 13012,
+  "output_tokens": 3165,
+  "cost_usd": 0.003033205
+ },
+ "strategy": "json_schema",
+ "attempts": 1,
+ "latency_s": 21.953,
+ "model": "openai/gpt-6-luna",
+ "schema": "RulesReply",
+ "step": "rules"
+}

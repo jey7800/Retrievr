@@ -17,6 +17,7 @@ import hashlib
 import logging
 import re
 import time
+from collections import Counter
 from collections.abc import Callable, Collection
 from dataclasses import dataclass, field
 from datetime import date
@@ -33,6 +34,7 @@ from retrievr.events import Event, EventHandler, emit
 from retrievr.fetch import BlockedError, Fetcher, FetchError, HTTPStatusError
 from retrievr.health import HealthReport, Probe, assess
 from retrievr.learn import (
+    FILTER_SYSTEM,
     Filter,
     LearnContext,
     Learner,
@@ -47,21 +49,29 @@ from retrievr.llm import (
     CostLedger,
     LLMClient,
     LLMError,
-    LLMNotConfiguredError,
     ResponseCache,
     StructuredLLM,
 )
-from retrievr.recipe import FoundDocument, Recipe, RunResult, load_recipe, run_recipe
+from retrievr.recipe import (
+    FoundDocument,
+    Recipe,
+    RunResult,
+    load_recipe,
+    run_recipe,
+    url_path_variants,
+)
 from retrievr.repair import RepairContext, Repairer, RepairResult
 from retrievr.store import StateStore
 from retrievr.urls import host_of
-from retrievr.validate import ValidationReport, validate_runs
+from retrievr.validate import Reachability, ValidationReport, validate_runs
 
 log = logging.getLogger("retrievr")
 
 LearnStatus = Literal["learned", "rejected", "blocked", "error", "budget_exceeded"]
-RunStatus = Literal["ok", "degraded", "blocked", "error", "no_recipe"]
+RunStatus = Literal["ok", "degraded", "blocked", "error", "no_recipe", "budget_exceeded"]
 MAX_LLM_REPAIRS_PER_DAY = 2
+REACHABILITY_SAMPLE = 3
+"""Documents fetched while learning to check that the listed files can be downloaded."""
 _GENERIC_LABELS = {"www", "investors", "investor", "ir", "home", "en", "fr", "de", "corporate"}
 
 
@@ -100,6 +110,8 @@ class LearnResult:
     downloads: list[DownloadOutcome] = field(default_factory=list)
     errors: list[str] = field(default_factory=list)
     notes: list[str] = field(default_factory=list)
+    warnings: list[str] = field(default_factory=list)
+    """Things the host should know about the result (e.g. a request that selects nothing)."""
     seconds: float = 0.0
 
 
@@ -115,9 +127,50 @@ class RunOutcome:
     llm: LLMUsage = field(default_factory=LLMUsage)
     downloads: list[DownloadOutcome] = field(default_factory=list)
     errors: list[str] = field(default_factory=list)
+    warnings: list[str] = field(default_factory=list)
     health: HealthReport | None = None
     repair: RepairResult | None = None
     """Set when the health check found the recipe broken."""
+
+
+def in_years(documents: list[FoundDocument], years: Collection[int] | None) -> list[FoundDocument]:
+    """The documents of the fiscal years asked for (all when ``years`` is None). A
+    recipe may list more years than asked (a single page holding every year), and a
+    document with no known fiscal year is left out when years are asked for."""
+    if not years:
+        return documents
+    wanted = set(years)
+    return [d for d in documents if d.fiscal_year in wanted]
+
+
+def download_warnings(downloads: list[DownloadOutcome]) -> list[str]:
+    """Say so when not one of the documents could be downloaded (they are listed, but
+    the site answers 404 or serves an HTML page instead of the files)."""
+    failed = [d for d in downloads if d.status in ("rejected", "error", "blocked")]
+    if not downloads or len(failed) < len(downloads):
+        return []
+    return [
+        f"none of the {len(downloads)} documents could be downloaded; "
+        f"first failure: {failed[0].reason}"
+    ]
+
+
+def selection_warnings(
+    compiled: Filter, documents: list[FoundDocument], selected: list[FoundDocument]
+) -> list[str]:
+    """A request that selects nothing although the site lists documents is most often a
+    request worded differently from the site's documents: say what the site has."""
+    if selected or not documents:
+        return []
+    counts = Counter(d.type or "untyped" for d in documents)
+    kinds = ", ".join(f"{t} {n}" for t, n in counts.most_common(8))
+    years = sorted({d.fiscal_year for d in documents if d.fiscal_year})
+    span = f"{years[0]}-{years[-1]}" if years else "unknown years"
+    return [
+        f"the request selected none of the {len(documents)} documents listed "
+        f"(types {compiled.types or 'any'}, years {compiled.year_from}-{compiled.year_to}); "
+        f"the site lists: {kinds} ({span})"
+    ]
 
 
 def issuer_from_url(url: str) -> str:
@@ -178,7 +231,8 @@ class Retrievr:
 
     def compile(self, llm: StructuredLLM, request: str) -> Filter:
         """The filter of a request, from the state cache or compiled once by the LLM."""
-        key = hashlib.sha256(f"{self.today.year}|{request.strip()}".encode()).hexdigest()
+        prompt = hashlib.sha256(FILTER_SYSTEM.encode()).hexdigest()[:12]  # a new prompt recompiles
+        key = hashlib.sha256(f"{self.today.year}|{prompt}|{request.strip()}".encode()).hexdigest()
         if (cached := self.store.filter_json(key)) is not None:
             return Filter.model_validate_json(cached)
         compiled = compile_request(llm, request, today=self.today)
@@ -200,6 +254,21 @@ class Retrievr:
         )
         return compiled, usage
 
+    def _downloader(self, fetcher: Fetcher, site: str) -> Downloader:
+        def progress(outcome: DownloadOutcome, index: int, total: int) -> None:
+            where = outcome.entry.path if outcome.entry else outcome.document.url
+            detail = f" ({outcome.reason})" if outcome.reason else ""
+            self._emit(
+                "document_downloaded",
+                site,
+                f"[{index}/{total}] {outcome.status}: {where}{detail}",
+                status=outcome.status,
+                index=index,
+                total=total,
+            )
+
+        return Downloader(fetcher, self.settings.output.output_dir, on_outcome=progress)
+
     def _emit(self, kind: str, site: str, message: str, **data: object) -> None:
         emit(self.on_event, Event(kind, site, message, data))  # type: ignore[arg-type]
 
@@ -218,7 +287,10 @@ class Retrievr:
         passes, and return the documents matching ``request``.
 
         ``years`` limits the listing pages replayed while learning (the recipe itself
-        covers every year)."""
+        covers every year) and the documents returned and downloaded."""
+        if not re.match(r"^https?://[^/\s]+", url.strip(), re.IGNORECASE):
+            raise ValueError(f"invalid start URL {url!r}: expected http:// or https://...")
+        url = url.strip()
         site = issuer or issuer_from_url(url)
         run_id = self.store.start_run("learn", site)
         result = LearnResult(site=site, status="error", run_id=run_id)
@@ -278,6 +350,7 @@ class Retrievr:
         recipe = learner.build_recipe(structure.reply, rules=rules.rules, version=version)
         check_years = learner.check_years(recipe)
         first = run_recipe(recipe, fetcher, years=check_years, today=self.today)
+        recipe, first, reachability = self._downloadable(recipe, first, fetcher, check_years)
         decisions: dict[str, Decision] = dict(rules.decisions)
         decisions.update(
             classify_remaining(llm, first.documents, decisions, issuer=site, years=years)
@@ -285,7 +358,7 @@ class Retrievr:
         documents = apply_decisions(first.documents, decisions)
         recipe = recipe.model_copy(update={"health": health_for(documents)})
         second = run_recipe(recipe, fetcher, years=check_years, today=self.today)
-        report = validate_runs(recipe, first, second)
+        report = validate_runs(recipe, first, second, reachability=reachability)
         result.recipe, result.validation = recipe, report
         result.all_documents = documents
         if report.passed:
@@ -302,12 +375,14 @@ class Retrievr:
         if request:
             self.store.set_site_request(site, request)
             result.filter = self.compile(llm, request)
-            result.documents = result.filter.select(documents)
+            result.documents = in_years(result.filter.select(documents), years)
+            result.warnings += selection_warnings(result.filter, documents, result.documents)
         else:
-            result.documents = documents
+            result.documents = in_years(documents, years)
         if download and report.passed:
-            downloader = Downloader(fetcher, self.settings.output.output_dir)
+            downloader = self._downloader(fetcher, site)
             result.downloads = downloader.download_all(recipe, result.documents)
+            result.warnings += download_warnings(result.downloads)
 
     # -- run ---------------------------------------------------------------------------
 
@@ -323,6 +398,7 @@ class Retrievr:
         """Replay the active recipe of ``site`` (or a recipe file path), check its health
         and, when it is broken, repair it (``repair=True``) before returning documents.
 
+        ``years`` limits the documents returned and downloaded to those fiscal years.
         A broken recipe that no repair fixes leaves the site ``degraded``: the documents
         it still lists are returned but not downloaded."""
         run_id = self.store.start_run("run", site)
@@ -330,6 +406,7 @@ class Retrievr:
         recipe = self._recipe(site)
         if recipe is None:
             outcome.status = "no_recipe"
+            outcome.errors.append(self._no_recipe_message(site))
             self.store.finish_run(run_id, status="no_recipe", documents=0, llm_calls=0, cost_usd=0)
             return outcome
         site = self._site_key(site, recipe)
@@ -365,35 +442,59 @@ class Retrievr:
                     outcome.status = run.status
                     return outcome
                 request = request or self.store.site_request(site)
+                if llm is None:
+                    llm, ledger = self._llm(run_id)
                 try:
-                    if llm is None:
-                        llm, ledger = self._llm(run_id)
                     new = classify_remaining(
                         llm, documents, decisions, issuer=recipe.issuer, years=years
                     )
                     if new:
                         self.store.save_decisions(recipe.recipe, new)
                         decisions.update(new)
-                    outcome.filter = self.compile(llm, request) if request else None
-                except LLMNotConfiguredError as exc:
-                    outcome.errors.append(f"LLM not configured: {exc}")
+                except BudgetExceededError:
+                    raise
+                except LLMError as exc:
+                    # Documents the rules leave undecided stay untyped; the run goes on.
+                    outcome.warnings.append(f"new documents left unclassified: {exc}")
                 outcome.all_documents = apply_decisions(documents, decisions)
+                if request:
+                    try:
+                        outcome.filter = self.compile(llm, request)
+                    except BudgetExceededError:
+                        raise
+                    except LLMError as exc:
+                        # Never fall back to every document: the request selects them.
+                        outcome.errors.append(
+                            f"the request {request!r} could not be compiled ({exc}); "
+                            "nothing selected or downloaded"
+                        )
+                        return outcome
                 if report.verdict in ("ok", "stale") or outcome.repair is not None:
                     self.store.record_documents(site, recipe.key, outcome.all_documents)
-                selected = (
+                selected = in_years(
                     outcome.filter.select(outcome.all_documents)
                     if outcome.filter
-                    else outcome.all_documents
+                    else outcome.all_documents,
+                    years,
                 )
                 outcome.documents = selected
+                if outcome.filter is not None:
+                    outcome.warnings += selection_warnings(
+                        outcome.filter, outcome.all_documents, selected
+                    )
                 if download:
-                    downloader = Downloader(fetcher, self.settings.output.output_dir)
+                    downloader = self._downloader(fetcher, site)
                     outcome.downloads = downloader.download_all(recipe, selected)
+                    outcome.warnings += download_warnings(outcome.downloads)
                 outcome.status = "ok"
         except BlockedError as exc:
             outcome.status = "blocked"
             outcome.errors.append(str(exc))
             self._emit("blocked", site, str(exc))
+        except BudgetExceededError as exc:
+            outcome.status = "budget_exceeded"
+            outcome.errors.append(str(exc))
+            self._emit("budget_exceeded", site, str(exc))
         except LLMError as exc:
             outcome.errors.append(f"{type(exc).__name__}: {exc}")
             self._emit("llm_error", site, str(exc))
@@ -419,7 +520,7 @@ class Retrievr:
         No LLM call, no download."""
         recipe = self._recipe(site)
         if recipe is None:
-            raise LookupError(f"no active recipe for {site!r}")
+            raise LookupError(self._no_recipe_message(site))
         site = self._site_key(site, recipe)
         run_id = self.store.start_run("check", site)
         report = HealthReport(site=site, recipe=recipe.key)
@@ -443,7 +544,7 @@ class Retrievr:
         """Check the health of ``site`` and run the repair ladder if it is broken."""
         recipe = self._recipe(site)
         if recipe is None:
-            raise LookupError(f"no active recipe for {site!r}")
+            raise LookupError(self._no_recipe_message(site))
         site = self._site_key(site, recipe)
         run_id = self.store.start_run("repair", site)
         result = RepairResult(site=site, status="not_needed")
@@ -480,9 +581,23 @@ class Retrievr:
         path = self.store.recipes_dir / f"{recipe.key}.yaml"
         if not path.exists():
             path = self.store.save_recipe(recipe)
+        elif load_recipe(path) != recipe:
+            # Stored versions are immutable: an edited recipe needs a new version.
+            raise ValueError(
+                f"{recipe.key} is already installed with other content; "
+                f"raise 'version' in {recipe_path} to install the edited recipe"
+            )
         self.store.activate(site, recipe, path)
         self.store.set_site(site, status="ok")
         return recipe
+
+    def _no_recipe_message(self, site: str) -> str:
+        known = self.store.sites()
+        listed = f"active sites: {', '.join(known)}" if known else "no site has a recipe yet"
+        return (
+            f"no active recipe for {site!r} ({listed}); learn it with 'retrievr learn <url>' "
+            "or activate a recipe file with 'retrievr install <file>'"
+        )
 
     def _site_key(self, site: str, recipe: Recipe) -> str:
         """History is kept per site; a recipe run from a file belongs to its issuer."""
@@ -514,6 +629,44 @@ class Retrievr:
         if report.verdict != "ok":
             self._emit("health_alert", site, report.summary(), verdict=report.verdict)
         return report
+
+    def _downloadable(
+        self,
+        recipe: Recipe,
+        run: RunResult,
+        fetcher: Fetcher,
+        years: Collection[int] | None,
+    ) -> tuple[Recipe, RunResult, Reachability]:
+        """Check that the listed documents can be fetched. A listing whose items carry
+        several URLs (a storage path and a public link) may give one that answers 404:
+        then the other paths are tried first, and the first variant whose documents are
+        reachable is kept."""
+        reach = self._reachability(run, fetcher, recipe)
+        if reach.reachable >= reach.gone:
+            return recipe, run, reach
+        for variant in url_path_variants(recipe):
+            rerun = run_recipe(variant, fetcher, years=years, today=self.today)
+            if rerun.status != "ok" or not rerun.documents:
+                continue
+            other = self._reachability(rerun, fetcher, variant)
+            if other.reachable > other.gone:
+                log.info("documents unreachable with the first URL path; another path works")
+                return variant, rerun, other
+        return recipe, run, reach
+
+    def _reachability(self, run: RunResult, fetcher: Fetcher, recipe: Recipe) -> Reachability:
+        """Up to ``REACHABILITY_SAMPLE`` documents, the most recent first."""
+        recent = sorted(run.documents, key=lambda d: d.fiscal_year or 0, reverse=True)
+        sample = recent[:REACHABILITY_SAMPLE]
+        probe = self._probe(fetcher, recipe)
+        allowed = [d for d in sample if fetcher.allows(d.url)]
+        answers = [probe(d.url) for d in allowed]
+        return Reachability(
+            sampled=len(sample),
+            reachable=sum(1 for a in answers if a is True),
+            gone=sum(1 for a in answers if a is False),
+            refused=len(sample) - len(allowed),
+        )
 
     def _probe(self, fetcher: Fetcher, recipe: Recipe) -> Probe:
         """Whether a document is still online (a streamed GET, the body is not read)."""

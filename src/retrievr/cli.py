@@ -24,7 +24,7 @@ import re
 import sys
 from collections.abc import Sequence
 from pathlib import Path
-from typing import Any, TextIO
+from typing import TYPE_CHECKING, Any, TextIO
 from urllib.parse import unquote
 
 from retrievr import __version__
@@ -32,6 +32,9 @@ from retrievr.config import Settings, load_settings
 from retrievr.events import Event
 from retrievr.health import HealthReport
 from retrievr.recipe import FoundDocument
+
+if TYPE_CHECKING:
+    import httpx
 
 DEFAULT_CONFIG = "retrievr.toml"
 EXIT_OK, EXIT_FAILED, EXIT_USAGE, EXIT_BLOCKED, EXIT_BUDGET = 0, 1, 2, 3, 4
@@ -167,7 +170,14 @@ def _utf8(stream: TextIO) -> None:
         reconfigure(encoding="utf-8", errors="replace")
 
 
-def main(argv: Sequence[str] | None = None, *, out: TextIO | None = None) -> int:
+def main(
+    argv: Sequence[str] | None = None,
+    *,
+    out: TextIO | None = None,
+    llm_transport: httpx.BaseTransport | None = None,
+) -> int:
+    """Run the command line. A host with an LLM gateway keeps the whole command line by
+    calling ``main(llm_transport=MyGateway())`` from its own script (see the README)."""
     if out is None:
         _utf8(sys.stdout)
         _utf8(sys.stderr)
@@ -185,7 +195,7 @@ def main(argv: Sequence[str] | None = None, *, out: TextIO | None = None) -> int
 
     on_event = _print_event if args.verbose else (None if args.json else _print_progress)
     try:
-        r = Retrievr(settings=settings, on_event=on_event)
+        r = Retrievr(settings=settings, on_event=on_event, llm_transport=llm_transport)
         payload, code = COMMANDS[args.command](r, args)
     except KeyboardInterrupt:
         print("retrievr: interrupted", file=sys.stderr)

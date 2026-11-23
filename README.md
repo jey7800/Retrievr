@@ -114,7 +114,15 @@ r = Retrievr("retrievr.toml", llm_transport=MyGateway())
   drop the default provider-routing hints.
 - `model_small` / `model_large` are passed as `model` in the body: use them as the keys
   your transport maps to deployments.
-- The `retrievr` command line has no transport option: use the Python API.
+- To keep the whole command line with your transport, call it from a small script of
+  your own, which takes the same commands and options as `retrievr`:
+
+  ```python
+  # mycli.py  ->  python mycli.py learn <url> "<request>"  /  python mycli.py run <site>
+  import sys
+  from retrievr.cli import main
+  sys.exit(main(llm_transport=MyGateway()))
+  ```
 
 Output: `<output_dir>/<issuer>/<year>/<type>_<period>_<lang>.<ext>` plus
 `<output_dir>/manifest.json`.

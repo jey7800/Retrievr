@@ -24,7 +24,9 @@ required the API key variable, and closed the transport at the end of each run (
   `Authorization` header is sent (the transport authenticates); when set, it is sent;
 - the library never closes a transport it was given: the host owns it.
 
-The command line has no transport option; hosts with a gateway use the Python API.
+The command line has no transport option (it would mean importing code named in a
+setting); a host keeps the whole command line by calling `retrievr.cli.main(argv,
+llm_transport=...)` from its own script.
 
 ## Consequences
 

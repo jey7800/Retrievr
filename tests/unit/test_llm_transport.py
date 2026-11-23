@@ -92,3 +92,31 @@ def test_transport_outlives_runs(tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     r.compile_request("half-year reports 2025")  # a new run, same transport
     assert len(gateway.requests) == 2
     assert not gateway.closed
+
+
+def test_command_line_passes_the_host_transport(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A host script keeps the whole command line: ``main(llm_transport=...)``."""
+    import io
+
+    import retrievr.api
+    from retrievr.cli import main
+
+    seen: dict[str, Any] = {}
+
+    class Recorder:
+        def __init__(self, **kwargs: Any) -> None:
+            seen.update(kwargs)
+
+        def check(self, site: str, **_kwargs: Any) -> Any:
+            raise LookupError(f"no recipe for {site}")
+
+    monkeypatch.setattr(retrievr.api, "Retrievr", Recorder)
+    gateway = Gateway()
+    out = io.StringIO()
+    code = main(
+        ["--state-dir", str(tmp_path), "--json", "check", "example"], out=out, llm_transport=gateway
+    )
+    assert code == 1
+    assert seen["llm_transport"] is gateway

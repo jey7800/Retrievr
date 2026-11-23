@@ -73,12 +73,14 @@ class Reachability:
     """Answered HTTP 404 or 410."""
     refused: int = 0
     """Not fetched: robots.txt of their host disallows them."""
+    blocked: int = 0
+    """Answered HTTP 403 or a challenge page: their host refuses this client."""
 
     @property
     def ok(self) -> bool:
         """False when every conclusive answer says the documents cannot be downloaded
-        (they do not exist, or robots.txt disallows them)."""
-        return not ((self.gone or self.refused) and not self.reachable)
+        (they do not exist, robots.txt disallows them, or their host refuses this client)."""
+        return not ((self.gone or self.refused or self.blocked) and not self.reachable)
 
 
 def validate_runs(
@@ -99,6 +101,7 @@ def validate_runs(
             f"{reachability.reachable} of {reachability.sampled} sampled documents "
             f"reachable, {reachability.gone} answered 404/410"
             + (f", {reachability.refused} disallowed by robots.txt" if reachability.refused else "")
+            + (f", {reachability.blocked} blocked (HTTP 403)" if reachability.blocked else "")
         )
         add(Check("downloadable", reachability.ok, detail))
     count = len(first.documents)

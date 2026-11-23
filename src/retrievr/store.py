@@ -19,7 +19,7 @@ from typing import Any
 
 import yaml
 
-from retrievr.classify import Decision
+from retrievr.classify import Decision, notice_type
 from retrievr.health import HealthReport, KnownDocument
 from retrievr.llm import CallRecord
 from retrievr.recipe import FoundDocument, Recipe, load_recipe
@@ -317,8 +317,18 @@ class StateStore:
                 "ORDER BY normalized_url",
                 (site,),
             ).fetchall()
+        # Built-in classification checks of the engine apply to the history too: a library
+        # update that refines them must not read as metadata drift of the site.
         return [
-            KnownDocument(r[0], r[1], r[2] or "", r[3] or "", json.loads(r[4]), *r[5:9])
+            KnownDocument(
+                r[0],
+                r[1],
+                r[2] or "",
+                r[3] or "",
+                json.loads(r[4]),
+                notice_type(r[5], r[2]),
+                *r[6:9],
+            )
             for r in rows
         ]
 

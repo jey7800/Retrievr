@@ -99,21 +99,41 @@ _FILE_NAME = re.compile(r"[^/\\]*\.([A-Za-z0-9]{2,5})$")
 _FORMAT_WORDS = r"(pdf|xlsx?|xlsb|excel|csv|zip|docx?|pptx?)"
 _TEXT_FORMAT = re.compile(
     r"[(\[]\s*" + _FORMAT_WORDS + r"\s*[)\]]"  # (pdf), [PDF]
-    r"|\b" + _FORMAT_WORDS + r"\s*[(,]?\s*\d+(?:[.,]\d+)?\s*[kmg]i?b\b"  # pdf 289 KB, PDF (2.1 MB)
+    r"|\b" + _FORMAT_WORDS + r"\s*[(,]?\s*\d+(?:[.,]\d+)?\s*[kmg]i?[bo]\b"  # pdf 289 KB, PDF (2 Mo)
     r"|^\s*" + _FORMAT_WORDS + r"\s*$",  # a link text that is only the format
     re.I,
 )
+_ROW_FORMAT = re.compile(
+    r"[(\[]\s*" + _FORMAT_WORDS + r"\s*[)\]]"
+    r"|\b" + _FORMAT_WORDS + r"\b[^\d\n]{0,12}?\d+(?:[.,]\d+)?\s*[kmg]i?[bo]\b",  # pdf, EN, 6 Mo
+    re.I,
+)
+"""A format announced next to a link (its row has no other link): needs a size or
+brackets, as a row also holds the document title."""
 _LINK_XPATH = ".//a[@href] | .//*[contains(local-name(), '-') and @href]"
 """Links: ``<a href>`` and custom elements (Web Components) that carry an ``href``."""
 
 
-def text_format(text: str | None) -> str:
+def text_format(text: str | None, pattern: re.Pattern[str] = _TEXT_FORMAT) -> str:
     """The file format a link text announces ('' when it names none)."""
-    m = _TEXT_FORMAT.search(text or "")
+    m = pattern.search(text or "")
     if not m:
         return ""
     word = next(g for g in m.groups() if g).lower()
     return "xlsx" if word == "excel" else word
+
+
+def announced_format(a: HtmlElement, base_url: str) -> str:
+    """The format the link text announces, else the one its row announces ("View" next
+    to "pdf, EN, 6 Mo")."""
+    if found := text_format(text_of(a)):
+        return found
+    href = a.get("href") or ""
+    row = _row_element(a, normalize_url(resolve_url(href, base_url)), base_url)
+    if row is a:
+        return ""
+    words = " ".join(" ".join(t for t in row.itertext() if isinstance(t, str)).split())
+    return text_format(words, _ROW_FORMAT)
 
 
 def _link_elements(scope: HtmlElement, link: str) -> list[HtmlElement]:
@@ -248,7 +268,7 @@ def _candidate(
         row_header=row_header,
         column_header=column_header,
         file_name=link_file_name(a),
-        format_hint=text_format(link_text) or None,
+        format_hint=announced_format(a, base_url) or None,
     )
 
 
@@ -277,7 +297,7 @@ def _links(
         if exts is not None and not (
             path_extension(url) in exts
             or file_extension(link_file_name(a)) in exts
-            or text_format(text_of(a)) in exts
+            or announced_format(a, base_url) in exts
             or any(p.search(url) for p in patterns)
         ):
             continue

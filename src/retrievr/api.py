@@ -182,6 +182,20 @@ def issuer_from_url(url: str) -> str:
     return slug or "site"
 
 
+def _answer(fetcher: Fetcher, recipe: Recipe, url: str) -> str:
+    """``ok``, ``gone`` (404/410), ``blocked`` (403 or a challenge page: the host refuses
+    this client) or ``unknown`` (rate limited, unavailable, network error)."""
+    try:
+        with fetcher.stream(url, allowed_domains=recipe.allowed_domains):
+            return "ok"
+    except BlockedError as exc:
+        return "blocked" if exc.status in (403, None) else "unknown"
+    except HTTPStatusError as exc:
+        return "gone" if exc.status in (404, 410) else "unknown"
+    except FetchError:
+        return "unknown"
+
+
 class Retrievr:
     """Public entry point: learn, run, check, repair and install site recipes.
 
@@ -670,29 +684,22 @@ class Retrievr:
         """Up to ``REACHABILITY_SAMPLE`` documents, the most recent first."""
         recent = sorted(run.documents, key=lambda d: d.fiscal_year or 0, reverse=True)
         sample = recent[:REACHABILITY_SAMPLE]
-        probe = self._probe(fetcher, recipe)
         allowed = [d for d in sample if fetcher.allows(d.url)]
-        answers = [probe(d.url) for d in allowed]
+        answers = [_answer(fetcher, recipe, d.url) for d in allowed]
         return Reachability(
             sampled=len(sample),
-            reachable=sum(1 for a in answers if a is True),
-            gone=sum(1 for a in answers if a is False),
+            reachable=answers.count("ok"),
+            gone=answers.count("gone"),
             refused=len(sample) - len(allowed),
+            blocked=answers.count("blocked"),
         )
 
     def _probe(self, fetcher: Fetcher, recipe: Recipe) -> Probe:
         """Whether a document is still online (a streamed GET, the body is not read)."""
 
         def probe(url: str) -> bool | None:
-            try:
-                with fetcher.stream(url, allowed_domains=recipe.allowed_domains):
-                    return True
-            except BlockedError:
-                return None
-            except HTTPStatusError as exc:
-                return False if exc.status in (404, 410) else None
-            except FetchError:
-                return None
+            answer = _answer(fetcher, recipe, url)
+            return True if answer == "ok" else False if answer == "gone" else None
 
         return probe
 

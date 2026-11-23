@@ -141,3 +141,39 @@ Known limit: detail pages that fill their document list with JavaScript (Microso
 Trend, counting the sites that answer an identifiable client: round 1 worked first time
 on 3 of 8 and needed nine generic fixes; round 2 on 7 of 8, two fixes; round 3 on 9 of 12,
 four fixes (one of them a crash on malformed markup).
+
+## Addendum (2026-11-23): fourth round, twelve banks and large companies
+
+Twelve more sites (BNP Paribas, Santander, CaixaBank, Swedbank, Royal Bank of Canada,
+Roche, Handelsbanken, Deutsche Telekom, Bank of Ireland, Mizuho, BMW, Heineken), run first
+with the code above. Safran, Nokia, AstraZeneca, Ericsson, Saint-Gobain and Stellantis
+answer 403 to an identifiable client and were left out.
+
+| Site | Outcome |
+|---|---|
+| RBC (589 listed, 51 downloaded), Telekom (136, 51), Santander (91, 44), Mizuho (95, 37), Roche (122, 29), CaixaBank (140, 24), Heineken (182, 20), BMW (76, 15) | learned first time, warm run `ok` with 0 LLM calls; Telekom's 4 media releases on a delivery host that robots.txt disallows are skipped and reported |
+| Bank of Ireland | learned, but 415 regulatory notices kept as press releases: fixed below (456 -> 70 documents) |
+| BNP Paribas | nothing found from the results page: fixed below (428 listed, 47 downloaded) |
+| Swedbank | the files host answers 403: now `rejected` with that reason instead of learned |
+| Handelsbanken | the report archive is a third-party widget in an iframe: not supported |
+
+Fixes:
+
+- **Regulatory notices are not results press releases**: titles such as "Transaction in
+  own shares", "Total voting rights", "Notification of major holdings", "PDMR dealing",
+  "Issuer call notice" (and their French forms) give `other` instead of `press_release`,
+  whether the type came from recipe rules or an LLM decision. Known documents stored by an
+  older version are read with the same check, so the update is not seen as metadata drift
+  (without it, health found 400 known documents changed, called the LLM to repair and
+  ended `degraded`): **a library update must never look like a site change**.
+- **Formats announced next to the link**: "View" next to "pdf, EN, 6 Mo" in the same row
+  (an ancestor with no other link) makes an opaque link a document; the row needs a size or
+  brackets, since it also holds the title. French size units (Ko, Mo) are read.
+- **Files hosts that refuse this client**: the downloadable gate counts sampled documents
+  answered with 403 or a challenge page; when none is reachable the recipe is rejected
+  (429 and 503 stay inconclusive).
+
+Trend, counting the sites that answer an identifiable client: round 1 worked first time on
+3 of 8, round 2 on 7 of 8, round 3 on 9 of 12, round 4 on 8 of 12, with three generic fixes
+and one upgrade-safety fix; the remaining failures are by design (403 on files, iframe
+widget).

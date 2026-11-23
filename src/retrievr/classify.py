@@ -147,6 +147,26 @@ class Classification:
     justification: list[str] = field(default_factory=list)
 
 
+_REGULATORY_NOTICE = re.compile(
+    r"transactions? (?:in|on|of) (?:its )?own shares|purchases? of own shares"
+    r"|total voting rights|notification of (?:major|significant) (?:share)?holdings?"
+    r"|holding\(s\) in company|director(?:/pdmr)?s? (?:shareholding|dealing)s?|\bpdmrs?\b"
+    r"|\bform 8\.3\b|block listing|issuer call notice|notice of (?:early )?redemption"
+    r"|transactions? sur (?:ses )?actions propres|achats? d.actions propres"
+    r"|nombre total de droits de vote|d[ée]claration des droits de vote",
+    re.I,
+)
+"""Regulatory notices that are not about results: titled press releases on many sites
+(one per buyback day), they are never a results press release."""
+
+
+def notice_type(doc_type: str | None, title: str | None) -> str | None:
+    """``other`` for a press release titled as a regulatory notice, else ``doc_type``."""
+    if doc_type == "press_release" and title and _REGULATORY_NOTICE.search(title):
+        return "other"
+    return doc_type
+
+
 def classify(
     rules: ClassifyRules,
     *,
@@ -167,6 +187,9 @@ def classify(
             doc_type = type_rule.type
             notes.append(f"type={doc_type} by {type_rule.describe()}")
             break
+    if (notice := notice_type(doc_type, values.get("title") or text)) != doc_type:
+        doc_type = notice
+        notes.append("type=other: a regulatory notice, not a results release")
 
     period = period_year = None
     for period_rule in rules.period:
@@ -372,9 +395,9 @@ def apply_decisions(
         changes: dict[str, object] = {}
         notes = []
         if doc.type is None and dec.type is not None:
-            changes["type"] = dec.type
+            changes["type"] = notice_type(dec.type, doc.title)
             changes["score"] = 0.8
-            notes.append(f"type={dec.type} by {dec.source}")
+            notes.append(f"type={changes['type']} by {dec.source}")
         if doc.period is None and dec.period is not None:
             changes["period"] = dec.period
             changes["fiscal_year"] = dec.fiscal_year

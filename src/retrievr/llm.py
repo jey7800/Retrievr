@@ -233,6 +233,7 @@ class LLMClient:
         on_call: Callable[[CallRecord], None] | None = None,
         transport: httpx.BaseTransport | None = None,
         api_key: str | None = None,
+        require_key: bool = True,
         sleep: Callable[[float], None] = time.sleep,
         clock: Callable[[], float] = time.monotonic,
     ) -> None:
@@ -242,6 +243,7 @@ class LLMClient:
         self._on_call = on_call
         self._transport = transport
         self._api_key = api_key
+        self._require_key = require_key
         self._sleep = sleep
         self._clock = clock
         self._client: httpx.Client | None = None
@@ -255,7 +257,10 @@ class LLMClient:
 
     def close(self) -> None:
         if self._client is not None:
-            self._client.close()
+            # A transport given by the host is the host's to close: it outlives this
+            # client (one client per run) and may hold its own connections or tokens.
+            if self._transport is None:
+                self._client.close()
             self._client = None
 
     def model_for(self, tier: Tier) -> str:
@@ -432,9 +437,10 @@ class LLMClient:
         return self._client
 
     def _key(self) -> str:
+        """The API key ("" when none is required: a custom transport authenticates)."""
         if self._api_key is None:
             value = os.environ.get(self.settings.api_key_env, "").strip()
-            if not value:
+            if not value and self._require_key:
                 raise LLMNotConfiguredError(
                     f"environment variable {self.settings.api_key_env} is not set (with uv, "
                     "keep the key in a .env file and run 'uv run --env-file .env ...')"
@@ -444,7 +450,9 @@ class LLMClient:
 
     def _post(self, body: dict[str, Any]) -> dict[str, Any]:
         url = self.settings.base_url.rstrip("/") + "/chat/completions"
-        headers = {"Authorization": f"Bearer {self._key()}", "Content-Type": "application/json"}
+        headers = {"Content-Type": "application/json"}
+        if key := self._key():
+            headers["Authorization"] = f"Bearer {key}"
         delays = (2.0, 6.0)
         for attempt in range(len(delays) + 1):
             try:

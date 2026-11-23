@@ -86,6 +86,36 @@ state_dir = ".retrievr"  # learned recipes, SQLite state, LLM response cache
 Every LLM call is logged (prompt, response, tokens, cost) in the SQLite state, and
 responses are cached so that tests replay them offline.
 
+### LLM gateways (custom transport)
+
+Some gateways are not a plain endpoint with a static key: OAuth client-credentials
+tokens, one URL per model deployment, an `api-version` query parameter, renamed request
+fields. Keep that logic in your own code and pass it as an `httpx` transport:
+
+```python
+import httpx
+from retrievr import Retrievr
+
+class MyGateway(httpx.BaseTransport):
+    def handle_request(self, request: httpx.Request) -> httpx.Response:
+        # request: POST {base_url}/chat/completions, standard chat completions JSON body
+        # (model, messages, response_format or tools, max_tokens...). Get a token, rewrite
+        # the URL and body as the gateway needs, send it, return the gateway's response.
+        ...
+
+r = Retrievr("retrievr.toml", llm_transport=MyGateway())
+```
+
+- With a transport, the API key environment variable is optional: when it is unset, no
+  `Authorization` header is sent and the transport authenticates.
+- The library never closes the transport (it is reused by every run); close it yourself.
+- The response must be a standard chat completions JSON reply. If it carries no `cost`,
+  set `prices` so that the budget cap still counts the calls; set `extra_body = {}` to
+  drop the default provider-routing hints.
+- `model_small` / `model_large` are passed as `model` in the body: use them as the keys
+  your transport maps to deployments.
+- The `retrievr` command line has no transport option: use the Python API.
+
 Output: `<output_dir>/<issuer>/<year>/<type>_<period>_<lang>.<ext>` plus
 `<output_dir>/manifest.json`.
 

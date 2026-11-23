@@ -183,6 +183,17 @@ def issuer_from_url(url: str) -> str:
 
 
 class Retrievr:
+    """Public entry point: learn, run, check, repair and install site recipes.
+
+    ``llm_transport`` (an ``httpx.BaseTransport``) is the supported way to reach an LLM
+    gateway that is not a plain OpenAI-compatible endpoint with a static key (OAuth
+    tokens, per-deployment URLs, extra query parameters...). It receives every chat
+    completions request (``POST {base_url}/chat/completions``, standard JSON body) and
+    returns the endpoint's response. With a transport, the API key environment variable
+    is optional: if it is unset, no ``Authorization`` header is sent and the transport
+    authenticates. The transport is never closed by the library; its owner closes it.
+    """
+
     def __init__(
         self,
         config_path: Path | str | None = None,
@@ -225,6 +236,7 @@ class Retrievr:
             cache=ResponseCache(cache_dir),
             on_call=lambda record: self.store.record_llm_call(run_id, record),
             transport=self._llm_transport,
+            require_key=self._llm_transport is None,
             sleep=self._sleep,
         )
         return client, client.ledger

@@ -159,6 +159,16 @@ the documents on those pages. A recipe (schema v4) then names the listing page a
 CSS selector of the links to the detail pages; the engine opens each of them (same site
 only) and reads its documents, with the page heading as their context.
 
+## Listings held by the page
+
+Some pages carry the whole archive as JSON (a `data-*` attribute, a
+`<script type="application/json">`) and their year selector only filters it in the
+browser, without any request. Learning finds such JSON when it lists documents the page
+does not link, and a recipe (schema v5) reads it from the page on every run
+(`response.embedded`). JSON item paths may use `*` for lists spread over keys
+(`{"2025": {"Q1": [...]}}` is `*.*`); the keys it goes through (2025, Q1) describe the
+documents, for the rules.
+
 ## Respectful crawling
 
 robots.txt is respected by default (see `docs/decisions/0002-robots-policy.md`), requests

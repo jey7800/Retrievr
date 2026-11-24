@@ -609,6 +609,33 @@ def json_path(data: Any, path: str) -> Any:
     return node
 
 
+def json_items(data: Any, path: str) -> list[tuple[list[str], Any]]:
+    """The items of the list at ``path``, each with the keys its ``*`` segments went
+    through (schema v5: ``*.*`` reads ``{"2025": {"Q1": [...]}}``, keys 2025 and Q1)."""
+    found: list[tuple[list[str], Any]] = []
+
+    def walk(node: Any, parts: list[str], keys: list[str]) -> None:
+        if not parts:
+            if isinstance(node, list):
+                found.extend((keys, entry) for entry in node)
+            return
+        head, rest = parts[0], parts[1:]
+        if head == "*":
+            if isinstance(node, dict):
+                for key, value in node.items():
+                    walk(value, rest, [*keys, str(key)])
+            elif isinstance(node, list):
+                for value in node:
+                    walk(value, rest, keys)
+            return
+        value = json_path(node, head)
+        if value is not None:
+            walk(value, rest, keys)
+
+    walk(data, path.split(".") if path else [], [])
+    return found
+
+
 def _text(value: Any) -> str:
     if value is None or isinstance(value, (dict, list)):
         return ""
@@ -632,14 +659,12 @@ def json_candidates(
     arguments are paths inside one item (``url`` may list several paths: the first one
     present wins). Items without a URL are skipped. With ``url_template`` the item holds
     a file name, placed (URL-encoded) at ``{value}`` in the template."""
-    entries = json_path(data, items)
-    if not isinstance(entries, list):
-        return []
+    entries = json_items(data, items)
     url_paths = [url] if isinstance(url, str) else list(url)
     exts = {e.lower().lstrip(".") for e in extensions} if extensions else None
     patterns = [re.compile(p) for p in document_urls or ()]
     out: list[Candidate] = []
-    for entry in entries:
+    for keys, entry in entries:
         raw = next((t for p in url_paths if (t := _text(json_path(entry, p)))), "")
         if not raw:
             continue
@@ -654,7 +679,9 @@ def json_candidates(
         if exts is not None and ext not in exts and not any(p.search(absolute) for p in patterns):
             continue
         heading = _text(json_path(entry, title)) if title else ""
-        ctx = " | ".join(t for p in context if (t := _text(json_path(entry, p))))
+        # Keys a ``*`` went through (a year, a quarter) describe the item too.
+        texts = [*keys, *(_text(json_path(entry, p)) for p in context)]
+        ctx = " | ".join(t for t in texts if t)
         out.append(
             Candidate(
                 url=absolute,

@@ -74,6 +74,9 @@ class Exchange:
     status: int
     content_type: str | None
     body: bytes = field(repr=False)
+    embedded: tuple[str, str | None] | None = None
+    """Not a call: JSON held by the page itself, at (CSS selector, attribute or None for
+    the element text). Found without a browser (``endpoints.embedded_exchanges``)."""
 
     @property
     def text(self) -> str:

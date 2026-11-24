@@ -18,6 +18,8 @@ from datetime import date
 from typing import Any, Literal
 from urllib.parse import parse_qsl, quote, unquote_plus
 
+from lxml.html import HtmlElement
+
 from retrievr.browser import Exchange
 from retrievr.candidates import (
     DOCUMENT_EXTENSIONS,
@@ -27,6 +29,7 @@ from retrievr.candidates import (
     group_document_links,
     parse_html,
     pruned_html,
+    select,
 )
 from retrievr.urls import host_of, normalize_url, path_extension, resolve_url
 
@@ -178,6 +181,9 @@ def _analyse_json(data: Any, base_url: str, links: Sequence[str] = ()) -> Respon
             holding[path] = with_url
             found.documents |= docs
     if found.lists:
+        for merged, count in _wildcard_lists(found.lists, holding):
+            found.lists.append(merged)
+            holding[merged.path] = count
         found.kind = "json_list"
         # The documents' own list: where the most items carry a document URL.
         found.lists.sort(key=lambda lst: (-holding[lst.path], len(lst.url_paths)))
@@ -193,6 +199,34 @@ def _analyse_json(data: Any, base_url: str, links: Sequence[str] = ()) -> Respon
                 found.documents = docs
                 return found
     return found
+
+
+def _wildcard_lists(
+    lists: Sequence[JsonList], holding: Mapping[str, int]
+) -> list[tuple[JsonList, int]]:
+    """One list for lists spread over keys (``2024.Q1``, ``2024.Q2``, ``2025.Q1``...):
+    the path with ``*`` where they differ (``*.*``), when at least three share a depth."""
+    by_depth: dict[int, list[JsonList]] = {}
+    for lst in lists:
+        by_depth.setdefault(lst.path.count("."), []).append(lst)
+    out = []
+    for group in by_depth.values():
+        if len(group) < 3:
+            continue
+        parts = [lst.path.split(".") for lst in group]
+        pattern = [col[0] if len(set(col)) == 1 else "*" for col in zip(*parts, strict=True)]
+        if "*" not in pattern or pattern.count("*") > 2:
+            continue
+        counts: dict[str, int] = {}
+        templates: dict[str, str] = {}
+        for lst in group:
+            for leaf, n in lst.url_paths.items():
+                counts[leaf] = counts.get(leaf, 0) + n
+            templates.update(lst.url_templates)
+        size = sum(lst.size for lst in group)
+        merged = JsonList(".".join(pattern), size, counts, group[-1].sample, templates)
+        out.append((merged, sum(holding[lst.path] for lst in group)))
+    return out
 
 
 def _path_value(node: Any, path: str) -> Any:
@@ -314,10 +348,87 @@ def endpoints(exchanges: Sequence[Exchange], links: Sequence[str] = ()) -> list[
     return out
 
 
+_EMBEDDED_MIN_CHARS = 200
+_JSON_SCRIPTS = (
+    'script[type="application/json"], script[type="application/ld+json"], script#__NEXT_DATA__'
+)
+
+
+def embedded_exchanges(root: HtmlElement, url: str, first_id: int = 1) -> list[Exchange]:
+    """JSON the page holds (a data attribute, a JSON script), as pseudo-calls: a list the
+    page filters in the browser (year selector without any request) is read from there."""
+    found: list[Exchange] = []
+    seen: set[tuple[str, str | None]] = set()
+
+    def add(selector: str, attribute: str | None, raw: str) -> None:
+        if (selector, attribute) in seen or len(raw) < _EMBEDDED_MIN_CHARS:
+            return
+        if not raw.lstrip().startswith(("{", "[")):
+            return
+        try:
+            json.loads(raw)
+        except ValueError:
+            return
+        seen.add((selector, attribute))
+        where = f"{selector} @{attribute}" if attribute else f"text of {selector}"
+        found.append(
+            Exchange(
+                id=f"J{first_id + len(found)}",
+                action=f"none: JSON held by the page itself ({where})",
+                method="GET",
+                url=url,
+                request_body=None,
+                request_content_type=None,
+                requested_with=None,
+                status=200,
+                content_type="application/json",
+                body=raw.encode("utf-8"),
+                embedded=(selector, attribute),
+            )
+        )
+
+    for el in select(root, _JSON_SCRIPTS):
+        add(_element_selector(el), None, el.text_content() or "")
+    for el in root.iter():
+        if not isinstance(el.tag, str) or el.tag in ("script", "style"):
+            continue
+        for name, value in el.attrib.items():
+            if name.startswith("data-") or name in ("value", "content"):
+                add(f"{_element_selector(el)}[{name}]", name, value)
+    return found
+
+
+def _element_selector(el: HtmlElement) -> str:
+    """A selector naming ``el`` by its id, else by its tag and first class."""
+    ident = (el.get("id") or "").strip()
+    if ident and re.fullmatch(r"[A-Za-z][\w-]*", ident):
+        return f"{el.tag}#{ident}"
+    classes = (el.get("class") or "").split()
+    usable = [c for c in classes if re.fullmatch(r"-?[A-Za-z_][\w-]*", c)]
+    if el.tag == "script":
+        kind = el.get("type") or ""
+        return f'script[type="{kind}"]' if kind else "script"
+    return f"{el.tag}.{usable[0]}" if usable else el.tag
+
+
 def digest_endpoints(found: Sequence[Endpoint], today: date) -> str:
-    lines = ["== Endpoints the page called (captured in a browser)"]
+    embedded = any(ex.embedded for ep in found for ex in ep.exchanges)
+    lines = [
+        "== Endpoints the page called (captured in a browser)"
+        + (", or JSON the page holds (J ids: no call)" if embedded else "")
+    ]
     for ep in found:
         first = ep.exchanges[0]
+        if first.embedded:
+            lines.append(
+                f"{ep.id}: JSON held by the page {ep.url} itself, no request "
+                f"({len(ep.exchanges)} block(s))"
+            )
+            lines.append("  Blocks:")
+            for ex in ep.exchanges:
+                lines.append(f"  - {ex.id} ({ex.action}): {_describe(ep.documents[ex.id])}")
+            lines.extend(_sample(ep))
+            continue
         kind = "JSON" if is_json_body(first) else ("form" if first.request_body else "no")
         extra = f", X-Requested-With: {first.requested_with}" if first.requested_with else ""
         lines.append(

@@ -53,6 +53,7 @@ from retrievr.urls import is_allowed, normalize_url, resolve_url
 log = logging.getLogger("retrievr.recipe")
 
 SCHEMA_VERSION = 4
+LATEST_SCHEMA_VERSION = 5
 _SLUG = r"^[a-z0-9][a-z0-9-]*$"
 _PLACEHOLDER = re.compile(r"\{([a-z_][a-z0-9_]*)\}")
 _TODAY = re.compile(r"\{today:([^{}]+)\}")
@@ -222,18 +223,36 @@ def url_path_variants(recipe: Recipe) -> list[Recipe]:
     return variants
 
 
+class EmbeddedJson(_Model):
+    """Schema v5: the JSON is inside the HTML page (a year selector that filters, in the
+    browser, a list the page already holds): the value of ``attribute`` of the elements
+    ``selector`` matches, else their text (a ``<script type="application/json">``). The
+    first element whose value is JSON is read."""
+
+    selector: str
+    attribute: str | None = None
+
+    @field_validator("selector")
+    @classmethod
+    def _valid_selector(cls, value: str) -> str:
+        compile_selector(value)
+        return value
+
+
 class ResponseSpec(_Model):
     format: Literal["html", "json"] = "html"
     html_path: str | None = None
     """JSON response holding an HTML fragment at this path (read with ``items``)."""
     items: JsonItems | None = None
+    embedded: EmbeddedJson | None = None
+    """Schema v5 (json only): the response is an HTML page holding the JSON."""
 
     @model_validator(mode="after")
     def _consistent(self) -> ResponseSpec:
         if self.format == "json" and (self.html_path is None) == (self.items is None):
             raise ValueError("a json response needs exactly one of html_path or items")
-        if self.format == "html" and (self.html_path or self.items):
-            raise ValueError("html_path and items apply to json responses only")
+        if self.format == "html" and (self.html_path or self.items or self.embedded):
+            raise ValueError("html_path, items and embedded apply to json responses only")
         return self
 
 
@@ -436,7 +455,7 @@ class Provenance(_Model):
 
 
 class Recipe(_Model):
-    schema_version: Literal[1, 2, 3, 4]
+    schema_version: Literal[1, 2, 3, 4, 5]
     recipe: str = Field(pattern=_SLUG)
     version: int = Field(ge=1)
     issuer: str = Field(pattern=_SLUG)
@@ -476,6 +495,17 @@ class Recipe(_Model):
                         param.page, self.allowed_domains
                     ):
                         raise ValueError(f"source {source.id!r}: options page outside domains")
+        if self.schema_version < 5 and any(
+            isinstance(s, RequestSource) and s.response.embedded for s in self.sources
+        ):
+            raise ValueError("response.embedded requires schema_version 5")
+        if self.schema_version < 5 and any(
+            isinstance(s, RequestSource)
+            and s.response.items is not None
+            and "*" in s.response.items.path.split(".")
+            for s in self.sources
+        ):
+            raise ValueError("'*' in items.path requires schema_version 5")
         if self.schema_version < 4 and any(
             isinstance(s, UrlTemplateSource) and s.detail for s in self.sources
         ):
@@ -897,10 +927,19 @@ def _response_candidates(
     spec = source.response
     if spec.format == "html":
         return _html_candidates(parse_html(content), base_url, source.items), None
-    try:
-        data = json.loads(content)
-    except ValueError as exc:
-        raise ValueError(f"response of {base_url} is not JSON: {exc}") from exc
+    if spec.embedded is not None:
+        data = embedded_json(parse_html(content), spec.embedded)
+        if data is None:
+            raise ValueError(
+                f"no JSON at {spec.embedded.selector} "
+                f"{'@' + spec.embedded.attribute if spec.embedded.attribute else ''} "
+                f"in {base_url}"
+            )
+    else:
+        try:
+            data = json.loads(content)
+        except ValueError as exc:
+            raise ValueError(f"response of {base_url} is not JSON: {exc}") from exc
     if spec.html_path is not None:
         fragment = json_path(data, spec.html_path)
         html = fragment if isinstance(fragment, str) else ""
@@ -922,6 +961,19 @@ def _response_candidates(
         url_template=spec.items.url_template,
     )
     return found, data
+
+
+def embedded_json(root: Any, spec: EmbeddedJson) -> Any:
+    """The first JSON value held by the elements ``spec`` names (None when none)."""
+    for el in select(root, spec.selector):
+        raw = el.get(spec.attribute) if spec.attribute else el.text_content()
+        if not raw or not raw.strip().startswith(("{", "[")):
+            continue
+        try:
+            return json.loads(raw)
+        except ValueError:
+            continue
+    return None
 
 
 def _next_url(root: Any, source: UrlTemplateSource, base_url: str, recipe: Recipe) -> str | None:

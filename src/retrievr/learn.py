@@ -27,7 +27,7 @@ from collections import Counter
 from collections.abc import Collection, Iterable, Mapping, Sequence
 from dataclasses import dataclass, field
 from datetime import date
-from typing import Literal, TypeVar
+from typing import Any, Literal, TypeVar
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator
 
@@ -68,6 +68,7 @@ from retrievr.endpoints import (
     digest_endpoints,
     document_extensions,
     document_hosts,
+    embedded_exchanges,
     endpoints,
     field_value,
     request_fields,
@@ -84,10 +85,12 @@ from retrievr.llm import (
     untrusted,
 )
 from retrievr.recipe import (
+    LATEST_SCHEMA_VERSION,
     SCHEMA_VERSION,
     Cadence,
     Defaults,
     DetailPages,
+    EmbeddedJson,
     FoundDocument,
     HealthSpec,
     ItemsSpec,
@@ -118,6 +121,9 @@ MAX_OPEN_PER_ROUND = 5
 RULES_AGREEMENT = 0.9
 MIN_RULES_SAMPLE = 30
 DISCOVERY_MAX_DOCUMENTS = 5
+EMBEDDED_MIN_DOCUMENTS = 3
+"""JSON held by a page is offered when it lists at least this many documents the page
+does not link."""
 _YEAR_PLACEHOLDER = "{year}"
 _YEAR_IN_VALUE = re.compile(r"(?<!\d)(?:19|20)\d{2}(?!\d)")
 
@@ -266,6 +272,13 @@ name, exactly as captured; fields equal to today's date are templated by the eng
   holds an HTML fragment give html_path, and item/title/container CSS selectors for the
   fragment. For an HTML response give item/title/container only.
 The sources list (static pages) may stay empty when request_sources cover the listing."""
+
+EMBEDDED_ADDENDUM = """
+J ids are not calls: they are JSON the page already holds (a year selector that filters,
+in the browser, a list the page carries for every year). When one lists the documents of
+the requested years, use it as a request_sources entry with exchange = the J id, vary = []
+and the response paths (items_path, url_paths...); the engine reads that JSON from the
+page on every run."""
 
 DETAILS_ADDENDUM = """
 
@@ -476,7 +489,25 @@ class Learner:
             load_more=controls.load_more,
         )
         self.pages[page_id] = visited
+        self._embedded(root, visited)
         return visited
+
+    def _embedded(self, root: Any, page: VisitedPage) -> None:
+        """Offer the JSON the page holds when it lists documents the page does not link
+        (the page renders them from it in the browser)."""
+        first = 1 + sum(1 for ep in self.endpoints for ex in ep.exchanges if ex.embedded)
+        linked = {c.normalized_url for g in page.groups for c in g.candidates}
+        for ep in endpoints(embedded_exchanges(root, page.final_url, first)):
+            unseen: set[str] = set()
+            for found in ep.documents.values():
+                unseen |= found.documents - linked
+            if len(unseen) < EMBEDDED_MIN_DOCUMENTS or not self._own_listing(ep):
+                continue
+            ep.id = f"E{len(self.endpoints) + 1}"
+            self.endpoints.append(ep)
+            self.notes.append(
+                f"{page.id} holds JSON listing {len(unseen)} documents it does not link"
+            )
 
     def _nav_url(self, link_id: str) -> str | None:
         page_id, _, rest = link_id.partition(".")
@@ -506,13 +537,14 @@ class Learner:
             f"{notes}\n\n{untrusted('pages', digests)}"
         )
         system = STRUCTURE_SYSTEM
+        embedded = any(ex.embedded for ep in self.endpoints for ex in ep.exchanges)
         if self.hint is not None:
             system += REPAIR_ADDENDUM
             user = untrusted("previous", self.hint.text()) + "\n\n" + user
         if self.details:
             system += DETAILS_ADDENDUM
         if self.endpoints:
-            system += ENDPOINTS_ADDENDUM
+            system += ENDPOINTS_ADDENDUM + (EMBEDDED_ADDENDUM if embedded else "")
             user += "\n\n" + untrusted(
                 "endpoints", digest_endpoints(self.endpoints, self.ctx.today)
             )
@@ -727,8 +759,9 @@ class Learner:
         language = (reply.default_language or "").lower() or None
         if language and not re.fullmatch(r"[a-z]{2,3}", language):
             language = None
+        embedded = any(isinstance(s, RequestSource) and s.response.embedded for s in sources)
         return Recipe(
-            schema_version=SCHEMA_VERSION,
+            schema_version=LATEST_SCHEMA_VERSION if embedded else SCHEMA_VERSION,
             recipe=self.ctx.recipe_name,
             version=version,
             issuer=self.ctx.issuer,
@@ -803,6 +836,8 @@ class Learner:
         found = endpoint.documents[exchange.id]
         if not self._own_listing(endpoint):
             raise ValueError(f"{exchange.id} does not list documents of {self.ctx.domain}")
+        if exchange.embedded is not None:
+            draft = draft.model_copy(update={"vary": []})  # no request to vary
         vary: dict[str, str] = {}
         params: dict[str, YearRange | OptionsParam] = {}
         pagination = None
@@ -868,6 +903,13 @@ class Learner:
             response = ResponseSpec(format="json", html_path=draft.html_path)
         else:
             response = ResponseSpec(format="html")
+        if exchange.embedded is not None:
+            if response.format != "json":
+                raise ValueError(f"{exchange.id} is JSON: give items_path or html_path")
+            selector, attribute = exchange.embedded
+            response = response.model_copy(
+                update={"embedded": EmbeddedJson(selector=selector, attribute=attribute)}
+            )
         # A listing endpoint only lists documents: accept every known kind of file.
         exts = sorted(base_exts | document_extensions([found]) | DOCUMENT_EXTENSIONS | {"xhtml"})
         source = RequestSource(

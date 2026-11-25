@@ -36,6 +36,7 @@ Mode = Literal["snapshot", "live", "cold"]
 Status = Literal[
     "ok",
     "blocked",
+    "unauthorized",
     "error",
     "no_recipe",
     "no_snapshot",

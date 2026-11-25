@@ -6,6 +6,7 @@ Never calls an LLM.
 
 from __future__ import annotations
 
+import http.cookiejar
 import logging
 import re
 import ssl
@@ -83,6 +84,17 @@ class BlockedError(FetchError):
         self.status = status
 
 
+class UnauthorizedError(FetchError):
+    """HTTP 401: the host session (cookies, tokens) is missing or no longer accepted.
+
+    Not a change of the site: the run stops with status ``unauthorized``, nothing is
+    repaired, and the host logs in again."""
+
+    def __init__(self, url: str) -> None:
+        super().__init__(f"unauthorized (HTTP 401) at {url}: the session is not accepted", url=url)
+        self.status = 401
+
+
 class RobotsDisallowedError(FetchError):
     def __init__(self, url: str) -> None:
         super().__init__(f"robots.txt disallows {url}", url=url)
@@ -104,6 +116,44 @@ class HTTPStatusError(FetchError):
     def __init__(self, url: str, status: int) -> None:
         super().__init__(f"HTTP {status} at {url}", url=url)
         self.status = status
+
+
+@dataclass(frozen=True)
+class HostSession:
+    """An authenticated session the host application opened (ADR 0014).
+
+    ``transport`` sends every request of the run: it adds the session's cookies and
+    tokens, keeps them up to date from the responses, and answers 401 when the session
+    is gone (for example a redirect to the login page). ``values`` are what the host read
+    at login (an account id): recipes use them as ``{session.<name>}``. Retrievr never
+    logs in, never sees a password and never closes the transport; the host does."""
+
+    transport: httpx.BaseTransport
+    values: Mapping[str, str] = field(default_factory=dict)
+
+
+class _BorrowedTransport(httpx.BaseTransport):
+    """The host's transport, which the fetcher's client must not close."""
+
+    def __init__(self, inner: httpx.BaseTransport) -> None:
+        self._inner = inner
+
+    def handle_request(self, request: httpx.Request) -> httpx.Response:
+        return self._inner.handle_request(request)
+
+    def close(self) -> None:
+        pass
+
+
+class _NoCookies(http.cookiejar.DefaultCookiePolicy):
+    """With a host session, cookies belong to the host's transport: the client keeps none
+    of its own (they would shadow the session's)."""
+
+    def set_ok(self, cookie: http.cookiejar.Cookie, request: Any) -> bool:
+        return False
+
+    def return_ok(self, cookie: http.cookiejar.Cookie, request: Any) -> bool:
+        return False
 
 
 @dataclass(frozen=True)
@@ -189,15 +239,23 @@ class Fetcher:
         *,
         client: httpx.Client | None = None,
         transport: httpx.BaseTransport | None = None,
+        session: HostSession | None = None,
         event_hooks: Mapping[str, list[Callable[..., Any]]] | None = None,
         clock: Callable[[], float] = time.monotonic,
         sleep: Callable[[float], None] = time.sleep,
     ) -> None:
         """``transport`` replaces the network (e.g. a snapshot replay); environment
-        proxies are then ignored. ``event_hooks`` are httpx hooks (e.g. a recorder)."""
+        proxies are then ignored. ``session`` is a host session (its transport is used
+        and never closed). ``event_hooks`` are httpx hooks (e.g. a recorder)."""
+        if session is not None and transport is not None:
+            raise ValueError("give a transport or a host session, not both")
         self.settings = settings or FetchSettings()
+        self.session_values: Mapping[str, str] = dict(session.values) if session else {}
         self._client = client or _default_client(
-            self.settings, transport=transport, event_hooks=event_hooks
+            self.settings,
+            transport=_BorrowedTransport(session.transport) if session else transport,
+            event_hooks=event_hooks,
+            cookies=http.cookiejar.CookieJar(policy=_NoCookies()) if session else None,
         )
         self._owns_client = client is None
         self._limiter = RateLimiter(self.settings.rate_limit_rps, clock=clock, sleep=sleep)
@@ -288,11 +346,25 @@ class Fetcher:
 
     @contextmanager
     def stream(
-        self, url: str, *, allowed_domains: Collection[str] | None = None
+        self,
+        url: str,
+        *,
+        allowed_domains: Collection[str] | None = None,
+        method: Method = "GET",
+        content: bytes | None = None,
+        headers: Mapping[str, str] | None = None,
     ) -> Iterator[httpx.Response]:
-        """Open a streamed GET (for downloads). The body is not read yet."""
-        with self._open(url, allowed_domains=allowed_domains, headers={}) as resp:
+        """Open a streamed request (for downloads): a GET, or the request a recipe
+        builds for a document (schema v6). The body is not read yet."""
+        extra = {k: v for k, v in (headers or {}).items() if k.lower() in REQUEST_HEADERS}
+        with self._open(
+            url, allowed_domains=allowed_domains, headers=extra, method=method, content=content
+        ) as resp:
             yield resp
+
+    def read(self, resp: httpx.Response) -> bytes:
+        """The whole body of a streamed response, within ``max_download_bytes``."""
+        return self._read_capped(resp)
 
     def allows(self, url: str, allowed_domains: Collection[str] | None = None) -> bool:
         """Whether ``url`` may be fetched (robots.txt and allowed domains), without
@@ -336,6 +408,8 @@ class Fetcher:
                     continue
                 if resp.status_code in BLOCK_STATUSES:
                     raise BlockedError(current, f"HTTP {resp.status_code}", resp.status_code)
+                if resp.status_code == 401:
+                    raise UnauthorizedError(current)
                 if resp.status_code >= 400:
                     raise HTTPStatusError(current, resp.status_code)
                 yield resp
@@ -434,10 +508,12 @@ def _default_client(
     *,
     transport: httpx.BaseTransport | None = None,
     event_hooks: Mapping[str, list[Callable[..., Any]]] | None = None,
+    cookies: http.cookiejar.CookieJar | None = None,
 ) -> httpx.Client:
     ctx = truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
     return httpx.Client(
         verify=ctx,
+        cookies=cookies,
         # HTTP(S)_PROXY, ALL_PROXY, NO_PROXY; never with a custom transport, where an
         # environment proxy would silently route around it.
         trust_env=transport is None,

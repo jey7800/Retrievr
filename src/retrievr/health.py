@@ -159,7 +159,8 @@ def assess(
     """Health of ``recipe`` from one replay (``documents``: the run's documents after
     stored decisions were applied) against the ``known`` documents of earlier runs."""
     report = HealthReport(site=site, recipe=recipe.key, baseline=not known)
-    if run.status == "blocked":
+    if run.status in ("blocked", "unauthorized"):
+        # A refused session is not a change of the site: never a reason to repair.
         report.add("run", "blocked", "; ".join(run.errors[:2]))
         return report
     if run.status == "error":

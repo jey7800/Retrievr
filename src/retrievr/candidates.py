@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import re
 from collections import Counter
-from collections.abc import Collection
+from collections.abc import Callable, Collection, Mapping
 from dataclasses import dataclass, field
 from functools import lru_cache
 from typing import Any
@@ -72,6 +72,8 @@ class Candidate:
     format_hint: str | None = None
     """File format the link text announces ("Interim report (pdf)", "PDF 2.1 MB"): the
     extension of an opaque link that gives no file name."""
+    extra: Mapping[str, str] = field(default_factory=dict, compare=False)
+    """Values of a JSON item kept with the document (recipe schema v6)."""
 
     @property
     def extension(self) -> str:
@@ -654,18 +656,29 @@ def json_candidates(
     extensions: Collection[str] | None = None,
     document_urls: Collection[str] | None = None,
     url_template: str | None = None,
+    extra: Mapping[str, str] | None = None,
+    identity: Callable[[Mapping[str, str]], str | None] | None = None,
 ) -> list[Candidate]:
     """Documents listed in a JSON response: ``items`` is the path to the list, the other
     arguments are paths inside one item (``url`` may list several paths: the first one
     present wins). Items without a URL are skipped. With ``url_template`` the item holds
-    a file name, placed (URL-encoded) at ``{value}`` in the template."""
+    a file name, placed (URL-encoded) at ``{value}`` in the template. ``extra`` names
+    values of the item kept with the document; ``identity`` gives the URL of an item
+    that has none (a document fetched by a request built from those values)."""
     entries = json_items(data, items)
     url_paths = [url] if isinstance(url, str) else list(url)
     exts = {e.lower().lstrip(".") for e in extensions} if extensions else None
     patterns = [re.compile(p) for p in document_urls or ()]
     out: list[Candidate] = []
     for keys, entry in entries:
+        kept = {
+            name: text
+            for name, path in (extra or {}).items()
+            if (text := _text(json_path(entry, path)))
+        }
         raw = next((t for p in url_paths if (t := _text(json_path(entry, p)))), "")
+        if not raw and identity is not None:
+            raw = identity(kept) or ""
         if not raw:
             continue
         if url_template:
@@ -692,6 +705,7 @@ def json_candidates(
                 heading=None,
                 dom_path=f"json:{items}",
                 file_name=name or None,
+                extra=kept,
             )
         )
     return out

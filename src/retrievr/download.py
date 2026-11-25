@@ -5,6 +5,8 @@ Never calls an LLM.
 
 from __future__ import annotations
 
+import base64
+import binascii
 import contextlib
 import dataclasses
 import hashlib
@@ -14,7 +16,7 @@ import re
 import time
 import uuid
 import zipfile
-from collections.abc import Callable, Iterable
+from collections.abc import Callable, Iterable, Iterator
 from dataclasses import dataclass
 from datetime import UTC, date, datetime
 from pathlib import Path, PurePosixPath
@@ -23,9 +25,11 @@ from typing import Literal
 import httpx
 from pydantic import BaseModel, ConfigDict
 
-from retrievr.fetch import BlockedError, Fetcher, FetchError
-from retrievr.recipe import FoundDocument, Recipe
+from retrievr.candidates import json_path
+from retrievr.fetch import BlockedError, Fetcher, FetchError, UnauthorizedError
+from retrievr.recipe import DownloadRequest, FoundDocument, Recipe, download_request
 from retrievr.snapshots import document_extension
+from retrievr.urls import resolve_url
 
 log = logging.getLogger("retrievr.download")
 
@@ -85,6 +89,8 @@ class ManifestEntry(BaseModel):
     score: float
     justification: str
     downloaded_at: datetime
+    extra: dict[str, str] = {}
+    """Values of the listed item the recipe keeps (recipe schema v6, ``items.extra``)."""
 
 
 class Manifest:
@@ -131,8 +137,10 @@ class Manifest:
 
 
 DownloadStatus = Literal[
-    "downloaded", "known_url", "duplicate_content", "rejected", "blocked", "error"
+    "downloaded", "known_url", "duplicate_content", "rejected", "blocked", "unauthorized", "error"
 ]
+STOPPING_STATUSES = ("blocked", "unauthorized")
+"""Outcomes after which no other document is tried (the site or the session refuses us)."""
 
 
 @dataclass(frozen=True)
@@ -173,7 +181,7 @@ class Downloader:
                 outcomes.append(outcome)
                 if self._on_outcome is not None:
                     self._on_outcome(outcome, index, len(todo))
-                if outcome.status == "blocked":
+                if outcome.status in STOPPING_STATUSES:
                     break
         finally:
             manifest.save()
@@ -237,6 +245,7 @@ class Downloader:
                 score=doc.score,
                 justification=doc.justification,
                 downloaded_at=self._now(),
+                extra=dict(doc.extra),
             )
             manifest.entries.append(entry)
             return DownloadOutcome(doc, "downloaded", entry)
@@ -244,6 +253,8 @@ class Downloader:
             return DownloadOutcome(doc, "rejected", reason=str(exc))
         except BlockedError as exc:
             return DownloadOutcome(doc, "blocked", reason=str(exc))
+        except UnauthorizedError as exc:
+            return DownloadOutcome(doc, "unauthorized", reason=str(exc))
         except FetchError as exc:
             return DownloadOutcome(doc, "error", reason=str(exc))
         except httpx.RequestError as exc:  # failure while streaming the body
@@ -254,26 +265,66 @@ class Downloader:
     def _fetch_to(
         self, tmp: Path, doc: FoundDocument, recipe: Recipe
     ) -> tuple[str, int, str | None, bytes]:
+        spec = download_request(recipe, doc)
+        if spec is not None:
+            return self._fetch_by_request(tmp, doc, recipe, spec)
+        with self.fetcher.stream(doc.url, allowed_domains=recipe.allowed_domains) as resp:
+            content_type = resp.headers.get("content-type")
+            return self._save(tmp, doc, resp.iter_bytes(), content_type)
+
+    def _fetch_by_request(
+        self, tmp: Path, doc: FoundDocument, recipe: Recipe, spec: DownloadRequest
+    ) -> tuple[str, int, str | None, bytes]:
+        """Schema v6: the request built from the document's item; its reply is the file,
+        or a JSON reply holding the file (base64) or the URL of the file."""
+        url, body, headers = spec.build(doc.extra, self.fetcher.session_values, date.today())
+        domains = recipe.allowed_domains
+        with self.fetcher.stream(
+            url, allowed_domains=domains, method=spec.method, content=body, headers=headers
+        ) as resp:
+            content_type = resp.headers.get("content-type")
+            if spec.reply == "file" or "json" not in (content_type or "").lower():
+                return self._save(tmp, doc, resp.iter_bytes(), content_type)
+            data = _json_reply(self.fetcher.read(resp), url)
+        value = json_path(data, spec.path) if spec.path else data
+        if not isinstance(value, str) or not value.strip():
+            raise _RejectedError(f"no {spec.reply} value at {spec.path or 'the reply'}")
+        if spec.reply == "base64":
+            try:
+                content = base64.b64decode(value.strip(), validate=True)
+            except (binascii.Error, ValueError) as exc:
+                raise _RejectedError(f"invalid base64 content at {spec.path}") from exc
+            return self._save(tmp, doc, iter([content]), None)
+        file_url = resolve_url(value.strip(), url)
+        with self.fetcher.stream(file_url, allowed_domains=domains) as resp:
+            return self._save(tmp, doc, resp.iter_bytes(), resp.headers.get("content-type"))
+
+    def _save(
+        self,
+        tmp: Path,
+        doc: FoundDocument,
+        chunks: Iterator[bytes],
+        content_type: str | None,
+    ) -> tuple[str, int, str | None, bytes]:
+        """Write ``chunks`` to ``tmp``, checking type, magic bytes and size on the way."""
         limit = self.fetcher.settings.max_download_bytes
         digest = hashlib.sha256()
         size = 0
         head = b""
-        with self.fetcher.stream(doc.url, allowed_domains=recipe.allowed_domains) as resp:
-            content_type = resp.headers.get("content-type")
-            media = (content_type or "").split(";")[0].strip().lower()
-            if media in _HTML_TYPES and doc.extension not in _MARKUP_EXTENSIONS:
-                raise _RejectedError(f"HTML page instead of a .{doc.extension or '?'} file")
-            with tmp.open("wb") as fh:
-                for chunk in resp.iter_bytes():
-                    if len(head) < 16:
-                        head = (head + chunk)[:16]
-                        if len(head) >= 8 and (reason := check_magic(doc.extension, head)):
-                            raise _RejectedError(reason)
-                    size += len(chunk)
-                    if size > limit:
-                        raise _RejectedError(f"file larger than {limit} bytes")
-                    digest.update(chunk)
-                    fh.write(chunk)
+        media = (content_type or "").split(";")[0].strip().lower()
+        if media in _HTML_TYPES and doc.extension not in _MARKUP_EXTENSIONS:
+            raise _RejectedError(f"HTML page instead of a .{doc.extension or '?'} file")
+        with tmp.open("wb") as fh:
+            for chunk in chunks:
+                if len(head) < 16:
+                    head = (head + chunk)[:16]
+                    if len(head) >= 8 and (reason := check_magic(doc.extension, head)):
+                        raise _RejectedError(reason)
+                size += len(chunk)
+                if size > limit:
+                    raise _RejectedError(f"file larger than {limit} bytes")
+                digest.update(chunk)
+                fh.write(chunk)
         if size == 0:
             raise _RejectedError("empty file")
         if reason := check_magic(doc.extension, head):
@@ -296,6 +347,13 @@ class Downloader:
 
 class _RejectedError(Exception):
     pass
+
+
+def _json_reply(content: bytes, url: str) -> object:
+    try:
+        return json.loads(content)
+    except ValueError as exc:
+        raise _RejectedError(f"the reply of {url} is not JSON: {exc}") from exc
 
 
 def target_path(issuer: str, doc: FoundDocument) -> str:

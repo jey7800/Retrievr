@@ -44,7 +44,8 @@ A file deleted from the output directory is downloaded again on the next run.
 Settings come from `--config` (else `./retrievr.toml`); `--state-dir` and `--output-dir`
 override them. `--json` prints one JSON object for scripts, `-v` prints events and logs
 on stderr. Exit codes: 0 success, 1 failure (rejected, degraded, broken), 2 bad usage,
-3 blocked by the site, 4 LLM budget exceeded. `python -m retrievr` works too.
+3 blocked by the site, 4 LLM budget exceeded, 5 host session refused (see "Sites behind
+a login"). `python -m retrievr` works too.
 
 ## Health checks and repair
 
@@ -168,6 +169,37 @@ does not link, and a recipe (schema v5) reads it from the page on every run
 (`response.embedded`). JSON item paths may use `*` for lists spread over keys
 (`{"2025": {"Q1": [...]}}` is `*.*`); the keys it goes through (2025, Q1) describe the
 documents, for the rules.
+
+## Sites behind a login (host sessions)
+
+Retrievr never logs in. A host application that has logged in to a site (with its own
+vault, browser sign-in and multi-factor handling) passes the session, and Retrievr
+replays the site's recipe with it:
+
+```python
+from retrievr import HostSession, Retrievr
+
+session = HostSession(
+    transport=MySessionTransport(),   # httpx.BaseTransport: adds cookies and tokens,
+                                      # answers 401 when the session is gone
+    values={"holder_id": "..."},      # read at login, used as {session.holder_id}
+)
+r = Retrievr("retrievr.toml", session=session)
+outcome = r.run("example-portal")
+if outcome.status == "unauthorized":  # log in again, then run once more
+    ...
+```
+
+- Every request goes through the transport; the library keeps no cookies of its own and
+  never closes the transport. robots.txt, the rate limit and block detection still apply.
+- A refused session (HTTP 401) ends the run with status `unauthorized` (CLI exit code 5),
+  never with a repair.
+- Recipe schema v6 describes such sites: listings asked once per account read from
+  another call (`params: {account: {kind: response, ...}}`), values of an item kept with
+  the document (`items.extra`, also in `manifest.json`), and documents fetched by a
+  request built from their item (`download`: a POST with the document key, whose reply
+  is the file, base64 in JSON, or a pre-signed URL). See
+  `docs/decisions/0014-host-sessions-and-schema-v6.md`.
 
 ## Respectful crawling
 

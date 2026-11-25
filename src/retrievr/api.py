@@ -31,7 +31,14 @@ from retrievr.classify import Decision, apply_decisions
 from retrievr.config import Settings, load_settings
 from retrievr.download import Downloader, DownloadOutcome
 from retrievr.events import Event, EventHandler, emit
-from retrievr.fetch import BlockedError, Fetcher, FetchError, HTTPStatusError
+from retrievr.fetch import (
+    BlockedError,
+    Fetcher,
+    FetchError,
+    HostSession,
+    HTTPStatusError,
+    UnauthorizedError,
+)
 from retrievr.health import HealthReport, Probe, assess
 from retrievr.learn import (
     FILTER_SYSTEM,
@@ -56,6 +63,7 @@ from retrievr.recipe import (
     FoundDocument,
     Recipe,
     RunResult,
+    fetched_by_request,
     load_recipe,
     run_recipe,
     url_path_variants,
@@ -67,8 +75,10 @@ from retrievr.validate import Reachability, ValidationReport, validate_runs
 
 log = logging.getLogger("retrievr")
 
-LearnStatus = Literal["learned", "rejected", "blocked", "error", "budget_exceeded"]
-RunStatus = Literal["ok", "degraded", "blocked", "error", "no_recipe", "budget_exceeded"]
+LearnStatus = Literal["learned", "rejected", "blocked", "unauthorized", "error", "budget_exceeded"]
+RunStatus = Literal[
+    "ok", "degraded", "blocked", "unauthorized", "error", "no_recipe", "budget_exceeded"
+]
 MAX_LLM_REPAIRS_PER_DAY = 2
 REACHABILITY_SAMPLE = 3
 """Documents fetched while learning to check that the listed files can be downloaded."""
@@ -146,7 +156,7 @@ def in_years(documents: list[FoundDocument], years: Collection[int] | None) -> l
 def download_warnings(downloads: list[DownloadOutcome]) -> list[str]:
     """Say so when not one of the documents could be downloaded (they are listed, but
     the site answers 404 or serves an HTML page instead of the files)."""
-    failed = [d for d in downloads if d.status in ("rejected", "error", "blocked")]
+    failed = [d for d in downloads if d.status in ("rejected", "error", "blocked", "unauthorized")]
     if not downloads or len(failed) < len(downloads):
         return []
     return [
@@ -184,7 +194,10 @@ def issuer_from_url(url: str) -> str:
 
 def _answer(fetcher: Fetcher, recipe: Recipe, url: str) -> str:
     """``ok``, ``gone`` (404/410), ``blocked`` (403 or a challenge page: the host refuses
-    this client) or ``unknown`` (rate limited, unavailable, network error)."""
+    this client) or ``unknown`` (rate limited, unavailable, network error, a refused
+    session, or a document fetched by a request that its identity URL cannot replay)."""
+    if fetched_by_request(recipe, url):
+        return "unknown"
     try:
         with fetcher.stream(url, allowed_domains=recipe.allowed_domains):
             return "ok"
@@ -206,6 +219,13 @@ class Retrievr:
     returns the endpoint's response. With a transport, the API key environment variable
     is optional: if it is unset, no ``Authorization`` header is sent and the transport
     authenticates. The transport is never closed by the library; its owner closes it.
+
+    ``session`` (a ``HostSession``: an ``httpx.BaseTransport`` plus the values read at
+    login) is how the host runs recipes on sites it has logged in to (ADR 0014). Every
+    request of the run goes through its transport, which adds the cookies and tokens and
+    answers 401 when the session is gone; recipes read its values as
+    ``{session.<name>}``. A refused session ends the run with status ``unauthorized``:
+    nothing is repaired, the host logs in again. Retrievr itself never logs in.
     """
 
     def __init__(
@@ -218,15 +238,19 @@ class Retrievr:
         discoverer: Discoverer | None = None,
         fetch_transport: httpx.BaseTransport | None = None,
         llm_transport: httpx.BaseTransport | None = None,
+        session: HostSession | None = None,
         sleep: Callable[[float], None] = time.sleep,
         today: date | None = None,
     ) -> None:
+        if session is not None and fetch_transport is not None:
+            raise ValueError("give fetch_transport or session, not both")
         self.settings = settings or load_settings(config_path)
         self.on_event = on_event
         self.store = StateStore(self.settings.state.state_dir)
         self._llm_override = llm
         self._discoverer = discoverer
         self._fetch_transport = fetch_transport
+        self._session = session
         self._llm_transport = llm_transport
         self._sleep = sleep
         self._today = today
@@ -238,7 +262,12 @@ class Retrievr:
     # -- helpers -----------------------------------------------------------------------
 
     def _fetcher(self) -> Fetcher:
-        return Fetcher(self.settings.fetch, transport=self._fetch_transport, sleep=self._sleep)
+        return Fetcher(
+            self.settings.fetch,
+            transport=self._fetch_transport,
+            session=self._session,
+            sleep=self._sleep,
+        )
 
     def _llm(self, run_id: str) -> tuple[StructuredLLM, CostLedger | None]:
         if self._llm_override is not None:
@@ -329,6 +358,10 @@ class Retrievr:
             result.status = "blocked"
             result.errors.append(str(exc))
             self._emit("blocked", site, str(exc))
+        except UnauthorizedError as exc:
+            result.status = "unauthorized"
+            result.errors.append(str(exc))
+            self._emit("unauthorized", site, str(exc))
         except BudgetExceededError as exc:
             result.status = "budget_exceeded"
             result.errors.append(str(exc))
@@ -376,6 +409,8 @@ class Retrievr:
         recipe = learner.build_recipe(structure.reply, rules=rules.rules, version=version)
         check_years = learner.check_years(recipe)
         first = run_recipe(recipe, fetcher, years=check_years, today=self.today)
+        if first.status == "unauthorized":
+            raise UnauthorizedError(url)
         recipe, first, reachability = self._downloadable(recipe, first, fetcher, check_years)
         decisions: dict[str, Decision] = dict(rules.decisions)
         decisions.update(
@@ -443,9 +478,9 @@ class Retrievr:
             with self._fetcher() as fetcher:
                 run = run_recipe(recipe, fetcher, years=years, today=self.today)
                 outcome.errors = list(run.errors)
-                if run.status == "blocked":
-                    outcome.status = "blocked"
-                    self._emit("blocked", site, "; ".join(run.errors))
+                if run.status in ("blocked", "unauthorized"):
+                    outcome.status = run.status
+                    self._emit(run.status, site, "; ".join(run.errors))
                     return outcome
                 decisions = self.store.decisions(recipe.recipe)
                 listed = apply_decisions(run.documents, decisions)
@@ -512,11 +547,23 @@ class Retrievr:
                     downloader = self._downloader(fetcher, site)
                     outcome.downloads = downloader.download_all(recipe, selected)
                     outcome.warnings += download_warnings(outcome.downloads)
+                    refused = [d for d in outcome.downloads if d.status == "unauthorized"]
+                    if refused:
+                        # The session ended during the downloads: the host logs in again
+                        # and runs once more (the files already saved are known then).
+                        outcome.status = "unauthorized"
+                        outcome.errors.append(refused[0].reason or "unauthorized")
+                        self._emit("unauthorized", site, refused[0].reason or "")
+                        return outcome
                 outcome.status = "ok"
         except BlockedError as exc:
             outcome.status = "blocked"
             outcome.errors.append(str(exc))
             self._emit("blocked", site, str(exc))
+        except UnauthorizedError as exc:
+            outcome.status = "unauthorized"
+            outcome.errors.append(str(exc))
+            self._emit("unauthorized", site, str(exc))
         except BudgetExceededError as exc:
             outcome.status = "budget_exceeded"
             outcome.errors.append(str(exc))
@@ -560,6 +607,9 @@ class Retrievr:
         except BlockedError as exc:
             report.add("run", "blocked", str(exc))
             self._emit("blocked", site, str(exc))
+        except UnauthorizedError as exc:
+            report.add("run", "blocked", str(exc))
+            self._emit("unauthorized", site, str(exc))
         finally:
             self.store.finish_run(
                 run_id, status=report.verdict, documents=0, llm_calls=0, cost_usd=0.0

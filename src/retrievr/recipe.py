@@ -7,7 +7,10 @@ interpreter below is the only thing that acts on it.
 Schema versions: v1 (url templates, items, rules), v2 (table context, rule field
 targets, ADR 0004), v3 (request sources: GET or POST endpoints with templated bodies,
 values read from page options, page-number pagination, JSON or HTML responses, opaque
-document links; ADR 0008).
+document links; ADR 0008), v4 (detail pages, file-name URL templates; ADR 0011), v5
+(listings held by the page as JSON, ``*`` in JSON paths; ADR 0013), v6 (host sessions:
+``{session.<name>}`` values, parameters read from another call, documents fetched by a
+request built from their item; ADR 0014).
 """
 
 from __future__ import annotations
@@ -22,7 +25,7 @@ from dataclasses import dataclass, field
 from datetime import date, datetime
 from pathlib import Path
 from typing import Annotated, Any, Literal
-from urllib.parse import urlencode
+from urllib.parse import quote, urlencode, urlsplit
 
 import yaml
 from pydantic import (
@@ -40,6 +43,7 @@ from retrievr.candidates import (
     compile_selector,
     extract_candidates,
     json_candidates,
+    json_items,
     json_path,
     label_year,
     parse_html,
@@ -47,15 +51,26 @@ from retrievr.candidates import (
     text_of,
 )
 from retrievr.classify import ClassifyRules, classify
-from retrievr.fetch import REQUEST_HEADERS, BlockedError, Fetcher, FetchError, HTTPStatusError
+from retrievr.fetch import (
+    REQUEST_HEADERS,
+    BlockedError,
+    Fetcher,
+    FetchError,
+    HTTPStatusError,
+    UnauthorizedError,
+)
 from retrievr.urls import is_allowed, normalize_url, resolve_url
 
 log = logging.getLogger("retrievr.recipe")
 
 SCHEMA_VERSION = 4
-LATEST_SCHEMA_VERSION = 5
+LATEST_SCHEMA_VERSION = 6
 _SLUG = r"^[a-z0-9][a-z0-9-]*$"
+_NAME = r"^[a-z_][a-z0-9_]*$"
 _PLACEHOLDER = re.compile(r"\{([a-z_][a-z0-9_]*)\}")
+_SCOPED = re.compile(r"\{((?:item|session)\.[a-z_][a-z0-9_]*)\}")
+"""Schema v6: ``{session.<name>}`` (a value of the host session) and ``{item.<name>}``
+(a value of the listed item, in a document's download request)."""
 _TODAY = re.compile(r"\{today:([^{}]+)\}")
 _YEAR_IN_TEXT = re.compile(r"(?<!\d)((?:19|20)\d{2})(?!\d)")
 _ISO_DATE = re.compile(r"(\d{4})-(\d{2})-(\d{2})")
@@ -96,6 +111,29 @@ class OptionsParam(_Model):
     def _valid_selector(cls, value: str) -> str:
         compile_selector(value)
         return value
+
+
+class ResponseParam(_Model):
+    """Schema v6: values read from the JSON reply of another call, typically the ids of
+    the accounts or entities a session can see; the listing request is made once per
+    value. ``{session.<name>}`` and ``{today:...}`` may appear in the URL and the body."""
+
+    kind: Literal["response"] = "response"
+    method: Literal["GET", "POST"] = "GET"
+    url: str
+    json_body: Any = Field(default=None, alias="json")
+    items: str
+    """Path to the list (dotted, ``*`` allowed)."""
+    value: str
+    """Path of the value inside one item."""
+
+    @model_validator(mode="after")
+    def _consistent(self) -> ResponseParam:
+        if self.method == "GET" and self.json_body is not None:
+            raise ValueError("a GET request has no body")
+        if names := _PLACEHOLDER.findall(" ".join([self.url, *_strings(self.json_body)])):
+            raise ValueError(f"only {{session.<name>}} placeholders here, not {sorted(names)}")
+        return self
 
 
 class NextLinkPagination(_Model):
@@ -185,8 +223,9 @@ class JsonItems(_Model):
 
     path: str
     """Path to the list of items, e.g. ``results.0.hits``."""
-    url: str | list[str]
-    """Path to the document URL inside an item; several paths: the first present wins."""
+    url: str | list[str] | None = None
+    """Path to the document URL inside an item; several paths: the first present wins.
+    None only when the source fetches each document by a request (``download``)."""
     title: str | None = None
     file_name: str | None = None
     date: str | None = None
@@ -196,6 +235,17 @@ class JsonItems(_Model):
     url_template: str | None = None
     """Schema v4: the item holds a file name, not a URL; the document URL is this
     template with ``{value}`` replaced by the (URL-encoded) name."""
+    extra: dict[str, str] = {}
+    """Schema v6: values of the item kept with the document (name -> path): in the
+    manifest for the host (an account number, a fund name), and as ``{item.<name>}`` in
+    the source's ``download`` request (a document key)."""
+
+    @field_validator("extra")
+    @classmethod
+    def _names(cls, value: dict[str, str]) -> dict[str, str]:
+        if bad := [n for n in value if not re.match(_NAME, n)]:
+            raise ValueError(f"extra names must be lowercase identifiers: {bad}")
+        return value
 
     @field_validator("url_template")
     @classmethod
@@ -313,11 +363,99 @@ class UrlTemplateSource(_Model):
             yield params, _fill(self.url, params)
 
 
+DownloadReply = Literal["file", "base64", "url"]
+
+
+class DownloadRequest(_Model):
+    """Schema v6: each document is fetched by a request built from its item (a POST
+    with the document key), not at a URL of its own. ``{item.<name>}`` (a value of
+    ``items.extra``), ``{session.<name>}`` and ``{today:...}`` may appear in the body;
+    the URL takes ``{item.<name>}`` of ``identity`` and ``{session.<name>}`` only.
+
+    ``reply``: ``file`` (the response is the file), ``base64`` (a JSON reply holds the
+    file, base64-encoded, at ``path``) or ``url`` (a JSON reply gives the URL of the file
+    at ``path``, e.g. a pre-signed link, fetched with a GET within the allowed domains).
+    With ``base64`` or ``url``, a reply that is not JSON is the file itself."""
+
+    method: Literal["GET", "POST"] = "POST"
+    url: str
+    form: dict[str, str] | None = None
+    json_body: Any = Field(default=None, alias="json")
+    headers: dict[str, str] = {}
+    reply: DownloadReply = "file"
+    path: str | None = None
+    identity: list[str] | None = None
+    """Names of ``items.extra`` that identify a document across runs (dedup, history);
+    by default every ``{item.<name>}`` of the request. Leave out a key the site changes
+    on every session."""
+
+    @model_validator(mode="after")
+    def _consistent(self) -> DownloadRequest:
+        if self.form is not None and self.json_body is not None:
+            raise ValueError("download: give form or json, not both")
+        if self.method == "GET" and (self.form is not None or self.json_body is not None):
+            raise ValueError("download: a GET request has no body")
+        if bad := [h for h in self.headers if h.lower() not in REQUEST_HEADERS]:
+            raise ValueError(f"download: headers not allowed: {bad}")
+        if self.reply == "base64" and not self.path:
+            raise ValueError("download: reply base64 needs the path of the content")
+        if names := _PLACEHOLDER.findall(" ".join(self._texts())):
+            raise ValueError(f"download: only item/session placeholders, not {sorted(names)}")
+        if _TODAY.search(self.url):
+            raise ValueError("download: {today:...} would change the document identity daily")
+        in_url = set(self.scoped(self.url, "item"))
+        if self.identity is not None and not in_url <= set(self.identity):
+            raise ValueError("download: the URL may only use {item.<name>} of identity")
+        return self
+
+    def _texts(self) -> list[str]:
+        return [self.url, *(self.form or {}).values(), *_strings(self.json_body)]
+
+    @staticmethod
+    def scoped(text: str, scope: str) -> list[str]:
+        prefix = scope + "."
+        return [m[len(prefix) :] for m in _SCOPED.findall(text) if m.startswith(prefix)]
+
+    def item_names(self) -> list[str]:
+        """The ``{item.<name>}`` the request uses, in order of first use."""
+        names: list[str] = []
+        for text in self._texts():
+            names += [n for n in self.scoped(text, "item") if n not in names]
+        return names
+
+    def identity_url(self, extra: Mapping[str, str], session: Mapping[str, str]) -> str | None:
+        """The document's identity: the request URL, plus the identity values the URL
+        does not hold as query pairs. None when the item lacks one of them."""
+        names = self.identity if self.identity is not None else self.item_names()
+        if any(not extra.get(n) for n in names):
+            return None
+        url = _fill_scoped(self.url, extra, session)
+        rest = [(n, extra[n]) for n in names if n not in self.scoped(self.url, "item")]
+        if not rest:
+            return url
+        return url + ("&" if "?" in url else "?") + urlencode(rest)
+
+    def build(
+        self, extra: Mapping[str, str], session: Mapping[str, str], today: date
+    ) -> tuple[str, bytes | None, dict[str, str]]:
+        """URL, body and headers of the request that fetches one document."""
+        values = _scoped_values(extra, session)
+        return _build_request(
+            _fill_scoped(self.url, extra, session),
+            self.form,
+            self.json_body,
+            self.headers,
+            values,
+            today,
+        )
+
+
 class RequestSource(_Model):
     """Schema v3: a listing endpoint (often the XHR a page calls), replayed without a
     browser. Placeholders ``{name}`` (a param, ``year``, ``page``) and ``{today:%d/%m/%Y}``
     may appear in the URL, the form fields and the strings of the JSON body; a JSON
-    string that is only ``{page}`` or ``{year}`` becomes a number."""
+    string that is only ``{page}`` or ``{year}`` becomes a number. Schema v6 adds
+    ``{session.<name>}``, parameters read from another call and ``download``."""
 
     id: str = Field(pattern=_SLUG)
     kind: Literal["request"] = "request"
@@ -326,10 +464,12 @@ class RequestSource(_Model):
     form: dict[str, str] | None = None
     json_body: Any = Field(default=None, alias="json")
     headers: dict[str, str] = {}
-    params: dict[str, YearRange | OptionsParam] = {}
+    params: dict[str, YearRange | OptionsParam | ResponseParam] = {}
     pagination: PageNumberPagination | None = None
     response: ResponseSpec = ResponseSpec()
     items: ItemsSpec = ItemsSpec()
+    download: DownloadRequest | None = None
+    """Schema v6: how each listed document is fetched, when not by its URL."""
 
     @model_validator(mode="after")
     def _consistent(self) -> RequestSource:
@@ -340,6 +480,20 @@ class RequestSource(_Model):
         bad = [h for h in self.headers if h.lower() not in REQUEST_HEADERS]
         if bad:
             raise ValueError(f"source {self.id!r}: headers not allowed: {bad}")
+        if any(m.startswith("item.") for m in _SCOPED.findall(" ".join(self._texts()))):
+            raise ValueError(f"source {self.id!r}: {{item.<name>}} belongs to download only")
+        items = self.response.items
+        if items is not None and items.url is None and self.download is None:
+            raise ValueError(f"source {self.id!r}: JSON items need a url path or a download")
+        if self.download is not None:
+            if items is None:
+                raise ValueError(f"source {self.id!r}: download needs JSON items")
+            known = set(items.extra)
+            wanted = set(self.download.item_names()) | set(self.download.identity or ())
+            if missing := wanted - known:
+                raise ValueError(
+                    f"source {self.id!r}: download uses {sorted(missing)}, not in items.extra"
+                )
         used = self.placeholders()
         allowed = set(self.params) | ({PAGE} if self.pagination else set())
         if any(isinstance(p, OptionsParam) for p in self.params.values()):
@@ -350,26 +504,67 @@ class RequestSource(_Model):
             raise ValueError(f"source {self.id!r}: page_number pagination needs {{page}}")
         return self
 
+    def _texts(self) -> list[str]:
+        return [self.url, *(self.form or {}).values(), *_strings(self.json_body)]
+
     def placeholders(self) -> set[str]:
-        texts = [self.url, *(self.form or {}).values(), *_strings(self.json_body)]
-        return {name for text in texts for name in _PLACEHOLDER.findall(text)}
+        return {name for text in self._texts() for name in _PLACEHOLDER.findall(text)}
+
+    def session_names(self) -> set[str]:
+        """``{session.<name>}`` used by the source, its parameters and its downloads."""
+        texts = self._texts()
+        for param in self.params.values():
+            if isinstance(param, ResponseParam):
+                texts += [param.url, *_strings(param.json_body)]
+        if self.download is not None:
+            texts += self.download._texts()
+        return {n for t in texts for n in DownloadRequest.scoped(t, "session")}
 
     def build(
-        self, values: Mapping[str, ParamValue], today: date
+        self,
+        values: Mapping[str, ParamValue],
+        today: date,
+        session: Mapping[str, str] | None = None,
     ) -> tuple[str, bytes | None, dict[str, str]]:
         """URL, body and headers of one request."""
-        url = fill_template(self.url, values, today)
-        headers = dict(self.headers)
-        body: bytes | None = None
-        if self.form is not None:
-            form = {k: fill_template(v, values, today) for k, v in self.form.items()}
-            body = urlencode(form).encode()
-            headers.setdefault("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8")
-        elif self.json_body is not None:
-            filled = _fill_json(self.json_body, values, today)
-            body = json.dumps(filled, ensure_ascii=False, separators=(",", ":")).encode()
-            headers.setdefault("Content-Type", "application/json")
-        return url, body, headers
+        scoped = _scoped_values({}, session or {})
+        url = fill_template(_fill_scoped(self.url, {}, session or {}), values, today)
+        return _build_request(
+            url, self.form, self.json_body, self.headers, {**values, **scoped}, today
+        )
+
+
+def _build_request(
+    url: str,
+    form: Mapping[str, str] | None,
+    json_body: Any,
+    headers: Mapping[str, str],
+    values: Mapping[str, ParamValue],
+    today: date,
+) -> tuple[str, bytes | None, dict[str, str]]:
+    out_headers = dict(headers)
+    body: bytes | None = None
+    if form is not None:
+        filled_form = {k: fill_template(v, values, today) for k, v in form.items()}
+        body = urlencode(filled_form).encode()
+        out_headers.setdefault("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8")
+    elif json_body is not None:
+        filled = _fill_json(json_body, values, today)
+        body = json.dumps(filled, ensure_ascii=False, separators=(",", ":")).encode()
+        out_headers.setdefault("Content-Type", "application/json")
+    return url, body, out_headers
+
+
+def _scoped_values(extra: Mapping[str, str], session: Mapping[str, str]) -> dict[str, str]:
+    return {
+        **{f"item.{k}": v for k, v in extra.items()},
+        **{f"session.{k}": v for k, v in session.items()},
+    }
+
+
+def _fill_scoped(text: str, extra: Mapping[str, str], session: Mapping[str, str]) -> str:
+    values = _scoped_values(extra, session)
+    return _SCOPED.sub(lambda m: quote(values.get(m.group(1), ""), safe=""), text)
 
 
 def _source_kind(value: Any) -> str:
@@ -387,6 +582,9 @@ Source = Annotated[
 
 def fill_template(text: str, values: Mapping[str, ParamValue], today: date) -> str:
     text = _TODAY.sub(lambda m: today.strftime(m.group(1)), text)
+    text = _SCOPED.sub(
+        lambda m: str(values[m.group(1)]) if m.group(1) in values else m.group(0), text
+    )
     return _PLACEHOLDER.sub(
         lambda m: str(values[m.group(1)]) if m.group(1) in values else m.group(0), text
     )
@@ -455,7 +653,7 @@ class Provenance(_Model):
 
 
 class Recipe(_Model):
-    schema_version: Literal[1, 2, 3, 4, 5]
+    schema_version: Literal[1, 2, 3, 4, 5, 6]
     recipe: str = Field(pattern=_SLUG)
     version: int = Field(ge=1)
     issuer: str = Field(pattern=_SLUG)
@@ -486,8 +684,7 @@ class Recipe(_Model):
         if len(ids) != len(set(ids)):
             raise ValueError(f"duplicate source ids: {ids}")
         for source in self.sources:
-            probe = _PLACEHOLDER.sub("2000", _TODAY.sub("x", source.url))
-            if not is_allowed(probe, self.allowed_domains):
+            if not is_allowed(_probe_url(source.url), self.allowed_domains):
                 raise ValueError(f"source {source.id!r} URL is outside allowed_domains")
             if isinstance(source, RequestSource):
                 for param in source.params.values():
@@ -495,6 +692,16 @@ class Recipe(_Model):
                         param.page, self.allowed_domains
                     ):
                         raise ValueError(f"source {source.id!r}: options page outside domains")
+                    if isinstance(param, ResponseParam) and not is_allowed(
+                        _probe_url(param.url), self.allowed_domains
+                    ):
+                        raise ValueError(f"source {source.id!r}: parameter call outside domains")
+                if source.download is not None and not is_allowed(
+                    _probe_url(source.download.url), self.allowed_domains
+                ):
+                    raise ValueError(f"source {source.id!r}: download URL outside domains")
+        if self.schema_version < 6 and (reason := self._v6_feature()):
+            raise ValueError(f"{reason} requires schema_version 6")
         if self.schema_version < 5 and any(
             isinstance(s, RequestSource) and s.response.embedded for s in self.sources
         ):
@@ -526,6 +733,26 @@ class Recipe(_Model):
             self._check_v1_subset()
         return self
 
+    def _v6_feature(self) -> str | None:
+        """The first schema v6 feature the recipe uses, or None."""
+        for source in self.sources:
+            if not isinstance(source, RequestSource):
+                continue
+            if source.session_names():
+                return "{session.<name>}"
+            if any(isinstance(p, ResponseParam) for p in source.params.values()):
+                return "a parameter read from another call"
+            if source.download is not None:
+                return "download"
+            items = source.response.items
+            if items is not None and items.extra:
+                return "items.extra"
+        return None
+
+    def session_values(self) -> set[str]:
+        """The values the host session must give (``{session.<name>}`` the recipe uses)."""
+        return {n for s in self.sources if isinstance(s, RequestSource) for n in s.session_names()}
+
     def _check_v2_subset(self) -> None:
         """Schema v1 and v2 recipes cannot use features added in v3."""
         if any(isinstance(s, RequestSource) for s in self.sources):
@@ -547,6 +774,11 @@ class Recipe(_Model):
     @property
     def key(self) -> str:
         return f"{self.recipe}@{self.version}"
+
+
+def _probe_url(template: str) -> str:
+    """A template with its placeholders filled by a dummy value (for domain checks)."""
+    return _PLACEHOLDER.sub("2000", _SCOPED.sub("x", _TODAY.sub("x", template)))
 
 
 def _targets(target: object, name: str) -> bool:
@@ -583,6 +815,8 @@ class FoundDocument:
     justification: str
     fields: Mapping[str, str | None] = field(default_factory=dict, compare=False)
     """Texts the classification rules read (link text, heading, table headers...)."""
+    extra: Mapping[str, str] = field(default_factory=dict, compare=False)
+    """Schema v6: values of the item the recipe keeps (``items.extra``)."""
 
 
 @dataclass(frozen=True)
@@ -597,7 +831,7 @@ class PageVisit:
     """Parameter values of a request source page (option, year, page)."""
 
 
-RunStatus = Literal["ok", "blocked", "error"]
+RunStatus = Literal["ok", "blocked", "unauthorized", "error"]
 
 
 @dataclass
@@ -624,6 +858,11 @@ def run_recipe(
     """
     today = today or date.today()
     result = RunResult(recipe=recipe.recipe, recipe_version=recipe.version)
+    if missing := missing_session_values(recipe, fetcher):
+        # No session to run with: the same signal as a refused session (log in first).
+        result.status = "unauthorized"
+        result.errors.append(session_values_message(missing))
+        return result
     seen: set[str] = set()
     restrict = {"year": years} if years is not None else None
     for source in recipe.sources:
@@ -644,6 +883,10 @@ def run_recipe(
             result.status = "blocked"
             result.errors.append(str(exc))
             return result
+        except UnauthorizedError as exc:
+            result.status = "unauthorized"
+            result.errors.append(str(exc))
+            return result
         except FetchError as exc:
             result.status = "error"
             result.errors.append(f"{source.id}: {exc}")
@@ -652,6 +895,39 @@ def run_recipe(
             result.errors.append(f"{source.id}: {exc}")
     result.documents = [_published_year(d, today) for d in result.documents]
     return result
+
+
+def missing_session_values(recipe: Recipe, fetcher: Fetcher) -> list[str]:
+    """``{session.<name>}`` the recipe uses that the fetcher's host session lacks."""
+    return sorted(recipe.session_values() - set(fetcher.session_values))
+
+
+def session_values_message(missing: Collection[str]) -> str:
+    return (
+        f"the recipe needs values of a host session: {', '.join(sorted(missing))} "
+        "(Retrievr(session=HostSession(transport, values={...})))"
+    )
+
+
+def download_request(recipe: Recipe, doc: FoundDocument) -> DownloadRequest | None:
+    """The request that fetches ``doc`` when its source has one (schema v6)."""
+    for source in recipe.sources:
+        if source.id == doc.source_id and isinstance(source, RequestSource):
+            return source.download
+    return None
+
+
+def fetched_by_request(recipe: Recipe, url: str) -> bool:
+    """Whether ``url`` is the identity of a document fetched by a request (schema v6):
+    it cannot be fetched as is, so it is never probed."""
+    target = urlsplit(url)
+    for source in recipe.sources:
+        if isinstance(source, RequestSource) and source.download is not None:
+            # The URL up to its first placeholder: the endpoint every identity starts with.
+            base = urlsplit(_SCOPED.split(source.download.url, maxsplit=1)[0])
+            if target.hostname == base.hostname and target.path.startswith(base.path):
+                return True
+    return False
 
 
 def _published_year(doc: FoundDocument, today: date) -> FoundDocument:
@@ -827,6 +1103,10 @@ def _assignments(
         values: list[_Choice]
         if isinstance(param, YearRange):
             values = [(name, y, y if name == "year" else None, False) for y in param.values(today)]
+        elif isinstance(param, ResponseParam):
+            values = [
+                (name, v, None, False) for v in _response_values(recipe, param, fetcher, today)
+            ]
         else:
             publication = param.year == "publication"
             values = [(name, v, y, publication) for v, y in _options(recipe, param, fetcher)]
@@ -861,6 +1141,45 @@ def _options(recipe: Recipe, param: OptionsParam, fetcher: Fetcher) -> list[tupl
     return found
 
 
+def _response_values(
+    recipe: Recipe, param: ResponseParam, fetcher: Fetcher, today: date
+) -> list[ParamValue]:
+    """The values a parameter call lists (in order, without repeats)."""
+    session = fetcher.session_values
+    url, body, headers = _build_request(
+        fill_template(_fill_scoped(param.url, {}, session), {}, today),
+        None,
+        param.json_body,
+        {},
+        _scoped_values({}, session),
+        today,
+    )
+    page = fetcher.request(
+        param.method, url, content=body, headers=headers, allowed_domains=recipe.allowed_domains
+    )
+    try:
+        data = json.loads(page.content)
+    except ValueError as exc:
+        raise ValueError(f"response of {page.final_url} is not JSON: {exc}") from exc
+    found: list[ParamValue] = []
+    for _keys, entry in json_items(data, param.items):
+        raw = json_path(entry, param.value)
+        value: ParamValue | None = (
+            raw if isinstance(raw, int) and not isinstance(raw, bool) else _scalar_text(raw)
+        )
+        if value not in (None, "") and value not in found:
+            found.append(value)
+    if not found:
+        raise ValueError(f"no value at {param.items} / {param.value} in {page.final_url}")
+    return found
+
+
+def _scalar_text(value: Any) -> str | None:
+    if value is None or isinstance(value, (dict, list)):
+        return None
+    return str(value).strip()
+
+
 def _run_request_source(
     recipe: Recipe,
     source: RequestSource,
@@ -881,7 +1200,7 @@ def _run_request_source(
             current = dict(values)
             if page_number is not None:
                 current[PAGE] = page_number
-            url, body, headers = source.build(current, today)
+            url, body, headers = source.build(current, today, fetcher.session_values)
             try:
                 page = fetcher.request(
                     source.method,
@@ -896,7 +1215,9 @@ def _run_request_source(
                     result.warnings.append(f"{source.id}: stop at {current} ({exc})")
                     break
                 raise
-            candidates, data = _response_candidates(source, page.content, page.final_url)
+            candidates, data = _response_candidates(
+                source, page.content, page.final_url, fetcher.session_values
+            )
             result.pages.append(
                 PageVisit(
                     source.id,
@@ -922,7 +1243,10 @@ def _run_request_source(
 
 
 def _response_candidates(
-    source: RequestSource, content: bytes, base_url: str
+    source: RequestSource,
+    content: bytes,
+    base_url: str,
+    session: Mapping[str, str] | None = None,
 ) -> tuple[list[Candidate], Any]:
     spec = source.response
     if spec.format == "html":
@@ -948,17 +1272,24 @@ def _response_candidates(
     assert spec.items is not None  # noqa: S101 - guaranteed by ResponseSpec
     # The date text joins the context, where _to_document reads its first ISO date.
     context = [*spec.items.context, *([spec.items.date] if spec.items.date else [])]
+    download = source.download
     found = json_candidates(
         data,
         base_url,
         items=spec.items.path,
-        url=spec.items.url,
+        url=spec.items.url or (),
         title=spec.items.title,
         file_name=spec.items.file_name,
         context=context,
         extensions=source.items.extensions,
         document_urls=source.items.document_urls,
         url_template=spec.items.url_template,
+        extra=spec.items.extra,
+        identity=(
+            (lambda extra: download.identity_url(extra, session or {}))
+            if download is not None
+            else None
+        ),
     )
     return found, data
 
@@ -1027,6 +1358,7 @@ def _to_document(
         score=cls.score,
         justification="; ".join(cls.justification),
         fields=cand.fields(),
+        extra=dict(cand.extra),
     )
 
 

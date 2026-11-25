@@ -12,7 +12,7 @@ defaults. ``--json`` prints one JSON object (for scripts); events go to stderr w
 
 Exit codes: 0 success (learned, ok, repaired, healthy), 1 failure (rejected, error,
 degraded, broken or suspect health, no recipe), 3 blocked by the site, 4 LLM budget
-exceeded, 2 bad usage.
+exceeded, 5 host session refused or missing (log in again), 2 bad usage.
 """
 
 from __future__ import annotations
@@ -36,8 +36,11 @@ from retrievr.recipe import FoundDocument
 if TYPE_CHECKING:
     import httpx
 
+    from retrievr.fetch import HostSession
+
 DEFAULT_CONFIG = "retrievr.toml"
 EXIT_OK, EXIT_FAILED, EXIT_USAGE, EXIT_BLOCKED, EXIT_BUDGET = 0, 1, 2, 3, 4
+EXIT_UNAUTHORIZED = 5
 _YEARS = re.compile(r"^\s*(\d{4})\s*(?:-\s*(\d{4}))?\s*$")
 
 
@@ -175,9 +178,11 @@ def main(
     *,
     out: TextIO | None = None,
     llm_transport: httpx.BaseTransport | None = None,
+    session: HostSession | None = None,
 ) -> int:
     """Run the command line. A host with an LLM gateway keeps the whole command line by
-    calling ``main(llm_transport=MyGateway())`` from its own script (see the README)."""
+    calling ``main(llm_transport=MyGateway())`` from its own script (see the README); a
+    host that logged in to a site passes its ``session`` the same way."""
     if out is None:
         _utf8(sys.stdout)
         _utf8(sys.stderr)
@@ -195,7 +200,9 @@ def main(
 
     on_event = _print_event if args.verbose else (None if args.json else _print_progress)
     try:
-        r = Retrievr(settings=settings, on_event=on_event, llm_transport=llm_transport)
+        r = Retrievr(
+            settings=settings, on_event=on_event, llm_transport=llm_transport, session=session
+        )
         payload, code = COMMANDS[args.command](r, args)
     except KeyboardInterrupt:
         print("retrievr: interrupted", file=sys.stderr)
@@ -244,7 +251,12 @@ def _learn(r: Any, args: argparse.Namespace) -> tuple[dict[str, Any], int]:
         "errors": result.errors,
         "notes": result.notes,
     }
-    codes = {"learned": EXIT_OK, "blocked": EXIT_BLOCKED, "budget_exceeded": EXIT_BUDGET}
+    codes = {
+        "learned": EXIT_OK,
+        "blocked": EXIT_BLOCKED,
+        "unauthorized": EXIT_UNAUTHORIZED,
+        "budget_exceeded": EXIT_BUDGET,
+    }
     return payload, codes.get(result.status, EXIT_FAILED)
 
 
@@ -270,7 +282,12 @@ def _run(r: Any, args: argparse.Namespace) -> tuple[dict[str, Any], int]:
         "warnings": outcome.warnings,
         "errors": outcome.errors,
     }
-    codes = {"ok": EXIT_OK, "blocked": EXIT_BLOCKED, "budget_exceeded": EXIT_BUDGET}
+    codes = {
+        "ok": EXIT_OK,
+        "blocked": EXIT_BLOCKED,
+        "unauthorized": EXIT_UNAUTHORIZED,
+        "budget_exceeded": EXIT_BUDGET,
+    }
     return payload, codes.get(outcome.status, EXIT_FAILED)
 
 
@@ -330,7 +347,7 @@ def _download_problems(downloads: Sequence[Any]) -> list[str]:
     return [
         f"{d.status}: {d.document.url} ({d.reason})"
         for d in downloads
-        if d.status in ("rejected", "blocked", "error")
+        if d.status in ("rejected", "blocked", "unauthorized", "error")
     ]
 
 

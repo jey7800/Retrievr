@@ -14,6 +14,7 @@ EventKind = Literal[
     "recipe_learned",  # a learned recipe passed validation and is active
     "recipe_rejected",  # a candidate recipe failed validation: nothing activated
     "blocked",  # the site refused us (403/429/503, challenge, CAPTCHA)
+    "unauthorized",  # the host session was refused (HTTP 401) or not given: log in again
     "budget_exceeded",  # the LLM cost cap of the run was reached
     "llm_error",  # the LLM endpoint failed or never returned valid output
     "run_finished",  # a run (learn or replay) ended, with its status
@@ -37,7 +38,7 @@ EventHandler = Callable[[Event], None]
 
 
 def emit(handler: EventHandler | None, event: Event) -> None:
-    warn = ("recipe_rejected", "blocked", "health_alert", "site_degraded")
+    warn = ("recipe_rejected", "blocked", "unauthorized", "health_alert", "site_degraded")
     level = logging.WARNING if event.kind in warn else logging.INFO
     log.log(level, "%s %s: %s", event.kind, event.site, event.message)
     if handler is not None:

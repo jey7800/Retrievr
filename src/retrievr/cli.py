@@ -107,6 +107,11 @@ def build_parser() -> argparse.ArgumentParser:
     install = sub.add_parser("install", parents=[common], help="activate a hand-written recipe")
     install.add_argument("recipe", type=Path)
     install.add_argument("--site", help="site name (default: the recipe's issuer)")
+    install.add_argument(
+        "--reset-history",
+        action="store_true",
+        help="forget the documents earlier runs listed (a recipe with other document identities)",
+    )
     return parser
 
 
@@ -305,9 +310,12 @@ def _repair_command(r: Any, args: argparse.Namespace) -> tuple[dict[str, Any], i
 
 
 def _install(r: Any, args: argparse.Namespace) -> tuple[dict[str, Any], int]:
-    recipe = r.install(args.recipe, site=args.site)
+    recipe = r.install(args.recipe, site=args.site, reset_history=args.reset_history)
     site = args.site or recipe.issuer
-    return {"site": site, "status": "installed", "recipe": recipe.key}, EXIT_OK
+    payload = {"site": site, "status": "installed", "recipe": recipe.key}
+    if args.reset_history:
+        payload["history"] = "reset"
+    return payload, EXIT_OK
 
 
 COMMANDS = {
@@ -325,6 +333,7 @@ COMMANDS = {
 def _document(d: FoundDocument) -> dict[str, Any]:
     return {
         "url": d.url,
+        "source": d.source_id,
         "title": d.title,
         "type": d.type,
         "period": d.period,

@@ -309,6 +309,15 @@ class StateStore:
                 [(_now(), site, u) for u in normalized_urls],
             )
 
+    def forget_documents(self, site: str) -> int:
+        """Mark every document the site's history expects as removed; returns how many."""
+        with self._db() as db:
+            cur = db.execute(
+                "UPDATE documents SET removed_at = ? WHERE site = ? AND removed_at IS NULL",
+                (_now(), site),
+            )
+        return cur.rowcount
+
     def known_documents(self, site: str) -> list[KnownDocument]:
         with self._db() as db:
             rows = db.execute(

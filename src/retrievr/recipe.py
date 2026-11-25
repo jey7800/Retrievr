@@ -20,7 +20,8 @@ import itertools
 import json
 import logging
 import re
-from collections.abc import Collection, Iterator, Mapping
+from collections import Counter
+from collections.abc import Callable, Collection, Iterator, Mapping
 from dataclasses import dataclass, field
 from datetime import date, datetime
 from pathlib import Path
@@ -1189,6 +1190,29 @@ def _run_request_source(
     today: date,
     years: Collection[int] | None,
 ) -> None:
+    skipped: Counter[str] = Counter()
+    try:
+        _request_source_pages(recipe, source, fetcher, result, seen, today, years, skipped)
+    finally:
+        if skipped:
+            # An item kept nowhere must not vanish silently (a value the portal leaves blank).
+            items = skipped.pop("")
+            names = ", ".join(sorted(skipped))
+            result.warnings.append(
+                f"{source.id}: {items} items skipped, identity value missing: {names}"
+            )
+
+
+def _request_source_pages(
+    recipe: Recipe,
+    source: RequestSource,
+    fetcher: Fetcher,
+    result: RunResult,
+    seen: set[str],
+    today: date,
+    years: Collection[int] | None,
+    skipped: Counter[str],
+) -> None:
     for values in _assignments(recipe, source, fetcher, today, years):
         pagination = source.pagination
         pages: Iterator[int | None] = (
@@ -1216,7 +1240,7 @@ def _run_request_source(
                     break
                 raise
             candidates, data = _response_candidates(
-                source, page.content, page.final_url, fetcher.session_values
+                source, page.content, page.final_url, fetcher.session_values, skipped
             )
             result.pages.append(
                 PageVisit(
@@ -1247,7 +1271,10 @@ def _response_candidates(
     content: bytes,
     base_url: str,
     session: Mapping[str, str] | None = None,
+    skipped: Counter[str] | None = None,
 ) -> tuple[list[Candidate], Any]:
+    """Candidates of one response. ``skipped`` counts the items dropped because an
+    identity value is missing (key ``""``) and the names of the missing values."""
     spec = source.response
     if spec.format == "html":
         return _html_candidates(parse_html(content), base_url, source.items), None
@@ -1286,12 +1313,26 @@ def _response_candidates(
         url_template=spec.items.url_template,
         extra=spec.items.extra,
         identity=(
-            (lambda extra: download.identity_url(extra, session or {}))
-            if download is not None
-            else None
+            _identity_counter(download, session or {}, skipped) if download is not None else None
         ),
     )
     return found, data
+
+
+def _identity_counter(
+    download: DownloadRequest, session: Mapping[str, str], skipped: Counter[str] | None
+) -> Callable[[Mapping[str, str]], str | None]:
+    """The identity URL of an item, counting the items that lack an identity value."""
+    names = download.identity if download.identity is not None else download.item_names()
+
+    def identity(extra: Mapping[str, str]) -> str | None:
+        url = download.identity_url(extra, session)
+        if url is None and skipped is not None:
+            skipped[""] += 1
+            skipped.update(n for n in names if not extra.get(n))
+        return url
+
+    return identity
 
 
 def embedded_json(root: Any, spec: EmbeddedJson) -> Any:

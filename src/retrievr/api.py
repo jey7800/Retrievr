@@ -478,6 +478,7 @@ class Retrievr:
             with self._fetcher() as fetcher:
                 run = run_recipe(recipe, fetcher, years=years, today=self.today)
                 outcome.errors = list(run.errors)
+                outcome.warnings += run.warnings
                 if run.status in ("blocked", "unauthorized"):
                     outcome.status = run.status
                     self._emit(run.status, site, "; ".join(run.errors))
@@ -650,8 +651,14 @@ class Retrievr:
             )
         return result
 
-    def install(self, recipe_path: Path | str, *, site: str | None = None) -> Recipe:
-        """Store a hand-written recipe and make it the active recipe of its site."""
+    def install(
+        self, recipe_path: Path | str, *, site: str | None = None, reset_history: bool = False
+    ) -> Recipe:
+        """Store a hand-written recipe and make it the active recipe of its site.
+
+        ``reset_history`` forgets the documents earlier runs listed for the site, for a
+        recipe whose documents have other identities: health checks then start afresh
+        instead of reading the change as documents gone. Downloaded files stay known."""
         recipe = load_recipe(recipe_path)
         site = site or recipe.issuer
         path = self.store.recipes_dir / f"{recipe.key}.yaml"
@@ -664,6 +671,8 @@ class Retrievr:
                 f"raise 'version' in {recipe_path} to install the edited recipe"
             )
         self.store.activate(site, recipe, path)
+        if reset_history:
+            self.store.forget_documents(site)
         self.store.set_site(site, status="ok")
         return recipe
 

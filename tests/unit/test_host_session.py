@@ -357,3 +357,67 @@ def test_401_is_its_own_error() -> None:
         pytest.raises(UnauthorizedError),
     ):
         fetcher.get(f"{PORTAL}/api/v1/helper/relationships")
+
+
+class BlankAccountPortal(Portal):
+    """A portal that leaves the account number blank on the documents of account 12."""
+
+    def _item(self, rel: int, doc_id: int, title: str, as_of: str) -> dict[str, Any]:
+        item = super()._item(rel, doc_id, title, as_of)
+        if rel == 12:
+            item["accountNumber"] = ""
+        return item
+
+
+def test_items_without_an_identity_value_are_counted_not_dropped_silently(
+    tmp_path: Path,
+) -> None:
+    portal = BlankAccountPortal()
+    r = _retrievr(tmp_path, _session(portal))
+    _install(r, tmp_path, _recipe(identity=["doc_id", "account"]))
+    outcome = r.run("example-manager", download=False)
+    assert outcome.status == "ok", outcome.errors
+    assert sorted(d.extra["doc_id"] for d in outcome.documents) == ["1", "2"]
+    skipped = [w for w in outcome.warnings if "identity value missing" in w]
+    assert skipped == [f"reports: {len(DOCS[12])} items skipped, identity value missing: account"]
+
+
+def _install_version(r: Retrievr, tmp_path: Path, version: int, **changes: Any) -> Path:
+    data = _recipe(**changes)
+    data["version"] = version
+    path = tmp_path / f"example-portal@{version}.yaml"
+    path.write_text(yaml.safe_dump(data, sort_keys=False), encoding="utf-8")
+    return path
+
+
+@pytest.mark.parametrize("reset", [False, True])
+def test_a_new_identity_can_start_from_a_fresh_history(tmp_path: Path, reset: bool) -> None:
+    portal = Portal()
+    r = _retrievr(tmp_path, _session(portal))
+    r.install(_install_version(r, tmp_path, 1))
+    assert r.run("example-manager", download=False).status == "ok"
+    # Version 2 names documents by account too: every identity changes.
+    r.install(_install_version(r, tmp_path, 2, identity=["doc_id", "account"]), reset_history=reset)
+    outcome = r.run("example-manager", download=False, repair=False)
+    assert outcome.health is not None
+    if reset:
+        assert outcome.status == "ok" and outcome.health.verdict == "ok"
+        assert len(r.store.known_documents("example-manager")) == 3
+    else:
+        assert outcome.health.verdict != "ok"  # the old identities read as documents gone
+
+
+def test_the_command_line_resets_history_and_names_each_document_source(tmp_path: Path) -> None:
+    portal = Portal()
+    path = tmp_path / "example-portal@1.yaml"
+    path.write_text(yaml.safe_dump(_recipe(), sort_keys=False), encoding="utf-8")
+    argv = ["--state-dir", str(tmp_path / "state"), "--output-dir", str(tmp_path / "out"), "--json"]
+    out = io.StringIO()
+    assert main([*argv, "install", str(path), "--reset-history"], out=out) == 0
+    assert json.loads(out.getvalue())["history"] == "reset"
+    out = io.StringIO()
+    code = main(
+        [*argv, "run", "example-manager", "--no-download"], out=out, session=_session(portal)
+    )
+    assert code == 0
+    assert {d["source"] for d in json.loads(out.getvalue())["documents"]} == {"reports"}

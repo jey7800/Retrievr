@@ -38,6 +38,9 @@ retrievr install recipes/example-issuer-ir@1.yaml   # activate a hand-written re
 
 `--years 2024-2025` (or `2024,2025`) keeps only the documents of those fiscal years, for
 the documents returned and downloaded; the recipe itself covers every year the site lists.
+
+`install --reset-history` forgets the documents earlier runs listed, for a new recipe
+version that identifies documents differently (the next run rebuilds the history).
 Without it, `run` downloads every document the request selects, all years included.
 A file deleted from the output directory is downloaded again on the next run.
 

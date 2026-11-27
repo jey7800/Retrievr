@@ -47,9 +47,20 @@ _STRONG_MARKERS: tuple[tuple[str, re.Pattern[str]], ...] = (
         ),
     ),
     ("block page (Imperva)", re.compile(r"Request unsuccessful\. Incapsula incident ID", re.I)),
+    ("block page (Imperva)", re.compile(r"<title>\s*Pardon Our Interruption", re.I)),
     (
         "challenge page (bot protection)",
         re.compile(r"using a security service\b[^.<]{0,60}online attacks", re.I),
+    ),
+    ("challenge page (Cloudflare)", re.compile(r"Checking your browser before accessing", re.I)),
+    (
+        "block page (F5)",
+        re.compile(r"The requested URL was rejected\. Please consult with your admin", re.I),
+    ),
+    ("block page (Sucuri)", re.compile(r"Sucuri WebSite Firewall", re.I)),
+    (
+        "block page (PerimeterX)",
+        re.compile(r"<title>\s*Access to this page has been denied", re.I),
     ),
 )
 # Weak markers are also injected into normal pages by CDNs and bot managers (for
@@ -60,7 +71,14 @@ _WEAK_MARKERS: tuple[tuple[str, re.Pattern[str]], ...] = (
     ("captcha page (DataDome)", re.compile(r"captcha-delivery\.com", re.I)),
     ("captcha page (PerimeterX)", re.compile(r"\bpx-captcha\b", re.I)),
     ("challenge page (Imperva)", re.compile(r"_Incapsula_Resource", re.I)),
+    ("challenge page (AWS WAF)", re.compile(r"awswaf|aws-waf-token", re.I)),
+    ("captcha page (Radware)", re.compile(r"perfdrive\.com", re.I)),
+    ("challenge page (Kasada)", re.compile(r"\bKPSDK\b", re.I)),
     ("captcha page", re.compile(r"captcha", re.I)),
+    (
+        "challenge page (bot protection)",
+        re.compile(r"verify (?:that )?you are (?:a )?human|are you a robot", re.I),
+    ),
 )
 
 

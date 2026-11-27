@@ -38,6 +38,7 @@ from retrievr.fetch import (
     HostSession,
     HTTPStatusError,
     UnauthorizedError,
+    detect_block,
 )
 from retrievr.health import HealthReport, Probe, assess
 from retrievr.learn import (
@@ -143,6 +144,10 @@ class RunOutcome:
     """Set when the health check found the recipe broken."""
 
 
+_PEEK_BYTES = 64 * 1024
+"""How much of an HTML reply to a document probe is read to recognise a challenge."""
+
+
 def in_years(documents: list[FoundDocument], years: Collection[int] | None) -> list[FoundDocument]:
     """The documents of the fiscal years asked for (all when ``years`` is None). A
     recipe may list more years than asked (a single page holding every year), and a
@@ -163,6 +168,15 @@ def download_warnings(downloads: list[DownloadOutcome]) -> list[str]:
         f"none of the {len(downloads)} documents could be downloaded; "
         f"first failure: {failed[0].reason}"
     ]
+
+
+def blocked_downloads(downloads: list[DownloadOutcome]) -> str | None:
+    """Why the site refused the downloads (a block status, a challenge or block page
+    served instead of the file), or None. The downloader stops at the first refusal."""
+    blocked = next((d for d in downloads if d.status == "blocked"), None)
+    if blocked is None:
+        return None
+    return f"the site blocks downloads: {blocked.reason or 'blocked'}"
 
 
 def selection_warnings(
@@ -199,7 +213,11 @@ def _answer(fetcher: Fetcher, recipe: Recipe, url: str) -> str:
     if fetched_by_request(recipe, url):
         return "unknown"
     try:
-        with fetcher.stream(url, allowed_domains=recipe.allowed_domains):
+        with fetcher.stream(url, allowed_domains=recipe.allowed_domains) as resp:
+            if "html" in (resp.headers.get("content-type") or "").lower():
+                body = fetcher.read(resp)[:_PEEK_BYTES].decode("utf-8", errors="replace")
+                if detect_block(resp.status_code, body):
+                    return "blocked"
             return "ok"
     except BlockedError as exc:
         return "blocked" if exc.status in (403, None) else "unknown"
@@ -444,6 +462,11 @@ class Retrievr:
             downloader = self._downloader(fetcher, site)
             result.downloads = downloader.download_all(recipe, result.documents)
             result.warnings += download_warnings(result.downloads)
+            if reason := blocked_downloads(result.downloads):
+                # The recipe is learned and active; the site refuses its files.
+                result.status = "blocked"
+                result.errors.append(reason)
+                self._emit("blocked", site, reason)
 
     # -- run ---------------------------------------------------------------------------
 
@@ -555,6 +578,11 @@ class Retrievr:
                         outcome.status = "unauthorized"
                         outcome.errors.append(refused[0].reason or "unauthorized")
                         self._emit("unauthorized", site, refused[0].reason or "")
+                        return outcome
+                    if reason := blocked_downloads(outcome.downloads):
+                        outcome.status = "blocked"
+                        outcome.errors.append(reason)
+                        self._emit("blocked", site, reason)
                         return outcome
                 outcome.status = "ok"
         except BlockedError as exc:

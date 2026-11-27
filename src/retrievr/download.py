@@ -26,7 +26,7 @@ import httpx
 from pydantic import BaseModel, ConfigDict
 
 from retrievr.candidates import json_path
-from retrievr.fetch import BlockedError, Fetcher, FetchError, UnauthorizedError
+from retrievr.fetch import BlockedError, Fetcher, FetchError, UnauthorizedError, detect_block
 from retrievr.recipe import DownloadRequest, FoundDocument, Recipe, download_request
 from retrievr.snapshots import document_extension
 from retrievr.urls import resolve_url
@@ -270,7 +270,7 @@ class Downloader:
             return self._fetch_by_request(tmp, doc, recipe, spec)
         with self.fetcher.stream(doc.url, allowed_domains=recipe.allowed_domains) as resp:
             content_type = resp.headers.get("content-type")
-            return self._save(tmp, doc, resp.iter_bytes(), content_type)
+            return self._save(tmp, doc, resp.iter_bytes(), content_type, str(resp.url))
 
     def _fetch_by_request(
         self, tmp: Path, doc: FoundDocument, recipe: Recipe, spec: DownloadRequest
@@ -284,7 +284,7 @@ class Downloader:
         ) as resp:
             content_type = resp.headers.get("content-type")
             if spec.reply == "file" or "json" not in (content_type or "").lower():
-                return self._save(tmp, doc, resp.iter_bytes(), content_type)
+                return self._save(tmp, doc, resp.iter_bytes(), content_type, str(resp.url))
             data = _json_reply(self.fetcher.read(resp), url)
         value = json_path(data, spec.path) if spec.path else data
         if not isinstance(value, str) or not value.strip():
@@ -294,10 +294,12 @@ class Downloader:
                 content = base64.b64decode(value.strip(), validate=True)
             except (binascii.Error, ValueError) as exc:
                 raise _RejectedError(f"invalid base64 content at {spec.path}") from exc
-            return self._save(tmp, doc, iter([content]), None)
+            return self._save(tmp, doc, iter([content]), None, url)
         file_url = resolve_url(value.strip(), url)
         with self.fetcher.stream(file_url, allowed_domains=domains) as resp:
-            return self._save(tmp, doc, resp.iter_bytes(), resp.headers.get("content-type"))
+            return self._save(
+                tmp, doc, resp.iter_bytes(), resp.headers.get("content-type"), str(resp.url)
+            )
 
     def _save(
         self,
@@ -305,20 +307,30 @@ class Downloader:
         doc: FoundDocument,
         chunks: Iterator[bytes],
         content_type: str | None,
+        url: str,
     ) -> tuple[str, int, str | None, bytes]:
-        """Write ``chunks`` to ``tmp``, checking type, magic bytes and size on the way."""
+        """Write ``chunks`` to ``tmp``, checking type, magic bytes and size on the way.
+
+        A page served instead of the document is rejected, unless it is a bot-protection
+        challenge or block page: that raises :class:`BlockedError` (the site refuses us;
+        the remaining downloads stop)."""
         limit = self.fetcher.settings.max_download_bytes
         digest = hashlib.sha256()
         size = 0
         head = b""
+        seen = b""  # the start of the reply, to tell a challenge page from another page
         media = (content_type or "").split(";")[0].strip().lower()
         if media in _HTML_TYPES and doc.extension not in _MARKUP_EXTENSIONS:
+            _raise_if_blocked(url, _take(chunks, _PEEK_BYTES))
             raise _RejectedError(f"HTML page instead of a .{doc.extension or '?'} file")
         with tmp.open("wb") as fh:
             for chunk in chunks:
+                if len(seen) < _PEEK_BYTES:
+                    seen += chunk[: _PEEK_BYTES - len(seen)]
                 if len(head) < 16:
                     head = (head + chunk)[:16]
                     if len(head) >= 8 and (reason := check_magic(doc.extension, head)):
+                        _raise_if_blocked(url, _take(chunks, _PEEK_BYTES, seen))
                         raise _RejectedError(reason)
                 size += len(chunk)
                 if size > limit:
@@ -328,6 +340,7 @@ class Downloader:
         if size == 0:
             raise _RejectedError("empty file")
         if reason := check_magic(doc.extension, head):
+            _raise_if_blocked(url, seen)
             raise _RejectedError(reason)
         return digest.hexdigest(), size, content_type, head
 
@@ -343,6 +356,26 @@ class Downloader:
             if manifest.path_owner(rel) is None and not on_disk.exists():
                 return rel
         raise FetchError("could not find a free file name", url=doc.url)
+
+
+_PEEK_BYTES = 64 * 1024
+"""How much of a page served instead of a document is read to recognise a challenge."""
+
+
+def _take(chunks: Iterator[bytes], limit: int, start: bytes = b"") -> bytes:
+    """``start`` followed by the next chunks, up to ``limit`` bytes."""
+    buf = bytearray(start)
+    for chunk in chunks:
+        if len(buf) >= limit:
+            break
+        buf += chunk
+    return bytes(buf[:limit])
+
+
+def _raise_if_blocked(url: str, body: bytes) -> None:
+    """A challenge or block page served instead of a document means the site refuses us."""
+    if reason := detect_block(200, body.decode("utf-8", errors="replace")):
+        raise BlockedError(url, reason)
 
 
 class _RejectedError(Exception):

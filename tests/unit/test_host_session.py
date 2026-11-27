@@ -48,7 +48,8 @@ class Portal:
     """A synthetic investor portal: every API call needs the session cookie; download
     keys change on every login (they are not an identity)."""
 
-    def __init__(self) -> None:
+    def __init__(self, today: date = TODAY) -> None:
+        self.today = today
         self.login = 1
         self.valid = True
         self.calls: list[tuple[str, str, Any]] = []
@@ -73,7 +74,7 @@ class Portal:
             assert body is not None and isinstance(
                 body["relId"], int
             )  # a number, as sent by the site
-            assert body["personId"] == "P-7" and body["endDate"] == TODAY.isoformat()
+            assert body["personId"] == "P-7" and body["endDate"] == self.today.isoformat()
             return httpx.Response(
                 200, json=[self._item(body["relId"], *d) for d in DOCS[body["relId"]]]
             )
@@ -408,7 +409,7 @@ def test_a_new_identity_can_start_from_a_fresh_history(tmp_path: Path, reset: bo
 
 
 def test_the_command_line_resets_history_and_names_each_document_source(tmp_path: Path) -> None:
-    portal = Portal()
+    portal = Portal(today=date.today())  # the command line runs with the real date
     path = tmp_path / "example-portal@1.yaml"
     path.write_text(yaml.safe_dump(_recipe(), sort_keys=False), encoding="utf-8")
     argv = ["--state-dir", str(tmp_path / "state"), "--output-dir", str(tmp_path / "out"), "--json"]
